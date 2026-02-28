@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
 
@@ -7,24 +7,27 @@ export function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isVendor, setIsVendor] = useState(false);
+
+  const checkRoles = useCallback(async (userId: string) => {
+    const { data } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId);
+    const roles = data?.map(r => r.role) || [];
+    setIsAdmin(roles.includes('admin'));
+    setIsVendor(roles.includes('vendor'));
+  }, []);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        // Check admin role - deferred to avoid deadlock
-        setTimeout(async () => {
-          const { data } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', session.user.id)
-            .eq('role', 'admin')
-            .maybeSingle();
-          setIsAdmin(!!data);
-        }, 0);
+        setTimeout(() => checkRoles(session.user.id), 0);
       } else {
         setIsAdmin(false);
+        setIsVendor(false);
       }
       setLoading(false);
     });
@@ -32,14 +35,21 @@ export function useAuth() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      setLoading(false);
+      if (session?.user) {
+        checkRoles(session.user.id).then(() => setLoading(false));
+      } else {
+        setLoading(false);
+      }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [checkRoles]);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error, data } = await supabase.auth.signInWithPassword({ email, password });
+    if (!error && data.user) {
+      await checkRoles(data.user.id);
+    }
     return { error };
   };
 
@@ -54,7 +64,9 @@ export function useAuth() {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    setIsAdmin(false);
+    setIsVendor(false);
   };
 
-  return { user, session, loading, isAdmin, signIn, signUp, signOut };
+  return { user, session, loading, isAdmin, isVendor, signIn, signUp, signOut };
 }

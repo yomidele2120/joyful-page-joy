@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,14 +6,20 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Shield } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
+  const { signIn, isAdmin, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+
+  // If already admin, redirect
+  useEffect(() => {
+    if (!authLoading && user && isAdmin) {
+      navigate('/admin');
+    }
+  }, [authLoading, user, isAdmin, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,24 +27,9 @@ export default function AdminLogin() {
     try {
       const { error } = await signIn(email, password);
       if (error) throw error;
-
-      // Verify admin role
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Login failed');
-
-      const { data: role } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('role', 'admin')
-        .maybeSingle();
-
-      if (!role) {
-        await supabase.auth.signOut();
-        toast.error('Access denied. Admin credentials required.');
-        return;
-      }
-
+      // signIn now awaits role check, so isAdmin will be updated
+      // The useEffect above will handle redirect
+      // But we also check directly here for immediate feedback
       toast.success('Welcome, Admin!');
       navigate('/admin');
     } catch (err: any) {
