@@ -45,7 +45,7 @@ export default function SupplierLogin() {
       }
 
       toast.success('Welcome back, Supplier!');
-      navigate('/supplier-dashboard');
+      navigate('/supplier-dashboard', { replace: true });
     } catch (err: any) {
       toast.error(err.message || 'Authentication failed');
     } finally {

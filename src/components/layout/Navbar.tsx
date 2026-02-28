@@ -12,7 +12,7 @@ export default function Navbar() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const { totalItems } = useCart();
-  const { user, isAdmin, signOut } = useAuth();
+  const { user, isAdmin, isVendor, signOut } = useAuth();
   const navigate = useNavigate();
 
   const handleSearch = (e: React.FormEvent) => {
@@ -83,11 +83,11 @@ export default function Navbar() {
 
           {user ? (
             <div className="flex items-center gap-1">
-              {isAdmin && (
-                <Link to="/admin">
-                  <Button variant="ghost" size="sm" className="hidden sm:inline-flex text-xs">Admin</Button>
-                </Link>
-              )}
+              <Link to={isAdmin ? '/admin' : isVendor ? '/supplier-dashboard' : '/user-dashboard'}>
+                <Button variant="ghost" size="icon">
+                  <User className="w-5 h-5" />
+                </Button>
+              </Link>
               <Button variant="ghost" size="sm" onClick={signOut} className="text-xs">Logout</Button>
             </div>
           ) : (
