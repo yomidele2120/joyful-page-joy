@@ -1,16 +1,1 @@
-project_id = "gfutfnqaoevrnenqlppp"
-
-[functions.setup-admin]
-verify_jwt = false
-
-[functions.initialize-payment]
-verify_jwt = false
-
-[functions.verify-payment]
-verify_jwt = false
-
-[functions.paystack-webhook]
-verify_jwt = false
-
-[functions.create-subaccount]
-verify_jwt = false
+project_id = "dvjxavjuwwcpcpcrlsjf"
