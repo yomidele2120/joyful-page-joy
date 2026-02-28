@@ -10,10 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { formatNaira } from '@/lib/format';
 import { useCategories } from '@/hooks/useProducts';
-import { Package, ShoppingCart, DollarSign, Plus, LogOut, ArrowLeft, Pencil, Trash2, Store, Upload } from 'lucide-react';
+import { Package, ShoppingCart, DollarSign, Plus, LogOut, ArrowLeft, Pencil, Trash2, Store, Upload, MessageCircle } from 'lucide-react';
+import { useUnreadCount } from '@/hooks/useChat';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 export default function SupplierDashboard() {
+  const unreadCount = useUnreadCount();
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -92,6 +94,14 @@ export default function SupplierDashboard() {
           <div className="flex items-center gap-2">
             <Link to={`/shop/${vendor.id}`}>
               <Button variant="outline" size="sm" className="text-xs">View Shop</Button>
+            </Link>
+            <Link to="/supplier-chat">
+              <Button variant="outline" size="sm" className="text-xs relative">
+                <MessageCircle className="w-4 h-4 mr-1" /> Chat
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive text-destructive-foreground rounded-full text-[10px] flex items-center justify-center">{unreadCount}</span>
+                )}
+              </Button>
             </Link>
             <Button variant="ghost" size="sm" onClick={() => { signOut(); navigate('/'); }}>
               <LogOut className="w-4 h-4" />

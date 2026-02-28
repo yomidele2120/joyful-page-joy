@@ -17,7 +17,7 @@ export default function AdminDashboard() {
   const { user, isAdmin, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'orders' | 'suppliers' | 'users' | 'payments' | 'add-product'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'orders' | 'suppliers' | 'users' | 'payments' | 'earnings' | 'add-product'>('overview');
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) {
@@ -72,12 +72,18 @@ export default function AdminDashboard() {
 
   const { data: categories } = useCategories();
 
+  const successfulPayments = payments?.filter(p => p.status === 'success') || [];
+  const totalRevenue = successfulPayments.reduce((s, p) => s + Number(p.amount), 0);
+  const platformCommission = totalRevenue * 0.05; // 5% commission
+  const supplierEarnings = totalRevenue - platformCommission;
+
   const stats = {
     products: products?.length || 0,
     orders: orders?.length || 0,
-    revenue: orders?.reduce((s, o) => s + Number(o.total), 0) || 0,
+    revenue: totalRevenue,
     suppliers: vendors?.length || 0,
     users: profiles?.length || 0,
+    commission: platformCommission,
   };
 
   if (loading) return <div className="flex items-center justify-center min-h-screen"><p>Loading...</p></div>;
@@ -118,6 +124,7 @@ export default function AdminDashboard() {
             { key: 'products', label: 'Products' },
             { key: 'orders', label: 'Orders' },
             { key: 'payments', label: 'Payments' },
+            { key: 'earnings', label: 'Earnings' },
             { key: 'add-product', label: 'Add Product' },
           ].map(tab => (
             <Button key={tab.key} variant={activeTab === tab.key ? 'default' : 'outline'} size="sm"
@@ -126,12 +133,15 @@ export default function AdminDashboard() {
         </div>
 
         {activeTab === 'overview' && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            <StatCard icon={<Package className="w-5 h-5 text-primary" />} label="Products" value={String(stats.products)} />
-            <StatCard icon={<ShoppingCart className="w-5 h-5 text-accent" />} label="Orders" value={String(stats.orders)} />
-            <StatCard icon={<DollarSign className="w-5 h-5 text-primary" />} label="Revenue" value={formatNaira(stats.revenue)} />
-            <StatCard icon={<Store className="w-5 h-5 text-primary" />} label="Suppliers" value={String(stats.suppliers)} />
-            <StatCard icon={<Users className="w-5 h-5 text-accent" />} label="Users" value={String(stats.users)} />
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+              <StatCard icon={<Package className="w-5 h-5 text-primary" />} label="Products" value={String(stats.products)} />
+              <StatCard icon={<ShoppingCart className="w-5 h-5 text-accent" />} label="Orders" value={String(stats.orders)} />
+              <StatCard icon={<DollarSign className="w-5 h-5 text-primary" />} label="Total Revenue" value={formatNaira(stats.revenue)} />
+              <StatCard icon={<DollarSign className="w-5 h-5 text-accent" />} label="Platform Commission (5%)" value={formatNaira(stats.commission)} />
+              <StatCard icon={<Store className="w-5 h-5 text-primary" />} label="Suppliers" value={String(stats.suppliers)} />
+              <StatCard icon={<Users className="w-5 h-5 text-accent" />} label="Users" value={String(stats.users)} />
+            </div>
           </div>
         )}
 
@@ -346,6 +356,47 @@ export default function AdminDashboard() {
             ) : (
               <p className="p-8 text-center text-muted-foreground">No transactions yet.</p>
             )}
+          </div>
+        )}
+
+        {activeTab === 'earnings' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <StatCard icon={<DollarSign className="w-5 h-5 text-primary" />} label="Total Revenue" value={formatNaira(totalRevenue)} />
+              <StatCard icon={<DollarSign className="w-5 h-5 text-accent" />} label="Platform Commission (5%)" value={formatNaira(platformCommission)} />
+              <StatCard icon={<Store className="w-5 h-5 text-primary" />} label="Supplier Payouts" value={formatNaira(supplierEarnings)} />
+            </div>
+            <div className="bg-card rounded-lg card-shadow overflow-hidden">
+              <div className="p-4 border-b border-border">
+                <h2 className="font-heading font-bold">Supplier Earnings Breakdown</h2>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-secondary">
+                    <tr>
+                      <th className="text-left p-3 font-heading">Supplier</th>
+                      <th className="text-left p-3 font-heading">Subaccount</th>
+                      <th className="text-left p-3 font-heading">Status</th>
+                      <th className="text-left p-3 font-heading">Bank</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {vendors?.map(v => (
+                      <tr key={v.id} className="border-t border-border">
+                        <td className="p-3 font-medium">{v.store_name}</td>
+                        <td className="p-3 font-mono text-xs text-muted-foreground">{(v as any).paystack_subaccount_code || 'Not created'}</td>
+                        <td className="p-3">
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${(v as any).paystack_subaccount_code ? 'bg-primary/10 text-primary' : 'bg-secondary'}`}>
+                            {(v as any).paystack_subaccount_code ? 'Active' : 'Pending'}
+                          </span>
+                        </td>
+                        <td className="p-3 text-muted-foreground">{v.bank_name || '-'} {v.bank_account_number ? `(***${v.bank_account_number.slice(-4)})` : ''}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         )}
 

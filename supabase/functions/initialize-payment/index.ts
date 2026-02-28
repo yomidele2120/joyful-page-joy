@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 serve(async (req) => {
@@ -30,11 +30,31 @@ serve(async (req) => {
     }
     const userId = claimsData.claims.sub;
 
-    const { email, amount, orderId, metadata } = await req.json();
+    const { email, amount, orderId, metadata, subaccount_code } = await req.json();
 
     const PAYSTACK_SECRET_KEY = Deno.env.get('PAYSTACK_SECRET_KEY');
     if (!PAYSTACK_SECRET_KEY) {
       return new Response(JSON.stringify({ error: 'Paystack not configured' }), { status: 500, headers: corsHeaders });
+    }
+
+    // Build Paystack payload
+    const paystackPayload: any = {
+      email,
+      amount: Math.round(amount * 100), // Paystack expects kobo
+      currency: 'NGN',
+      reference: `itha_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      callback_url: req.headers.get('origin') || '',
+      metadata: {
+        order_id: orderId,
+        user_id: userId,
+        ...metadata,
+      },
+    };
+
+    // Add split payment if subaccount provided
+    if (subaccount_code) {
+      paystackPayload.subaccount = subaccount_code;
+      paystackPayload.bearer = 'account'; // Customer bears Paystack fees
     }
 
     // Initialize transaction with Paystack
@@ -44,18 +64,7 @@ serve(async (req) => {
         'Authorization': `Bearer ${PAYSTACK_SECRET_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        email,
-        amount: Math.round(amount * 100), // Paystack expects kobo
-        currency: 'NGN',
-        reference: `itha_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-        callback_url: req.headers.get('origin') || '',
-        metadata: {
-          order_id: orderId,
-          user_id: userId,
-          ...metadata,
-        },
-      }),
+      body: JSON.stringify(paystackPayload),
     });
 
     const paystackData = await paystackRes.json();
@@ -80,7 +89,8 @@ serve(async (req) => {
       access_code: paystackData.data.access_code,
       reference: paystackData.data.reference,
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: corsHeaders });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Internal server error';
+    return new Response(JSON.stringify({ error: message }), { status: 500, headers: corsHeaders });
   }
 });

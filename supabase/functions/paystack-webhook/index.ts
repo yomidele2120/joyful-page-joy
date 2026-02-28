@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { createHmac } from "https://deno.land/std@0.168.0/crypto/mod.ts";
+
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -61,6 +61,7 @@ serve(async (req) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    const message = error instanceof Error ? error.message : 'Internal server error';
+    return new Response(JSON.stringify({ error: message }), { status: 500 });
   }
 });

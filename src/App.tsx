@@ -15,6 +15,7 @@ import UserLogin from "./pages/UserLogin";
 import SupplierLogin from "./pages/SupplierLogin";
 import SupplierSignup from "./pages/SupplierSignup";
 import SupplierDashboard from "./pages/SupplierDashboard";
+import SupplierChat from "./pages/SupplierChat";
 import SupplierShop from "./pages/SupplierShop";
 import AdminLogin from "./pages/AdminLogin";
 import Wishlist from "./pages/Wishlist";
@@ -43,6 +44,7 @@ const App = () => (
             <Route path="/supplier-signup" element={<SupplierSignup />} />
             <Route path="/supplier-dashboard" element={<SupplierDashboard />} />
             <Route path="/shop/:vendorId" element={<SupplierShop />} />
+            <Route path="/supplier-chat" element={<SupplierChat />} />
             <Route path="/admin-login" element={<AdminLogin />} />
             <Route path="/wishlist" element={<Wishlist />} />
             <Route path="/admin" element={<AdminDashboard />} />

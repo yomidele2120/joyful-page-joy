@@ -32,7 +32,7 @@ export default function SupplierSignup() {
     }
     setLoading(true);
     try {
-      // 1. Create auth user
+      // 1. Create auth user (email verification disabled globally)
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
@@ -94,7 +94,7 @@ export default function SupplierSignup() {
       });
       if (roleError) console.error('Role assignment:', roleError);
 
-      toast.success('Supplier account created! Please check your email to verify, then sign in.');
+      toast.success('Supplier account created! You can now sign in.');
       navigate('/suppliers-login');
     } catch (err: any) {
       toast.error(err.message || 'Signup failed');
@@ -121,85 +121,29 @@ export default function SupplierSignup() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {step === 1 && (
-              <>
-                <h2 className="font-heading font-semibold text-lg mb-2">Account Details</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div><Label>Full Name *</Label><Input value={form.fullName} onChange={e => update('fullName', e.target.value)} required /></div>
-                  <div><Label>Email *</Label><Input type="email" value={form.email} onChange={e => update('email', e.target.value)} required /></div>
-                  <div><Label>Password *</Label><Input type="password" value={form.password} onChange={e => update('password', e.target.value)} required minLength={6} /></div>
-                  <div><Label>Confirm Password *</Label><Input type="password" value={form.confirmPassword} onChange={e => update('confirmPassword', e.target.value)} required minLength={6} /></div>
-                  <div><Label>Phone Number *</Label><Input value={form.phone} onChange={e => update('phone', e.target.value)} required placeholder="+234..." /></div>
-                  <div><Label>WhatsApp Number *</Label><Input value={form.whatsappNumber} onChange={e => update('whatsappNumber', e.target.value)} required placeholder="+234..." /></div>
-                </div>
-                <Button type="button" onClick={() => {
-                  if (!form.fullName || !form.email || !form.password || !form.phone || !form.whatsappNumber) {
-                    toast.error('Please fill all required fields'); return;
-                  }
-                  if (form.password !== form.confirmPassword) {
-                    toast.error('Passwords do not match'); return;
-                  }
-                  setStep(2);
-                }} className="w-full">Next: Company Details</Button>
-              </>
+              <SignupStep1 form={form} update={update} onNext={() => {
+                if (!form.fullName || !form.email || !form.password || !form.phone || !form.whatsappNumber) {
+                  toast.error('Please fill all required fields'); return;
+                }
+                if (form.password !== form.confirmPassword) {
+                  toast.error('Passwords do not match'); return;
+                }
+                setStep(2);
+              }} />
             )}
-
             {step === 2 && (
-              <>
-                <h2 className="font-heading font-semibold text-lg mb-2">Company Details</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div><Label>Company Name *</Label><Input value={form.companyName} onChange={e => update('companyName', e.target.value)} required /></div>
-                  <div><Label>Company Address *</Label><Input value={form.companyAddress} onChange={e => update('companyAddress', e.target.value)} required /></div>
-                  <div className="col-span-full"><Label>Product Categories</Label><Input value={form.productCategories} onChange={e => update('productCategories', e.target.value)} placeholder="Laptops, Phones, Accessories (comma separated)" /></div>
-                  <div className="col-span-full"><Label>Store Description</Label><Textarea value={form.storeDescription} onChange={e => update('storeDescription', e.target.value)} placeholder="Tell buyers about your business..." /></div>
-                  <div>
-                    <Label>Company Logo</Label>
-                    <div className="mt-1">
-                      <label className="flex items-center gap-2 px-4 py-2 rounded-md border border-border cursor-pointer hover:bg-secondary transition-colors text-sm">
-                        <Upload className="w-4 h-4" />
-                        {logoFile ? logoFile.name : 'Upload Logo'}
-                        <input type="file" accept="image/*" className="hidden" onChange={e => setLogoFile(e.target.files?.[0] || null)} />
-                      </label>
-                    </div>
-                  </div>
-                  <div>
-                    <Label>Verification Document</Label>
-                    <div className="mt-1">
-                      <label className="flex items-center gap-2 px-4 py-2 rounded-md border border-border cursor-pointer hover:bg-secondary transition-colors text-sm">
-                        <Upload className="w-4 h-4" />
-                        {docFile ? docFile.name : 'Upload Document'}
-                        <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={e => setDocFile(e.target.files?.[0] || null)} />
-                      </label>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button type="button" variant="outline" onClick={() => setStep(1)}>Back</Button>
-                  <Button type="button" className="flex-1" onClick={() => {
-                    if (!form.companyName || !form.companyAddress) {
-                      toast.error('Please fill required fields'); return;
-                    }
-                    setStep(3);
-                  }}>Next: Bank Details</Button>
-                </div>
-              </>
+              <SignupStep2 form={form} update={update} logoFile={logoFile} setLogoFile={setLogoFile}
+                docFile={docFile} setDocFile={setDocFile}
+                onBack={() => setStep(1)} onNext={() => {
+                  if (!form.companyName || !form.companyAddress) {
+                    toast.error('Please fill required fields'); return;
+                  }
+                  setStep(3);
+                }} />
             )}
-
             {step === 3 && (
-              <>
-                <h2 className="font-heading font-semibold text-lg mb-2">Bank Details</h2>
-                <p className="text-sm text-muted-foreground mb-4">For receiving payments from sales</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div><Label>Bank Name</Label><Input value={form.bankName} onChange={e => update('bankName', e.target.value)} /></div>
-                  <div><Label>Account Number</Label><Input value={form.bankAccountNumber} onChange={e => update('bankAccountNumber', e.target.value)} /></div>
-                  <div className="col-span-full"><Label>Account Name</Label><Input value={form.bankAccountName} onChange={e => update('bankAccountName', e.target.value)} /></div>
-                </div>
-                <div className="flex gap-2">
-                  <Button type="button" variant="outline" onClick={() => setStep(2)}>Back</Button>
-                  <Button type="submit" className="flex-1" disabled={loading}>
-                    {loading ? 'Creating Account...' : 'Create Supplier Account'}
-                  </Button>
-                </div>
-              </>
+              <SignupStep3 form={form} update={update} loading={loading}
+                onBack={() => setStep(2)} />
             )}
           </form>
 
@@ -211,5 +155,80 @@ export default function SupplierSignup() {
         </div>
       </div>
     </Layout>
+  );
+}
+
+function SignupStep1({ form, update, onNext }: { form: any; update: (k: string, v: string) => void; onNext: () => void }) {
+  return (
+    <>
+      <h2 className="font-heading font-semibold text-lg mb-2">Account Details</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div><Label>Full Name *</Label><Input value={form.fullName} onChange={e => update('fullName', e.target.value)} required /></div>
+        <div><Label>Email *</Label><Input type="email" value={form.email} onChange={e => update('email', e.target.value)} required /></div>
+        <div><Label>Password *</Label><Input type="password" value={form.password} onChange={e => update('password', e.target.value)} required minLength={6} /></div>
+        <div><Label>Confirm Password *</Label><Input type="password" value={form.confirmPassword} onChange={e => update('confirmPassword', e.target.value)} required minLength={6} /></div>
+        <div><Label>Phone Number *</Label><Input value={form.phone} onChange={e => update('phone', e.target.value)} required placeholder="+234..." /></div>
+        <div><Label>WhatsApp Number *</Label><Input value={form.whatsappNumber} onChange={e => update('whatsappNumber', e.target.value)} required placeholder="+234..." /></div>
+      </div>
+      <Button type="button" onClick={onNext} className="w-full">Next: Company Details</Button>
+    </>
+  );
+}
+
+function SignupStep2({ form, update, logoFile, setLogoFile, docFile, setDocFile, onBack, onNext }: any) {
+  return (
+    <>
+      <h2 className="font-heading font-semibold text-lg mb-2">Company Details</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div><Label>Company Name *</Label><Input value={form.companyName} onChange={e => update('companyName', e.target.value)} required /></div>
+        <div><Label>Company Address *</Label><Input value={form.companyAddress} onChange={e => update('companyAddress', e.target.value)} required /></div>
+        <div className="col-span-full"><Label>Product Categories</Label><Input value={form.productCategories} onChange={e => update('productCategories', e.target.value)} placeholder="Laptops, Phones, Accessories (comma separated)" /></div>
+        <div className="col-span-full"><Label>Store Description</Label><Textarea value={form.storeDescription} onChange={e => update('storeDescription', e.target.value)} placeholder="Tell buyers about your business..." /></div>
+        <div>
+          <Label>Company Logo</Label>
+          <div className="mt-1">
+            <label className="flex items-center gap-2 px-4 py-2 rounded-md border border-border cursor-pointer hover:bg-secondary transition-colors text-sm">
+              <Upload className="w-4 h-4" />
+              {logoFile ? logoFile.name : 'Upload Logo'}
+              <input type="file" accept="image/*" className="hidden" onChange={e => setLogoFile(e.target.files?.[0] || null)} />
+            </label>
+          </div>
+        </div>
+        <div>
+          <Label>Verification Document</Label>
+          <div className="mt-1">
+            <label className="flex items-center gap-2 px-4 py-2 rounded-md border border-border cursor-pointer hover:bg-secondary transition-colors text-sm">
+              <Upload className="w-4 h-4" />
+              {docFile ? docFile.name : 'Upload Document'}
+              <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={e => setDocFile(e.target.files?.[0] || null)} />
+            </label>
+          </div>
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <Button type="button" variant="outline" onClick={onBack}>Back</Button>
+        <Button type="button" className="flex-1" onClick={onNext}>Next: Bank Details</Button>
+      </div>
+    </>
+  );
+}
+
+function SignupStep3({ form, update, loading, onBack }: any) {
+  return (
+    <>
+      <h2 className="font-heading font-semibold text-lg mb-2">Bank Details</h2>
+      <p className="text-sm text-muted-foreground mb-4">For receiving payments from sales</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div><Label>Bank Name</Label><Input value={form.bankName} onChange={e => update('bankName', e.target.value)} /></div>
+        <div><Label>Account Number</Label><Input value={form.bankAccountNumber} onChange={e => update('bankAccountNumber', e.target.value)} /></div>
+        <div className="col-span-full"><Label>Account Name</Label><Input value={form.bankAccountName} onChange={e => update('bankAccountName', e.target.value)} /></div>
+      </div>
+      <div className="flex gap-2">
+        <Button type="button" variant="outline" onClick={onBack}>Back</Button>
+        <Button type="submit" className="flex-1" disabled={loading}>
+          {loading ? 'Creating Account...' : 'Create Supplier Account'}
+        </Button>
+      </div>
+    </>
   );
 }
