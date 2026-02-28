@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import { useAuth } from '@/hooks/useAuth';
@@ -14,8 +14,17 @@ export default function UserLogin() {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, user, isAdmin, isVendor, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect already-logged-in users
+  useEffect(() => {
+    if (!authLoading && user) {
+      if (isAdmin) navigate('/admin', { replace: true });
+      else if (isVendor) navigate('/supplier-dashboard', { replace: true });
+      else navigate('/user-dashboard', { replace: true });
+    }
+  }, [authLoading, user, isAdmin, isVendor, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,12 +34,17 @@ export default function UserLogin() {
         const { error } = await signIn(email, password);
         if (error) throw error;
         toast.success('Welcome back!');
-        navigate('/');
+        // Role redirect handled by useEffect
       } else {
         const { error } = await signUp(email, password, fullName);
         if (error) throw error;
-        toast.success('Account created! Please check your email to verify.');
-        setIsLogin(true);
+        toast.success('Account created successfully!');
+        // After signup with auto-confirm, signIn to get session
+        const { error: loginError } = await signIn(email, password);
+        if (loginError) {
+          setIsLogin(true);
+        }
+        // Role redirect handled by useEffect
       }
     } catch (err: any) {
       toast.error(err.message || 'Authentication failed');

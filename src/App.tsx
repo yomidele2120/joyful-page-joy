@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { CartProvider } from "@/contexts/CartContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
@@ -12,6 +13,7 @@ import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import Auth from "./pages/Auth";
 import UserLogin from "./pages/UserLogin";
+import UserDashboard from "./pages/UserDashboard";
 import SupplierLogin from "./pages/SupplierLogin";
 import SupplierSignup from "./pages/SupplierSignup";
 import SupplierDashboard from "./pages/SupplierDashboard";
@@ -42,12 +44,32 @@ const App = () => (
             <Route path="/users-login" element={<UserLogin />} />
             <Route path="/suppliers-login" element={<SupplierLogin />} />
             <Route path="/supplier-signup" element={<SupplierSignup />} />
-            <Route path="/supplier-dashboard" element={<SupplierDashboard />} />
             <Route path="/shop/:vendorId" element={<SupplierShop />} />
-            <Route path="/supplier-chat" element={<SupplierChat />} />
             <Route path="/admin-login" element={<AdminLogin />} />
             <Route path="/wishlist" element={<Wishlist />} />
-            <Route path="/admin" element={<AdminDashboard />} />
+
+            {/* Protected routes */}
+            <Route path="/user-dashboard" element={
+              <ProtectedRoute allowedRoles={['user']}>
+                <UserDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/supplier-dashboard" element={
+              <ProtectedRoute allowedRoles={['vendor']}>
+                <SupplierDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/supplier-chat" element={
+              <ProtectedRoute allowedRoles={['vendor']}>
+                <SupplierChat />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            } />
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

@@ -31,7 +31,7 @@ export default function AdminLogin() {
       // The useEffect above will handle redirect
       // But we also check directly here for immediate feedback
       toast.success('Welcome, Admin!');
-      navigate('/admin');
+      navigate('/admin', { replace: true });
     } catch (err: any) {
       toast.error(err.message || 'Authentication failed');
     } finally {
