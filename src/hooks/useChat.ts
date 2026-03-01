@@ -16,8 +16,7 @@ export interface Message {
   id: string;
   conversation_id: string;
   sender_id: string;
-  receiver_id: string;
-  message: string;
+  content: string;
   is_read: boolean;
   created_at: string;
 }
@@ -117,10 +116,20 @@ export function useUnreadCount() {
     if (!user) return;
 
     const fetch = async () => {
-      const { count: c } = await fromTable('messages')
-        .select('*', { count: 'exact', head: true })
-        .eq('receiver_id', user.id)
-        .eq('is_read', false);
+      // Get conversations where user is participant, then count unread messages
+      const { data: convos } = await fromTable('conversations')
+        .select('id')
+        .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`);
+      const convoIds = (convos || []).map((c: any) => c.id);
+      let c = 0;
+      if (convoIds.length > 0) {
+        const { count: cnt } = await fromTable('messages')
+          .select('*', { count: 'exact', head: true })
+          .in('conversation_id', convoIds)
+          .neq('sender_id', user.id)
+          .eq('is_read', false);
+        c = cnt || 0;
+      }
       setCount(c || 0);
     };
 
@@ -138,12 +147,11 @@ export function useUnreadCount() {
   return count;
 }
 
-export async function sendMessage(conversationId: string, senderId: string, receiverId: string, message: string) {
+export async function sendMessage(conversationId: string, senderId: string, _receiverId: string, message: string) {
   const { error } = await fromTable('messages').insert({
     conversation_id: conversationId,
     sender_id: senderId,
-    receiver_id: receiverId,
-    message,
+    content: message,
   });
 
   if (!error) {
