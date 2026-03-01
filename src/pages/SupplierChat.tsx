@@ -8,6 +8,9 @@ import { Input } from '@/components/ui/input';
 import { ArrowLeft, Send, MessageCircle, Store, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
+import MediaPreview from '@/components/chat/MediaPreview';
+import VoiceRecorder from '@/components/chat/VoiceRecorder';
+import MediaUploadButton from '@/components/chat/MediaUploadButton';
 
 export default function SupplierChat() {
   const { user, loading: authLoading } = useAuth();
@@ -40,12 +43,45 @@ export default function SupplierChat() {
       .then(() => {});
   }, [activeConvoId, user, messages]);
 
+  const uploadMedia = async (file: Blob, ext: string): Promise<string | null> => {
+    const fileName = `${user!.id}/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from('chat-media').upload(fileName, file);
+    if (error) { toast.error('Upload failed'); return null; }
+    const { data: urlData } = supabase.storage.from('chat-media').getPublicUrl(fileName);
+    return urlData.publicUrl;
+  };
+
   const handleSend = async () => {
     if (!newMessage.trim() || !activeConvoId || !user || !activeReceiverId) return;
     setSending(true);
     const { error } = await sendMessage(activeConvoId, user.id, activeReceiverId, newMessage.trim());
     if (error) toast.error('Failed to send message');
     setNewMessage('');
+    setSending(false);
+  };
+
+  const handleMediaUpload = async (file: File) => {
+    if (!activeConvoId || !user || !activeReceiverId) return;
+    setSending(true);
+    const isVideo = file.type.startsWith('video/');
+    const ext = file.name.split('.').pop() || (isVideo ? 'mp4' : 'jpg');
+    const mediaType = isVideo ? 'video' as const : 'image' as const;
+    const url = await uploadMedia(file, ext);
+    if (url) {
+      const { error } = await sendMessage(activeConvoId, user.id, activeReceiverId, mediaType === 'image' ? '📷 Photo' : '🎬 Video', url, mediaType);
+      if (error) toast.error('Failed to send');
+    }
+    setSending(false);
+  };
+
+  const handleVoiceNote = async (blob: Blob) => {
+    if (!activeConvoId || !user || !activeReceiverId) return;
+    setSending(true);
+    const url = await uploadMedia(blob, 'webm');
+    if (url) {
+      const { error } = await sendMessage(activeConvoId, user.id, activeReceiverId, '🎤 Voice note', url, 'voice');
+      if (error) toast.error('Failed to send');
+    }
     setSending(false);
   };
 
@@ -194,7 +230,13 @@ export default function SupplierChat() {
                           ? 'bg-primary text-primary-foreground rounded-br-md'
                           : 'bg-secondary rounded-bl-md'
                       }`}>
-                        <p>{m.content}</p>
+                        {m.media_url && m.media_type ? (
+                          <div className="mb-1">
+                            <MediaPreview url={m.media_url} type={m.media_type} isOwn={m.sender_id === user?.id} />
+                          </div>
+                        ) : (
+                          <p>{m.content}</p>
+                        )}
                         <span className={`text-[10px] mt-1 block ${
                           m.sender_id === user?.id ? 'text-primary-foreground/70' : 'text-muted-foreground'
                         }`}>
@@ -209,7 +251,9 @@ export default function SupplierChat() {
 
               {/* Input */}
               <div className="p-3 border-t border-border bg-card">
-                <form onSubmit={e => { e.preventDefault(); handleSend(); }} className="flex gap-2">
+                <form onSubmit={e => { e.preventDefault(); handleSend(); }} className="flex items-center gap-1">
+                  <MediaUploadButton onFileSelected={handleMediaUpload} disabled={sending} />
+                  <VoiceRecorder onRecorded={handleVoiceNote} disabled={sending} />
                   <Input
                     value={newMessage}
                     onChange={e => setNewMessage(e.target.value)}

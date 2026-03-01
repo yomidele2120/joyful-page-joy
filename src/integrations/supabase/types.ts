@@ -128,6 +128,8 @@ export type Database = {
           created_at: string
           id: string
           is_read: boolean | null
+          media_type: string | null
+          media_url: string | null
           sender_id: string
         }
         Insert: {
@@ -136,6 +138,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_read?: boolean | null
+          media_type?: string | null
+          media_url?: string | null
           sender_id: string
         }
         Update: {
@@ -144,6 +148,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_read?: boolean | null
+          media_type?: string | null
+          media_url?: string | null
           sender_id?: string
         }
         Relationships: [

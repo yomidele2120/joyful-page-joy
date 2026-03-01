@@ -19,6 +19,8 @@ export interface Message {
   content: string;
   is_read: boolean;
   created_at: string;
+  media_url?: string | null;
+  media_type?: 'image' | 'video' | 'voice' | null;
 }
 
 function fromTable(table: string) {
@@ -147,12 +149,24 @@ export function useUnreadCount() {
   return count;
 }
 
-export async function sendMessage(conversationId: string, senderId: string, _receiverId: string, message: string) {
-  const { error } = await fromTable('messages').insert({
+export async function sendMessage(
+  conversationId: string,
+  senderId: string,
+  _receiverId: string,
+  message: string,
+  mediaUrl?: string,
+  mediaType?: 'image' | 'video' | 'voice'
+) {
+  const insertData: any = {
     conversation_id: conversationId,
     sender_id: senderId,
     content: message,
-  });
+  };
+  if (mediaUrl) {
+    insertData.media_url = mediaUrl;
+    insertData.media_type = mediaType;
+  }
+  const { error } = await fromTable('messages').insert(insertData);
 
   if (!error) {
     await fromTable('conversations').update({
