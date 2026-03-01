@@ -35,7 +35,7 @@ export default function SupplierChat() {
     if (!activeConvoId || !user) return;
     (supabase as any).from('messages').update({ is_read: true })
       .eq('conversation_id', activeConvoId)
-      .eq('receiver_id', user.id)
+      .neq('sender_id', user.id)
       .eq('is_read', false)
       .then(() => {});
   }, [activeConvoId, user, messages]);
@@ -194,7 +194,7 @@ export default function SupplierChat() {
                           ? 'bg-primary text-primary-foreground rounded-br-md'
                           : 'bg-secondary rounded-bl-md'
                       }`}>
-                        <p>{m.message}</p>
+                        <p>{m.content}</p>
                         <span className={`text-[10px] mt-1 block ${
                           m.sender_id === user?.id ? 'text-primary-foreground/70' : 'text-muted-foreground'
                         }`}>
