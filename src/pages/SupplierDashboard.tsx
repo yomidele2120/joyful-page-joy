@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { formatNaira } from '@/lib/format';
 import { useCategories } from '@/hooks/useProducts';
-import { Package, ShoppingCart, DollarSign, Plus, LogOut, ArrowLeft, Pencil, Trash2, Store, Upload, MessageCircle } from 'lucide-react';
+import { Package, ShoppingCart, DollarSign, Plus, LogOut, ArrowLeft, Trash2, Store, Upload, MessageCircle, AlertCircle, Clock, CheckCircle, CreditCard } from 'lucide-react';
 import { useUnreadCount } from '@/hooks/useChat';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -19,7 +19,7 @@ export default function SupplierDashboard() {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'orders' | 'add-product' | 'shop-settings'>('overview');
+  const [activeTab, setActiveTab] = useState<string>('overview');
 
   const { data: vendor, isLoading: vendorLoading } = useQuery({
     queryKey: ['vendor-profile', user?.id],
@@ -34,19 +34,21 @@ export default function SupplierDashboard() {
     if (!loading && !user) navigate('/suppliers-login');
   }, [user, loading, navigate]);
 
+  const isApproved = vendor?.is_approved === true;
+  const hasPaystack = !!vendor?.paystack_subaccount_code;
+
   const { data: products } = useQuery({
     queryKey: ['vendor-products', vendor?.id],
     queryFn: async () => {
       const { data } = await supabase.from('products').select('*, categories(name)').eq('vendor_id', vendor!.id).order('created_at', { ascending: false });
       return data || [];
     },
-    enabled: !!vendor?.id,
+    enabled: !!vendor?.id && isApproved,
   });
 
   const { data: orders } = useQuery({
     queryKey: ['vendor-orders', vendor?.id],
     queryFn: async () => {
-      // Get orders that contain this vendor's products
       const { data: vendorProductIds } = await supabase.from('products').select('id').eq('vendor_id', vendor!.id);
       if (!vendorProductIds?.length) return [];
       const ids = vendorProductIds.map(p => p.id);
@@ -56,7 +58,7 @@ export default function SupplierDashboard() {
       const { data: orderData } = await supabase.from('orders').select('*').in('id', orderIds).order('created_at', { ascending: false });
       return orderData || [];
     },
-    enabled: !!vendor?.id,
+    enabled: !!vendor?.id && isApproved,
   });
 
   const { data: categories } = useCategories();
@@ -67,10 +69,21 @@ export default function SupplierDashboard() {
     revenue: orders?.reduce((s, o) => s + Number(o.total), 0) || 0,
   };
 
-  if (loading || vendorLoading) return <div className="flex items-center justify-center min-h-screen"><p>Loading...</p></div>;
+  if (loading || vendorLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
+          <p className="text-muted-foreground text-sm">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!vendor) {
     return (
-      <div className="flex items-center justify-center min-h-screen flex-col gap-4">
+      <div className="flex items-center justify-center min-h-screen flex-col gap-4 bg-background">
+        <Store className="w-12 h-12 text-muted-foreground" />
         <p className="text-muted-foreground">No supplier profile found.</p>
         <Link to="/supplier-signup"><Button>Create Supplier Account</Button></Link>
       </div>
@@ -79,6 +92,7 @@ export default function SupplierDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Header */}
       <header className="bg-card border-b border-border sticky top-0 z-50">
         <div className="container flex items-center justify-between h-14">
           <div className="flex items-center gap-3">
@@ -86,23 +100,27 @@ export default function SupplierDashboard() {
             <Store className="w-5 h-5 text-primary" />
             <div>
               <h1 className="font-heading font-bold text-sm leading-none">{vendor.store_name}</h1>
-              <span className={`text-[10px] ${vendor.is_approved ? 'text-primary' : 'text-muted-foreground'}`}>
-                {vendor.is_approved ? '✓ Approved' : '⏳ Pending Approval'}
+              <span className={`text-[10px] flex items-center gap-1 ${isApproved ? 'text-primary' : 'text-accent'}`}>
+                {isApproved ? <><CheckCircle className="w-3 h-3" /> Approved</> : <><Clock className="w-3 h-3" /> Pending Approval</>}
               </span>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Link to={`/shop/${vendor.id}`}>
-              <Button variant="outline" size="sm" className="text-xs">View Shop</Button>
-            </Link>
-            <Link to="/supplier-chat">
-              <Button variant="outline" size="sm" className="text-xs relative">
-                <MessageCircle className="w-4 h-4 mr-1" /> Chat
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive text-destructive-foreground rounded-full text-[10px] flex items-center justify-center">{unreadCount}</span>
-                )}
-              </Button>
-            </Link>
+            {isApproved && (
+              <>
+                <Link to={`/shop/${vendor.id}`}>
+                  <Button variant="outline" size="sm" className="text-xs">View Shop</Button>
+                </Link>
+                <Link to="/supplier-chat">
+                  <Button variant="outline" size="sm" className="text-xs relative">
+                    <MessageCircle className="w-4 h-4 mr-1" /> Chat
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive text-destructive-foreground rounded-full text-[10px] flex items-center justify-center">{unreadCount}</span>
+                    )}
+                  </Button>
+                </Link>
+              </>
+            )}
             <Button variant="ghost" size="sm" onClick={() => { signOut(); navigate('/'); }}>
               <LogOut className="w-4 h-4" />
             </Button>
@@ -111,115 +129,188 @@ export default function SupplierDashboard() {
       </header>
 
       <div className="container py-6">
-        <div className="flex gap-2 mb-6 overflow-x-auto">
-          {[
-            { key: 'overview', label: 'Overview' },
-            { key: 'products', label: 'My Products' },
-            { key: 'orders', label: 'Orders' },
-            { key: 'add-product', label: 'Add Product' },
-            { key: 'shop-settings', label: 'Settings' },
-          ].map(tab => (
-            <Button key={tab.key} variant={activeTab === tab.key ? 'default' : 'outline'} size="sm"
-              onClick={() => setActiveTab(tab.key as any)}>{tab.label}</Button>
-          ))}
-        </div>
-
-        {activeTab === 'overview' && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <StatCard icon={<Package className="w-6 h-6 text-primary" />} label="Products" value={String(stats.products)} />
-            <StatCard icon={<ShoppingCart className="w-6 h-6 text-accent" />} label="Orders" value={String(stats.orders)} />
-            <StatCard icon={<DollarSign className="w-6 h-6 text-primary" />} label="Revenue" value={formatNaira(stats.revenue)} />
+        {/* Pending Verification Banner */}
+        {!isApproved && (
+          <div className="bg-accent/10 border border-accent/30 rounded-lg p-6 mb-6">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-full bg-accent/20 flex items-center justify-center shrink-0">
+                <Clock className="w-6 h-6 text-accent" />
+              </div>
+              <div>
+                <h2 className="font-heading font-bold text-lg mb-1">Account Pending Verification</h2>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Your account is under review. Once your documents are verified and approved by the admin, 
+                  your dashboard will be fully activated with product management, orders, and payment features.
+                </p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    {vendor.verification_document_url
+                      ? <CheckCircle className="w-4 h-4 text-primary" />
+                      : <AlertCircle className="w-4 h-4 text-destructive" />}
+                    <span>Verification document {vendor.verification_document_url ? 'uploaded' : 'not uploaded'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {vendor.bank_name
+                      ? <CheckCircle className="w-4 h-4 text-primary" />
+                      : <AlertCircle className="w-4 h-4 text-destructive" />}
+                    <span>Bank details {vendor.bank_name ? 'provided' : 'missing'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-accent" />
+                    <span>Admin approval pending</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-accent" />
+                    <span>Paystack subaccount pending</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
-        {activeTab === 'products' && (
-          <div className="bg-card rounded-lg card-shadow overflow-hidden">
-            {products?.length ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-secondary">
-                    <tr>
-                      <th className="text-left p-3 font-heading">Product</th>
-                      <th className="text-left p-3 font-heading">Price</th>
-                      <th className="text-left p-3 font-heading">Stock</th>
-                      <th className="text-left p-3 font-heading">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {products.map(p => (
-                      <tr key={p.id} className="border-t border-border">
-                        <td className="p-3">
-                          <div className="flex items-center gap-2">
-                            <img src={p.image_url || '/placeholder.svg'} alt="" className="w-8 h-8 rounded object-cover" />
-                            <span className="font-medium line-clamp-1">{p.name}</span>
-                          </div>
-                        </td>
-                        <td className="p-3">{formatNaira(p.price)}</td>
-                        <td className="p-3">{p.stock_quantity}</td>
-                        <td className="p-3">
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive"
-                            onClick={async () => {
-                              await supabase.from('products').delete().eq('id', p.id);
-                              queryClient.invalidateQueries({ queryKey: ['vendor-products'] });
-                              toast.success('Product deleted');
-                            }}>
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="p-8 text-center">
-                <p className="text-muted-foreground mb-4">No products yet.</p>
-                <Button onClick={() => setActiveTab('add-product')}><Plus className="w-4 h-4 mr-1" /> Add Product</Button>
+        {/* Approved but no Paystack */}
+        {isApproved && !hasPaystack && (
+          <div className="bg-accent/10 border border-accent/30 rounded-lg p-4 mb-6 flex items-center gap-3">
+            <CreditCard className="w-5 h-5 text-accent shrink-0" />
+            <div>
+              <p className="font-medium text-sm">Paystack subaccount setup pending</p>
+              <p className="text-xs text-muted-foreground">Your payment account is being configured. You'll receive payments once setup is complete.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Only show tabs/features if approved */}
+        {isApproved ? (
+          <>
+            <div className="flex gap-2 mb-6 overflow-x-auto">
+              {[
+                { key: 'overview', label: 'Overview' },
+                { key: 'products', label: 'My Products' },
+                { key: 'orders', label: 'Orders' },
+                { key: 'add-product', label: 'Add Product' },
+                { key: 'shop-settings', label: 'Settings' },
+              ].map(tab => (
+                <Button key={tab.key} variant={activeTab === tab.key ? 'default' : 'outline'} size="sm"
+                  onClick={() => setActiveTab(tab.key as any)}>{tab.label}</Button>
+              ))}
+            </div>
+
+            {activeTab === 'overview' && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <StatCard icon={<Package className="w-6 h-6 text-primary" />} label="Products" value={String(stats.products)} />
+                  <StatCard icon={<ShoppingCart className="w-6 h-6 text-accent" />} label="Orders" value={String(stats.orders)} />
+                  <StatCard icon={<DollarSign className="w-6 h-6 text-primary" />} label="Revenue" value={formatNaira(stats.revenue)} />
+                </div>
+                {hasPaystack && (
+                  <div className="bg-card rounded-lg card-shadow p-4">
+                    <h3 className="font-heading font-semibold text-sm mb-2">Payment Account</h3>
+                    <div className="text-sm space-y-1">
+                      <div className="flex justify-between"><span className="text-muted-foreground">Paystack Subaccount</span><span className="font-mono text-xs">{vendor.paystack_subaccount_code}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Bank</span><span>{vendor.bank_name} (***{vendor.bank_account_number?.slice(-4)})</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Status</span><span className="text-primary font-medium">Active</span></div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
-          </div>
-        )}
 
-        {activeTab === 'orders' && (
-          <div className="bg-card rounded-lg card-shadow overflow-hidden">
-            {orders?.length ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-secondary">
-                    <tr>
-                      <th className="text-left p-3 font-heading">Order ID</th>
-                      <th className="text-left p-3 font-heading">Status</th>
-                      <th className="text-left p-3 font-heading">Total</th>
-                      <th className="text-left p-3 font-heading">Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {orders.map(o => (
-                      <tr key={o.id} className="border-t border-border">
-                        <td className="p-3 font-mono text-xs">{o.id.slice(0, 8)}...</td>
-                        <td className="p-3"><span className="px-2 py-0.5 rounded-full text-xs bg-secondary font-medium">{o.status}</span></td>
-                        <td className="p-3 font-medium">{formatNaira(Number(o.total))}</td>
-                        <td className="p-3 text-muted-foreground">{new Date(o.created_at).toLocaleDateString()}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            {activeTab === 'products' && (
+              <div className="bg-card rounded-lg card-shadow overflow-hidden">
+                {products?.length ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-secondary">
+                        <tr>
+                          <th className="text-left p-3 font-heading">Product</th>
+                          <th className="text-left p-3 font-heading">Price</th>
+                          <th className="text-left p-3 font-heading">Stock</th>
+                          <th className="text-left p-3 font-heading">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {products.map(p => (
+                          <tr key={p.id} className="border-t border-border">
+                            <td className="p-3">
+                              <div className="flex items-center gap-2">
+                                <img src={p.image_url || '/placeholder.svg'} alt="" className="w-8 h-8 rounded object-cover" />
+                                <span className="font-medium line-clamp-1">{p.name}</span>
+                              </div>
+                            </td>
+                            <td className="p-3">{formatNaira(p.price)}</td>
+                            <td className="p-3">{p.stock_quantity}</td>
+                            <td className="p-3">
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive"
+                                onClick={async () => {
+                                  await supabase.from('products').delete().eq('id', p.id);
+                                  queryClient.invalidateQueries({ queryKey: ['vendor-products'] });
+                                  toast.success('Product deleted');
+                                }}>
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="p-8 text-center">
+                    <p className="text-muted-foreground mb-4">No products yet.</p>
+                    <Button onClick={() => setActiveTab('add-product')}><Plus className="w-4 h-4 mr-1" /> Add Product</Button>
+                  </div>
+                )}
               </div>
-            ) : (
-              <p className="p-8 text-center text-muted-foreground">No orders yet.</p>
             )}
+
+            {activeTab === 'orders' && (
+              <div className="bg-card rounded-lg card-shadow overflow-hidden">
+                {orders?.length ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-secondary">
+                        <tr>
+                          <th className="text-left p-3 font-heading">Order ID</th>
+                          <th className="text-left p-3 font-heading">Status</th>
+                          <th className="text-left p-3 font-heading">Total</th>
+                          <th className="text-left p-3 font-heading">Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {orders.map(o => (
+                          <tr key={o.id} className="border-t border-border">
+                            <td className="p-3 font-mono text-xs">{o.id.slice(0, 8)}...</td>
+                            <td className="p-3"><span className="px-2 py-0.5 rounded-full text-xs bg-secondary font-medium">{o.status}</span></td>
+                            <td className="p-3 font-medium">{formatNaira(Number(o.total))}</td>
+                            <td className="p-3 text-muted-foreground">{new Date(o.created_at).toLocaleDateString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="p-8 text-center text-muted-foreground">No orders yet.</p>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'add-product' && (
+              <SupplierAddProduct vendorId={vendor.id} categories={categories || []} onSuccess={() => {
+                queryClient.invalidateQueries({ queryKey: ['vendor-products'] });
+                setActiveTab('products');
+              }} />
+            )}
+
+            {activeTab === 'shop-settings' && (
+              <ShopSettings vendor={vendor} onUpdate={() => queryClient.invalidateQueries({ queryKey: ['vendor-profile'] })} />
+            )}
+          </>
+        ) : (
+          /* Show limited settings for pending suppliers */
+          <div className="mt-4">
+            <ShopSettings vendor={vendor} onUpdate={() => queryClient.invalidateQueries({ queryKey: ['vendor-profile'] })} />
           </div>
-        )}
-
-        {activeTab === 'add-product' && (
-          <SupplierAddProduct vendorId={vendor.id} categories={categories || []} onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['vendor-products'] });
-            setActiveTab('products');
-          }} />
-        )}
-
-        {activeTab === 'shop-settings' && (
-          <ShopSettings vendor={vendor} onUpdate={() => queryClient.invalidateQueries({ queryKey: ['vendor-profile'] })} />
         )}
       </div>
     </div>
@@ -249,7 +340,6 @@ function SupplierAddProduct({ vendorId, categories, onSuccess }: { vendorId: str
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
     let imageUrl = form.image_url;
     if (imageFile) {
       const ext = imageFile.name.split('.').pop();
@@ -260,7 +350,6 @@ function SupplierAddProduct({ vendorId, categories, onSuccess }: { vendorId: str
         imageUrl = data.publicUrl;
       }
     }
-
     const slug = form.name.toLowerCase().replace(/[^\w ]+/g, '').replace(/ +/g, '-') + '-' + Date.now();
     const { error } = await supabase.from('products').insert({
       name: form.name, slug, price: Number(form.price),
