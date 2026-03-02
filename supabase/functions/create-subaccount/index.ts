@@ -14,31 +14,37 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const supabase = createClient(
+    // Validate user is admin using service role
+    const adminClient = createClient(
       Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { Authorization: authHeader } } }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
+    const { data: { user }, error: userError } = await adminClient.auth.getUser(token);
+    if (userError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // Check admin role
+    const { data: roles } = await adminClient
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'admin');
+
+    if (!roles?.length) {
+      return new Response(JSON.stringify({ error: 'Admin access required' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     const { vendor_id } = await req.json();
     const PAYSTACK_SECRET_KEY = Deno.env.get('PAYSTACK_SECRET_KEY');
     if (!PAYSTACK_SECRET_KEY) {
-      return new Response(JSON.stringify({ error: 'Paystack not configured' }), { status: 500, headers: corsHeaders });
+      return new Response(JSON.stringify({ error: 'Paystack not configured' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
-
-    const adminClient = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-    );
 
     // Get vendor details
     const { data: vendor, error: vendorErr } = await adminClient
@@ -48,7 +54,7 @@ serve(async (req) => {
       .single();
 
     if (vendorErr || !vendor) {
-      return new Response(JSON.stringify({ error: 'Vendor not found' }), { status: 404, headers: corsHeaders });
+      return new Response(JSON.stringify({ error: 'Vendor not found' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     // Check if already has subaccount
@@ -59,10 +65,10 @@ serve(async (req) => {
     }
 
     if (!vendor.bank_name || !vendor.bank_account_number || !vendor.bank_account_name) {
-      return new Response(JSON.stringify({ error: 'Vendor bank details incomplete' }), { status: 400, headers: corsHeaders });
+      return new Response(JSON.stringify({ error: 'Vendor bank details incomplete. Cannot create subaccount.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // Map bank name to Paystack bank code (common Nigerian banks)
+    // Map bank name to Paystack bank code
     const bankCodes: Record<string, string> = {
       'access bank': '044', 'citibank': '023', 'diamond bank': '063',
       'ecobank': '050', 'fidelity bank': '070', 'first bank': '011',
@@ -75,11 +81,12 @@ serve(async (req) => {
       'united bank for africa': '033', 'uba': '033',
       'unity bank': '215', 'wema bank': '035', 'zenith bank': '057',
       'kuda': '50211', 'opay': '999992', 'palmpay': '999991',
+      'moniepoint': '50515',
     };
 
     const bankCode = bankCodes[vendor.bank_name.toLowerCase()] || '';
     if (!bankCode) {
-      return new Response(JSON.stringify({ error: `Unsupported bank: ${vendor.bank_name}` }), { status: 400, headers: corsHeaders });
+      return new Response(JSON.stringify({ error: `Unsupported bank: ${vendor.bank_name}` }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     // Create Paystack subaccount
@@ -93,7 +100,7 @@ serve(async (req) => {
         business_name: vendor.store_name,
         bank_code: bankCode,
         account_number: vendor.bank_account_number,
-        percentage_charge: 5, // Platform takes 5% commission
+        percentage_charge: 5,
         description: `Subaccount for ${vendor.store_name}`,
       }),
     });
@@ -101,7 +108,7 @@ serve(async (req) => {
     const paystackData = await paystackRes.json();
 
     if (!paystackData.status) {
-      return new Response(JSON.stringify({ error: paystackData.message || 'Failed to create subaccount' }), { status: 400, headers: corsHeaders });
+      return new Response(JSON.stringify({ error: paystackData.message || 'Failed to create subaccount' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     // Save subaccount code to vendor
@@ -115,6 +122,6 @@ serve(async (req) => {
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Internal server error';
-    return new Response(JSON.stringify({ error: message }), { status: 500, headers: corsHeaders });
+    return new Response(JSON.stringify({ error: message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 });
