@@ -10,47 +10,65 @@ export function useAuth() {
   const [isVendor, setIsVendor] = useState(false);
 
   const checkRoles = useCallback(async (userId: string) => {
-    const { data } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId);
-    const roles = data?.map(r => r.role) || [];
-    setIsAdmin(roles.includes('admin'));
-    setIsVendor(roles.includes('vendor'));
+    try {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      const roles = data?.map((r) => r.role) || [];
+      setIsAdmin(roles.includes('admin'));
+      setIsVendor(roles.includes('vendor'));
+      return roles;
+    } catch {
+      setIsAdmin(false);
+      setIsVendor(false);
+      return [] as string[];
+    }
   }, []);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        setTimeout(() => checkRoles(session.user.id), 0);
+    let mounted = true;
+
+    const syncAuthState = async (nextSession: Session | null) => {
+      if (!mounted) return;
+
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
+
+      if (nextSession?.user) {
+        await checkRoles(nextSession.user.id);
       } else {
         setIsAdmin(false);
         setIsVendor(false);
       }
-      setLoading(false);
+
+      if (mounted) setLoading(false);
+    };
+
+    setLoading(true);
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setLoading(true);
+      void syncAuthState(nextSession);
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        checkRoles(session.user.id).then(() => setLoading(false));
-      } else {
-        setLoading(false);
-      }
+      void syncAuthState(session);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [checkRoles]);
 
   const signIn = async (email: string, password: string) => {
     const { error, data } = await supabase.auth.signInWithPassword({ email, password });
-    if (!error && data.user) {
-      await checkRoles(data.user.id);
-    }
-    return { error };
+    const roles = !error && data.user ? await checkRoles(data.user.id) : [];
+    return { error, roles };
   };
 
   const signUp = async (email: string, password: string, fullName: string) => {
