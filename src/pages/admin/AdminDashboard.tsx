@@ -745,79 +745,166 @@ function TableSkeleton() {
 }
 
 function SupplierTable({ vendors, onApprove, onReject }: { vendors: any[]; onApprove: (id: string) => void; onReject: (id: string) => void }) {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewTitle, setPreviewTitle] = useState('');
+
+  const openPreview = (url: string, title: string) => {
+    setPreviewUrl(url);
+    setPreviewTitle(title);
+  };
+
+  const isImage = (url: string) => /\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/i.test(url);
+
   return (
-    <table className="w-full text-sm">
-      <thead className="bg-secondary">
-        <tr>
-          <th className="text-left p-3 font-heading">Store</th>
-          <th className="text-left p-3 font-heading">Phone</th>
-          <th className="text-left p-3 font-heading">Bank</th>
-          <th className="text-left p-3 font-heading">Status</th>
-          <th className="text-left p-3 font-heading">Paystack</th>
-          <th className="text-left p-3 font-heading">Docs</th>
-          <th className="text-left p-3 font-heading">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {vendors.map(v => (
-          <tr key={v.id} className="border-t border-border">
-            <td className="p-3">
-              <div className="flex items-center gap-2">
-                {v.logo_url ? <img src={v.logo_url} className="w-8 h-8 rounded object-cover" /> : <Store className="w-5 h-5 text-muted-foreground" />}
-                <div>
-                  <span className="font-medium">{v.store_name}</span>
-                  {v.company_name && <span className="block text-xs text-muted-foreground">{v.company_name}</span>}
-                </div>
-              </div>
-            </td>
-            <td className="p-3 text-muted-foreground text-xs">
-              <div>{v.phone || '-'}</div>
-              {v.whatsapp_number && <div className="text-[10px]">WA: {v.whatsapp_number}</div>}
-            </td>
-            <td className="p-3 text-muted-foreground text-xs">
-              {v.bank_name ? (
-                <div>
-                  <div>{v.bank_name}</div>
-                  <div>{v.bank_account_number || '-'}</div>
-                  <div className="text-[10px]">{v.bank_account_name || '-'}</div>
-                </div>
-              ) : <span>-</span>}
-            </td>
-            <td className="p-3"><StatusBadge status={v.is_approved ? 'approved' : 'pending'} /></td>
-            <td className="p-3">
-              <StatusBadge status={v.paystack_subaccount_code ? 'active' : 'pending'} />
-              {v.paystack_subaccount_code && (
-                <div className="font-mono text-[10px] text-muted-foreground mt-0.5">{v.paystack_subaccount_code}</div>
-              )}
-            </td>
-            <td className="p-3">
-              {v.verification_document_url ? (
-                <a href={v.verification_document_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary text-xs hover:underline">
-                  <FileText className="w-3 h-3" /> View
+    <>
+      {/* Fullscreen document/image preview dialog */}
+      <Dialog open={!!previewUrl} onOpenChange={() => setPreviewUrl(null)}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>{previewTitle}</DialogTitle>
+          </DialogHeader>
+          {previewUrl && (
+            isImage(previewUrl) ? (
+              <img src={previewUrl} alt={previewTitle} className="w-full rounded-lg object-contain max-h-[70vh]" />
+            ) : previewUrl.endsWith('.pdf') ? (
+              <iframe src={previewUrl} className="w-full h-[70vh] rounded-lg border border-border" title={previewTitle} />
+            ) : (
+              <div className="text-center py-8">
+                <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+                <p className="text-sm text-muted-foreground mb-3">Preview not available for this file type.</p>
+                <a href={previewUrl} target="_blank" rel="noopener noreferrer">
+                  <Button size="sm">Download / Open in new tab</Button>
                 </a>
-              ) : <span className="text-xs text-muted-foreground">None</span>}
-            </td>
-            <td className="p-3">
-              <div className="flex gap-1">
-                {!v.is_approved && (
-                  <Button size="sm" variant="outline" className="h-7 text-xs text-primary" onClick={() => onApprove(v.id)}>
-                    <CheckCircle className="w-3 h-3 mr-1" /> Approve
-                  </Button>
-                )}
-                {v.is_approved && (
-                  <Button size="sm" variant="outline" className="h-7 text-xs text-destructive" onClick={() => onReject(v.id)}>
-                    <XCircle className="w-3 h-3 mr-1" /> Revoke
-                  </Button>
-                )}
-                <Link to={`/shop/${v.id}`}>
-                  <Button size="sm" variant="ghost" className="h-7 text-xs"><Eye className="w-3 h-3" /></Button>
-                </Link>
               </div>
-            </td>
+            )
+          )}
+          <div className="flex justify-end">
+            <a href={previewUrl || '#'} target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" size="sm">Open in new tab</Button>
+            </a>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <table className="w-full text-sm">
+        <thead className="bg-secondary">
+          <tr>
+            <th className="text-left p-3 font-heading">Store</th>
+            <th className="text-left p-3 font-heading">Contact</th>
+            <th className="text-left p-3 font-heading">Bank Details</th>
+            <th className="text-left p-3 font-heading">Uploads</th>
+            <th className="text-left p-3 font-heading">Status</th>
+            <th className="text-left p-3 font-heading">Paystack</th>
+            <th className="text-left p-3 font-heading">Actions</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {vendors.map(v => (
+            <tr key={v.id} className="border-t border-border">
+              {/* Store info */}
+              <td className="p-3">
+                <div className="flex items-center gap-2">
+                  {v.logo_url ? (
+                    <img
+                      src={v.logo_url}
+                      className="w-10 h-10 rounded object-cover cursor-pointer border border-border hover:ring-2 hover:ring-primary/50 transition-all"
+                      onClick={() => openPreview(v.logo_url, `${v.store_name} - Logo`)}
+                      alt="Logo"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded bg-secondary flex items-center justify-center">
+                      <Store className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div>
+                    <span className="font-medium block">{v.store_name}</span>
+                    {v.company_name && <span className="text-xs text-muted-foreground">{v.company_name}</span>}
+                    {v.address && <span className="block text-[10px] text-muted-foreground">{v.address}</span>}
+                  </div>
+                </div>
+              </td>
+
+              {/* Contact */}
+              <td className="p-3 text-xs">
+                <div className="space-y-0.5">
+                  <div className="text-muted-foreground">{v.phone || '-'}</div>
+                  {v.whatsapp_number && <div className="text-[10px] text-muted-foreground">WA: {v.whatsapp_number}</div>}
+                </div>
+              </td>
+
+              {/* Bank Details - Full */}
+              <td className="p-3 text-xs">
+                {v.bank_name ? (
+                  <div className="space-y-0.5 bg-secondary/50 rounded p-2">
+                    <div className="font-medium text-foreground">{v.bank_name}</div>
+                    <div className="font-mono text-muted-foreground">{v.bank_account_number || 'No account number'}</div>
+                    <div className="text-muted-foreground">{v.bank_account_name || 'No account name'}</div>
+                  </div>
+                ) : (
+                  <span className="text-muted-foreground italic">No bank details</span>
+                )}
+              </td>
+
+              {/* Uploads - Logo + Verification Doc */}
+              <td className="p-3">
+                <div className="flex flex-col gap-1.5">
+                  {v.logo_url ? (
+                    <button
+                      onClick={() => openPreview(v.logo_url, `${v.store_name} - Logo`)}
+                      className="inline-flex items-center gap-1 text-primary text-xs hover:underline"
+                    >
+                      <Eye className="w-3 h-3" /> Logo
+                    </button>
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground">No logo</span>
+                  )}
+                  {v.verification_document_url ? (
+                    <button
+                      onClick={() => openPreview(v.verification_document_url, `${v.store_name} - Verification Document`)}
+                      className="inline-flex items-center gap-1 text-primary text-xs hover:underline"
+                    >
+                      <FileText className="w-3 h-3" /> Verification Doc
+                    </button>
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground">No document</span>
+                  )}
+                </div>
+              </td>
+
+              {/* Status */}
+              <td className="p-3"><StatusBadge status={v.is_approved ? 'approved' : 'pending'} /></td>
+
+              {/* Paystack */}
+              <td className="p-3">
+                <StatusBadge status={v.paystack_subaccount_code ? 'active' : 'pending'} />
+                {v.paystack_subaccount_code && (
+                  <div className="font-mono text-[10px] text-muted-foreground mt-0.5">{v.paystack_subaccount_code}</div>
+                )}
+              </td>
+
+              {/* Actions */}
+              <td className="p-3">
+                <div className="flex gap-1">
+                  {!v.is_approved && (
+                    <Button size="sm" variant="outline" className="h-7 text-xs text-primary" onClick={() => onApprove(v.id)}>
+                      <CheckCircle className="w-3 h-3 mr-1" /> Approve
+                    </Button>
+                  )}
+                  {v.is_approved && (
+                    <Button size="sm" variant="outline" className="h-7 text-xs text-destructive" onClick={() => onReject(v.id)}>
+                      <XCircle className="w-3 h-3 mr-1" /> Revoke
+                    </Button>
+                  )}
+                  <Link to={`/shop/${v.id}`}>
+                    <Button size="sm" variant="ghost" className="h-7 text-xs"><Eye className="w-3 h-3" /></Button>
+                  </Link>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
   );
 }
 
