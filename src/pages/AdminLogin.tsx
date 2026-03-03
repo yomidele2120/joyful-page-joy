@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Shield } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('');
@@ -25,11 +26,15 @@ export default function AdminLogin() {
     e.preventDefault();
     setLoading(true);
     try {
-      const { error } = await signIn(email, password);
+      const { error, roles } = await signIn(email, password);
       if (error) throw error;
-      // signIn now awaits role check, so isAdmin will be updated
-      // The useEffect above will handle redirect
-      // But we also check directly here for immediate feedback
+
+      const isUserAdmin = roles?.includes('admin');
+      if (!isUserAdmin) {
+        await supabase.auth.signOut();
+        throw new Error('This account does not have admin access.');
+      }
+
       toast.success('Welcome, Admin!');
       navigate('/admin', { replace: true });
     } catch (err: any) {

@@ -32,49 +32,60 @@ export default function AdminDashboard() {
     }
   }, [user, isAdmin, loading, navigate]);
 
-  const { data: products, isLoading: productsLoading } = useQuery({
+  const canFetchAdminData = !loading && !!user && isAdmin;
+
+  const { data: products, isLoading: productsLoading, error: productsError } = useQuery({
     queryKey: ['admin-products'],
     queryFn: async () => {
-      const { data } = await supabase.from('products').select('*, categories(name), vendors(store_name)').order('created_at', { ascending: false });
+      const { data, error } = await supabase
+        .from('products')
+        .select('*, categories(name), vendors(store_name)')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
       return data || [];
     },
-    enabled: isAdmin,
+    enabled: canFetchAdminData,
   });
 
-  const { data: orders, isLoading: ordersLoading } = useQuery({
+  const { data: orders, isLoading: ordersLoading, error: ordersError } = useQuery({
     queryKey: ['admin-orders'],
     queryFn: async () => {
-      const { data } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
       return data || [];
     },
-    enabled: isAdmin,
+    enabled: canFetchAdminData,
   });
 
-  const { data: vendors, isLoading: vendorsLoading } = useQuery({
+  const { data: vendors, isLoading: vendorsLoading, error: vendorsError } = useQuery({
     queryKey: ['admin-vendors'],
     queryFn: async () => {
-      const { data } = await supabase.from('vendors').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('vendors').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
       return data || [];
     },
-    enabled: isAdmin,
+    enabled: canFetchAdminData,
   });
 
-  const { data: payments, isLoading: paymentsLoading } = useQuery({
+  const { data: payments, isLoading: paymentsLoading, error: paymentsError } = useQuery({
     queryKey: ['admin-payments'],
     queryFn: async () => {
-      const { data } = await supabase.from('payments').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('payments').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
       return data || [];
     },
-    enabled: isAdmin,
+    enabled: canFetchAdminData,
   });
 
-  const { data: profiles, isLoading: profilesLoading } = useQuery({
+  const { data: profiles, isLoading: profilesLoading, error: profilesError } = useQuery({
     queryKey: ['admin-profiles'],
     queryFn: async () => {
-      const { data } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
       return data || [];
     },
-    enabled: isAdmin,
+    enabled: canFetchAdminData,
   });
 
   const { data: categories, isLoading: categoriesLoading } = useCategories();
@@ -88,6 +99,22 @@ export default function AdminDashboard() {
   const pendingVendors = vendors?.filter(v => !v.is_approved) || [];
   const approvedVendors = vendors?.filter(v => v.is_approved) || [];
 
+  const allAdminErrors = [productsError, ordersError, vendorsError, paymentsError, profilesError].filter(Boolean);
+  const hasAdminDataError = allAdminErrors.length > 0;
+
+  const ordersPerDay = Object.entries(
+    (orders || []).reduce((acc: Record<string, number>, order) => {
+      const day = new Date(order.created_at).toLocaleDateString();
+      acc[day] = (acc[day] || 0) + 1;
+      return acc;
+    }, {})
+  ).slice(-7);
+
+  const popularProducts = (products || [])
+    .slice()
+    .sort((a, b) => Number(b.stock_quantity || 0) - Number(a.stock_quantity || 0))
+    .slice(0, 5);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -98,7 +125,17 @@ export default function AdminDashboard() {
       </div>
     );
   }
-  if (!isAdmin) return null;
+
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+          <p className="text-muted-foreground text-sm">Redirecting to admin login...</p>
+        </div>
+      </div>
+    );
+  }
 
   const approveVendor = async (vendorId: string) => {
     const { error } = await supabase.from('vendors').update({ is_approved: true }).eq('id', vendorId);
@@ -148,6 +185,8 @@ export default function AdminDashboard() {
     { key: 'products', label: 'Products', icon: <Package className="w-4 h-4" /> },
     { key: 'categories', label: 'Categories', icon: <Layers className="w-4 h-4" /> },
     { key: 'users', label: 'Users', icon: <Users className="w-4 h-4" /> },
+    { key: 'analytics', label: 'Analytics', icon: <BarChart3 className="w-4 h-4" /> },
+    { key: 'settings', label: 'Settings', icon: <Pencil className="w-4 h-4" /> },
     { key: 'earnings', label: 'Earnings', icon: <TrendingUp className="w-4 h-4" /> },
   ];
 
@@ -186,6 +225,31 @@ export default function AdminDashboard() {
             </Button>
           ))}
         </div>
+
+        {hasAdminDataError && (
+          <div className="mb-6 rounded-lg border border-destructive/30 bg-destructive/5 p-4 flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-destructive shrink-0" />
+            <div className="min-w-0">
+              <p className="font-medium text-sm">Some dashboard data failed to load.</p>
+              <p className="text-xs text-muted-foreground truncate">{String((allAdminErrors[0] as any)?.message || 'Unknown error')}</p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="ml-auto"
+              onClick={() => {
+                queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+                queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+                queryClient.invalidateQueries({ queryKey: ['admin-vendors'] });
+                queryClient.invalidateQueries({ queryKey: ['admin-payments'] });
+                queryClient.invalidateQueries({ queryKey: ['admin-profiles'] });
+                queryClient.invalidateQueries({ queryKey: ['categories'] });
+              }}
+            >
+              Retry
+            </Button>
+          </div>
+        )}
 
         {/* Overview */}
         {activeTab === 'overview' && (
@@ -458,6 +522,118 @@ export default function AdminDashboard() {
                 </table>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Analytics */}
+        {activeTab === 'analytics' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <StatCard icon={<Users className="w-5 h-5 text-primary" />} label="New Suppliers" value={String(pendingVendors.length)} loading={vendorsLoading} />
+              <StatCard icon={<ShoppingCart className="w-5 h-5 text-accent" />} label="Orders (7 days)" value={String((ordersPerDay || []).reduce((sum, [, count]) => sum + Number(count), 0))} loading={ordersLoading} />
+              <StatCard icon={<DollarSign className="w-5 h-5 text-primary" />} label="Total Sales" value={formatNaira(totalRevenue)} loading={paymentsLoading} />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="bg-card rounded-lg card-shadow overflow-hidden">
+                <div className="p-4 border-b border-border">
+                  <h2 className="font-heading font-bold">Orders per Day (Last 7)</h2>
+                </div>
+                {ordersLoading ? <TableSkeleton /> : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-secondary">
+                        <tr>
+                          <th className="text-left p-3 font-heading">Day</th>
+                          <th className="text-left p-3 font-heading">Orders</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ordersPerDay.length ? ordersPerDay.map(([day, count]) => (
+                          <tr key={day} className="border-t border-border">
+                            <td className="p-3">{day}</td>
+                            <td className="p-3 font-medium">{count}</td>
+                          </tr>
+                        )) : (
+                          <tr><td className="p-3 text-muted-foreground" colSpan={2}>No order data yet.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-card rounded-lg card-shadow overflow-hidden">
+                <div className="p-4 border-b border-border">
+                  <h2 className="font-heading font-bold">Popular Products</h2>
+                </div>
+                {productsLoading ? <TableSkeleton /> : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-secondary">
+                        <tr>
+                          <th className="text-left p-3 font-heading">Product</th>
+                          <th className="text-left p-3 font-heading">Stock</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {popularProducts.length ? popularProducts.map((product) => (
+                          <tr key={product.id} className="border-t border-border">
+                            <td className="p-3 font-medium">{product.name}</td>
+                            <td className="p-3">{product.stock_quantity}</td>
+                          </tr>
+                        )) : (
+                          <tr><td className="p-3 text-muted-foreground" colSpan={2}>No products available.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Settings */}
+        {activeTab === 'settings' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-card rounded-lg card-shadow p-4">
+                <h3 className="font-heading font-semibold mb-3">Access & Security</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Authenticated admin</span><StatusBadge status={isAdmin ? 'approved' : 'pending'} /></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Current user</span><span className="font-mono text-xs">{user?.id?.slice(0, 8)}...</span></div>
+                </div>
+              </div>
+
+              <div className="bg-card rounded-lg card-shadow p-4">
+                <h3 className="font-heading font-semibold mb-3">System Connectivity</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Suppliers with Paystack subaccount</span><span className="font-medium">{vendors?.filter(v => !!v.paystack_subaccount_code).length || 0}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Pending document reviews</span><span className="font-medium">{pendingVendors.length}</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-card rounded-lg card-shadow p-4 flex items-center gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+                  queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+                  queryClient.invalidateQueries({ queryKey: ['admin-vendors'] });
+                  queryClient.invalidateQueries({ queryKey: ['admin-payments'] });
+                  queryClient.invalidateQueries({ queryKey: ['admin-profiles'] });
+                  queryClient.invalidateQueries({ queryKey: ['categories'] });
+                  toast.success('Dashboard data refreshed');
+                }}
+              >
+                Refresh Dashboard Data
+              </Button>
+              <Button variant="ghost" onClick={() => { signOut(); navigate('/admin-login'); }}>
+                Sign out admin
+              </Button>
+            </div>
           </div>
         )}
 
