@@ -25,11 +25,10 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-md border-b border-border">
-      {/* Top Bar */}
+      {/* Top Bar (simplified) */}
       <div className="bg-primary text-primary-foreground text-xs py-1.5">
-        <div className="container flex items-center justify-between">
-          <span>📍 Computer Village, Ikeja, Lagos</span>
-          <span className="hidden sm:block">📞 +234 806 047 4393</span>
+        <div className="container flex items-center justify-start">
+          <span className="text-sm">Tech, Phones & Accessories</span>
         </div>
       </div>
 
@@ -121,7 +120,7 @@ export default function Navbar() {
       {/* Category Nav */}
       <nav className="hidden md:block border-t border-border">
         <div className="container flex items-center gap-6 h-10 text-sm overflow-x-auto">
-          {['Laptops & Computers', 'Desktop Computers', 'Printers', 'Monitors', 'Gaming Devices', 'Electronics', 'Accessories'].map(cat => (
+          {['Laptops & Computers', 'Desktop Computers', 'Phones', 'Printers', 'Monitors', 'Gaming Devices', 'Electronics', 'Accessories'].map(cat => (
             <Link
               key={cat}
               to={`/category/${cat.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-')}`}
@@ -138,7 +137,7 @@ export default function Navbar() {
       {menuOpen && (
         <div className="md:hidden border-t border-border bg-card animate-slide-in">
           <div className="container py-4 space-y-2">
-            {['Laptops & Computers', 'Desktop Computers', 'Printers', 'Monitors', 'Gaming Devices', 'Electronics', 'Accessories'].map(cat => (
+            {['Laptops & Computers', 'Desktop Computers', 'Phones', 'Printers', 'Monitors', 'Gaming Devices', 'Electronics', 'Accessories'].map(cat => (
               <Link
                 key={cat}
                 to={`/category/${cat.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-')}`}

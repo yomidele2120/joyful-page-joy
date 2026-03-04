@@ -28,7 +28,7 @@ export default function ProductCard({ id, name, slug, price, compare_at_price, i
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-40px" }}
       transition={{ duration: 0.4 }}
-      className="group bg-card rounded-lg overflow-hidden card-shadow hover:card-hover-shadow transition-all duration-300"
+      className="group bg-card rounded-lg overflow-hidden card-shadow hover:card-hover-shadow transition-all duration-300 h-full flex flex-col"
     >
       <Link to={`/product/${slug}`} className="block relative aspect-square overflow-hidden bg-secondary">
         <img
@@ -49,10 +49,10 @@ export default function ProductCard({ id, name, slug, price, compare_at_price, i
         )}
       </Link>
 
-      <div className="p-4">
-        {brand && <span className="text-xs text-muted-foreground uppercase tracking-wider">{brand}</span>}
-        <Link to={`/product/${slug}`}>
-          <h3 className="font-heading font-semibold text-sm mt-1 line-clamp-2 text-card-foreground group-hover:text-primary transition-colors">
+      <div className="p-4 flex flex-col flex-1">
+        {brand && <span className="text-xs text-muted-foreground uppercase tracking-wider truncate block">{brand}</span>}
+        <Link to={`/product/${slug}`}> 
+          <h3 className="font-heading font-semibold text-sm mt-1 line-clamp-2 text-card-foreground group-hover:text-primary transition-colors break-words">
             {name}
           </h3>
         </Link>
@@ -62,7 +62,7 @@ export default function ProductCard({ id, name, slug, price, compare_at_price, i
             <span className="text-xs text-muted-foreground line-through">{formatNaira(compare_at_price)}</span>
           )}
         </div>
-        <div className="flex items-center gap-2 mt-3">
+        <div className="flex items-center gap-2 mt-3 mt-auto">
           <Button
             size="sm"
             className="flex-1 text-xs"

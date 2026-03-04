@@ -14,7 +14,7 @@ export default function CategoryPage() {
       <div className="container py-8">
         <h1 className="font-heading text-3xl font-bold mb-6">{title}</h1>
         {isLoading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="bg-card rounded-lg animate-pulse aspect-[3/4]" />
             ))}
@@ -22,7 +22,7 @@ export default function CategoryPage() {
         ) : (
           <>
             <p className="text-sm text-muted-foreground mb-4">{products?.length || 0} products</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {products?.map(p => <ProductCard key={p.id} {...p} />)}
             </div>
             {!products?.length && (

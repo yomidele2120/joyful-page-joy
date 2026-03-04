@@ -28,7 +28,7 @@ export default function HeroSection() {
               Buy, Sell & <span className="text-primary">Grow</span> With Confidence
             </h1>
             <p className="mt-4 text-background/70 text-lg max-w-md">
-              Premium laptops, electronics & accessories at the best prices. Direct from Computer Village, Ikeja.
+              Premium laptops, phones and accessories — top brands and trusted sellers, all in one place.
             </p>
             <div className="flex flex-wrap gap-3 mt-8">
               <Link to="/products">

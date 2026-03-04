@@ -65,7 +65,7 @@ export default function Products() {
         </div>
 
         {isLoading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {Array.from({ length: 10 }).map((_, i) => (
               <div key={i} className="bg-card rounded-lg animate-pulse aspect-[3/4]" />
             ))}
@@ -73,7 +73,7 @@ export default function Products() {
         ) : (
           <>
             <p className="text-sm text-muted-foreground mb-4">{filtered?.length || 0} products found</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {filtered?.map(p => (
                 <ProductCard key={p.id} {...p} />
               ))}

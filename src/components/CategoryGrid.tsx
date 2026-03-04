@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 const iconMap: Record<string, React.ReactNode> = {
   'laptops-computers': <Laptop className="w-6 h-6" />,
   'desktop-computers': <Cpu className="w-6 h-6" />,
+  'phones': <Smartphone className="w-6 h-6" />,
   'printers': <Printer className="w-6 h-6" />,
   'monitors': <Monitor className="w-6 h-6" />,
   'accessories': <Headphones className="w-6 h-6" />,

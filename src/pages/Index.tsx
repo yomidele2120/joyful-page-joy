@@ -2,6 +2,7 @@ import Layout from '@/components/layout/Layout';
 import HeroSection from '@/components/HeroSection';
 import CategoryGrid from '@/components/CategoryGrid';
 import ProductSection from '@/components/ProductSection';
+import BrandLogos from '@/components/BrandLogos';
 import { useProducts } from '@/hooks/useProducts';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -28,13 +29,7 @@ export default function Index() {
       <section className="py-10 bg-secondary">
         <div className="container">
           <h2 className="font-heading text-2xl font-bold text-foreground mb-6 text-center">Trusted Brands</h2>
-          <div className="flex flex-wrap items-center justify-center gap-8 text-muted-foreground">
-            {['HP', 'Dell', 'Lenovo', 'ASUS', 'MSI', 'Apple', 'Microsoft'].map(brand => (
-              <span key={brand} className="font-heading text-xl font-bold opacity-40 hover:opacity-100 hover:text-primary transition-all cursor-default">
-                {brand}
-              </span>
-            ))}
-          </div>
+          <BrandLogos />
         </div>
       </section>
 
