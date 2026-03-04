@@ -1,5 +1,3 @@
-import React from 'react';
-
 const brands = [
   { name: 'Samsung', src: '/brands/samsung.svg' },
   { name: 'Apple', src: '/brands/apple.svg' },
@@ -17,14 +15,17 @@ const brands = [
 export default function BrandLogos() {
   return (
     <div className="w-full">
-      <div className="mx-auto grid grid-cols-3 sm:grid-cols-6 gap-4 items-center justify-items-center max-w-4xl">
+      <div className="mx-auto grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-6 items-center justify-items-center max-w-5xl">
         {brands.map(b => (
-          <div key={b.name} className="w-20 h-10 flex items-center justify-center">
+          <div
+            key={b.name}
+            className="w-24 h-14 flex items-center justify-center grayscale hover:grayscale-0 opacity-70 hover:opacity-100 transition-all duration-300"
+          >
             <img
               src={b.src}
               alt={b.name}
               loading="lazy"
-              className="max-h-8 max-w-full object-contain"
+              className="max-h-10 max-w-full object-contain"
               onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
             />
           </div>

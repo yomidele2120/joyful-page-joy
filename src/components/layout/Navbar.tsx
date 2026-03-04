@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, Search, User, Menu, X, Heart } from 'lucide-react';
+import logo from '@/assets/logo.jpeg';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useCart } from '@/contexts/CartContext';
@@ -34,14 +35,8 @@ export default function Navbar() {
 
       {/* Main Nav */}
       <div className="container flex items-center justify-between h-16 gap-4">
-        <Link to="/" className="flex items-center gap-2 shrink-0">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-heading font-bold text-sm">IT</span>
-          </div>
-          <div className="hidden sm:block">
-            <span className="font-heading font-bold text-lg leading-none text-foreground">IT Hub Africa</span>
-            <span className="block text-[10px] text-muted-foreground leading-none">Buy, Sell & Grow</span>
-          </div>
+        <Link to="/" className="flex items-center shrink-0">
+          <img src={logo} alt="IT Hub Africa" className="h-10 w-auto object-contain" />
         </Link>
 
         {/* Desktop Search */}
