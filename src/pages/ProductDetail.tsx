@@ -1,16 +1,33 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import { useProduct } from '@/hooks/useProducts';
 import { useCart } from '@/contexts/CartContext';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, Heart, Truck, Shield, RotateCcw, MessageCircle, Store } from 'lucide-react';
+import { ShoppingCart, Heart, Truck, Shield, RotateCcw, MessageCircle, Store, MessageSquare } from 'lucide-react';
 import { formatNaira } from '@/lib/format';
+import { toast } from 'sonner';
 
 export default function ProductDetail() {
   const { slug } = useParams<{ slug: string }>();
   const { data: product, isLoading } = useProduct(slug || '');
   const { addItem } = useCart();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleInAppChat = (vendorUserId: string, productName: string) => {
+    if (!user) {
+      toast.error('Please log in to chat with the seller');
+      navigate('/users-login');
+      return;
+    }
+    if (user.id === vendorUserId) {
+      toast.info("This is your own product");
+      return;
+    }
+    navigate(`/chat?vendor=${vendorUserId}&product=${encodeURIComponent(productName)}`);
+  };
 
   if (isLoading) {
     return (
@@ -96,13 +113,19 @@ export default function ProductDetail() {
                     <span className="font-heading font-semibold">{(product as any).vendors.store_name}</span>
                     {(product as any).vendors.is_approved && <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">✓</span>}
                   </Link>
-                  {((product as any).vendors.whatsapp_number || (product as any).vendors.phone) && (
-                    <a href={`https://wa.me/${((product as any).vendors.whatsapp_number || (product as any).vendors.phone || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hi, I'm interested in ${product.name}`)}`} target="_blank" rel="noopener noreferrer">
-                      <Button size="sm" variant="outline" className="gap-1 text-xs">
-                        <MessageCircle className="w-3 h-3" /> WhatsApp Seller
-                      </Button>
-                    </a>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="outline" className="gap-1 text-xs"
+                      onClick={() => handleInAppChat((product as any).vendors.user_id || '', product.name)}>
+                      <MessageSquare className="w-3 h-3" /> Message
+                    </Button>
+                    {((product as any).vendors.whatsapp_number || (product as any).vendors.phone) && (
+                      <a href={`https://wa.me/${((product as any).vendors.whatsapp_number || (product as any).vendors.phone || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hi, I'm interested in ${product.name}`)}`} target="_blank" rel="noopener noreferrer">
+                        <Button size="sm" variant="outline" className="gap-1 text-xs">
+                          <MessageCircle className="w-3 h-3" /> WhatsApp
+                        </Button>
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
             )}

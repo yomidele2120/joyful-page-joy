@@ -7,7 +7,10 @@ export default function Footer() {
       <div className="container py-12 grid grid-cols-1 md:grid-cols-4 gap-8">
         <div>
           <div className="flex items-center gap-2 mb-4">
-            <img src="/assets/logo.jpeg" alt="IT Hub Africa" className="h-10 w-auto object-contain brightness-0 invert" />
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+              <span className="text-primary-foreground font-heading font-bold text-sm">IT</span>
+            </div>
+            <span className="font-heading font-bold text-lg text-background">IT Hub Africa</span>
           </div>
           <p className="text-sm text-background/60">Buy, Sell, and Grow With Confidence. Nigeria's trusted tech marketplace.</p>
         </div>

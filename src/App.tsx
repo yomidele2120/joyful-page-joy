@@ -22,6 +22,7 @@ import SupplierShop from "./pages/SupplierShop";
 import AdminLogin from "./pages/AdminLogin";
 import Wishlist from "./pages/Wishlist";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import BuyerChat from "./pages/BuyerChat";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -48,6 +49,7 @@ const App = () => (
             <Route path="/admin-login" element={<AdminLogin />} />
             <Route path="/dashboard" element={<Navigate to="/admin" replace />} />
             <Route path="/wishlist" element={<Wishlist />} />
+            <Route path="/chat" element={<BuyerChat />} />
 
             {/* Protected routes */}
             <Route path="/user-dashboard" element={

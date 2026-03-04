@@ -29,7 +29,7 @@ export function useProduct(slug: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
-        .select('*, categories(name, slug), vendors(id, store_name, whatsapp_number, phone, logo_url, is_approved)')
+        .select('*, categories(name, slug), vendors(id, user_id, store_name, whatsapp_number, phone, logo_url, is_approved)')
         .eq('slug', slug)
         .single();
       if (error) throw error;

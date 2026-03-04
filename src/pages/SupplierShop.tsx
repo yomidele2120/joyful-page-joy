@@ -1,14 +1,17 @@
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import ProductCard from '@/components/ProductCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
-import { MessageCircle, MapPin, Phone, Store } from 'lucide-react';
+import { MessageCircle, MapPin, Phone, Store, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 
 export default function SupplierShop() {
   const { vendorId } = useParams();
-
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const { data: vendor, isLoading } = useQuery({
     queryKey: ['shop-vendor', vendorId],
     queryFn: async () => {
@@ -32,6 +35,18 @@ export default function SupplierShop() {
 
   const whatsappNumber = (vendor.whatsapp_number || vendor.phone || '').replace(/[^0-9]/g, '');
 
+  const handleInAppChat = () => {
+    if (!user) {
+      toast.error('Please log in to chat with the seller');
+      navigate('/users-login');
+      return;
+    }
+    if (user.id === vendor.user_id) {
+      toast.info("This is your own shop");
+      return;
+    }
+    navigate(`/chat?vendor=${vendor.user_id}`);
+  };
   return (
     <Layout>
       {/* Shop Header */}
@@ -57,13 +72,18 @@ export default function SupplierShop() {
                 {vendor.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{vendor.phone}</span>}
               </div>
             </div>
-            {whatsappNumber && (
-              <a href={`https://wa.me/${whatsappNumber}`} target="_blank" rel="noopener noreferrer" className="mt-3 sm:mt-0">
-                <Button className="bg-[hsl(142,70%,45%)] hover:bg-[hsl(142,70%,40%)] text-white gap-2 whitespace-nowrap">
-                  <MessageCircle className="w-4 h-4" /> Chat on WhatsApp
-                </Button>
-              </a>
-            )}
+            <div className="flex items-center gap-2 mt-3 sm:mt-0">
+              <Button onClick={handleInAppChat} variant="outline" className="gap-2 whitespace-nowrap">
+                <MessageSquare className="w-4 h-4" /> Message Seller
+              </Button>
+              {whatsappNumber && (
+                <a href={`https://wa.me/${whatsappNumber}`} target="_blank" rel="noopener noreferrer">
+                  <Button className="bg-[hsl(142,70%,45%)] hover:bg-[hsl(142,70%,40%)] text-white gap-2 whitespace-nowrap">
+                    <MessageCircle className="w-4 h-4" /> WhatsApp
+                  </Button>
+                </a>
+              )}
+            </div>
           </div>
         </div>
       </div>
