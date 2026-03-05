@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useConversations, useMessages, sendMessage, getOrCreateConversation } from '@/hooks/useChat';
+import { useConversations, useMessages, sendMessage, getOrCreateConversation, Conversation } from '@/hooks/useChat';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Send, MessageCircle, Store, Search } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, Send, MessageCircle, Store, Search, User, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import MediaPreview from '@/components/chat/MediaPreview';
@@ -110,10 +111,9 @@ export default function SupplierChat() {
     }
   };
 
-  const selectConversation = (convo: any) => {
+  const selectConversation = (convo: Conversation) => {
     setActiveConvoId(convo.id);
-    const otherId = convo.participant_1 === user?.id ? convo.participant_2 : convo.participant_1;
-    setActiveReceiverId(otherId);
+    setActiveReceiverId(convo.other_user_id);
   };
 
   const activeConvo = conversations.find(c => c.id === activeConvoId);
@@ -169,15 +169,22 @@ export default function SupplierChat() {
                   className={`w-full text-left px-4 py-3 border-b border-border hover:bg-secondary transition-colors ${c.id === activeConvoId ? 'bg-secondary' : ''}`}
                   onClick={() => selectConversation(c)}>
                   <div className="flex items-center gap-3">
-                    {c.other_vendor?.logo_url ? (
+                    {c.other_is_vendor && c.other_vendor?.logo_url ? (
                       <img src={c.other_vendor.logo_url} className="w-10 h-10 rounded-full object-cover" />
                     ) : (
                       <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Store className="w-5 h-5 text-primary" />
+                        {c.other_is_vendor ? <Store className="w-5 h-5 text-primary" /> : <User className="w-5 h-5 text-primary" />}
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{c.other_vendor?.store_name || 'Supplier'}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-medium text-sm truncate">
+                          {c.other_is_vendor ? c.other_vendor?.store_name : c.other_profile?.full_name || 'Buyer'}
+                        </p>
+                        <Badge variant={c.other_is_vendor ? 'default' : 'secondary'} className="text-[9px] px-1 py-0 leading-tight">
+                          {c.other_is_vendor ? 'Supplier' : 'Buyer'}
+                        </Badge>
+                      </div>
                       <p className="text-xs text-muted-foreground truncate">{c.last_message || 'No messages yet'}</p>
                     </div>
                     <span className="text-[10px] text-muted-foreground">
@@ -206,14 +213,30 @@ export default function SupplierChat() {
                 <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setActiveConvoId(null)}>
                   <ArrowLeft className="w-5 h-5" />
                 </Button>
-                {activeConvo?.other_vendor?.logo_url ? (
+                {activeConvo?.other_is_vendor && activeConvo?.other_vendor?.logo_url ? (
                   <img src={activeConvo.other_vendor.logo_url} className="w-8 h-8 rounded-full object-cover" />
                 ) : (
                   <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Store className="w-4 h-4 text-primary" />
+                    {activeConvo?.other_is_vendor ? <Store className="w-4 h-4 text-primary" /> : <User className="w-4 h-4 text-primary" />}
                   </div>
                 )}
-                <span className="font-heading font-semibold">{activeConvo?.other_vendor?.store_name || 'Supplier'}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-heading font-semibold truncate">
+                      {activeConvo?.other_is_vendor ? activeConvo?.other_vendor?.store_name : activeConvo?.other_profile?.full_name || 'Buyer'}
+                    </span>
+                    <Badge variant={activeConvo?.other_is_vendor ? 'default' : 'secondary'} className="text-[10px] px-1.5 py-0">
+                      {activeConvo?.other_is_vendor ? 'Supplier' : 'Buyer'}
+                    </Badge>
+                  </div>
+                </div>
+                {activeConvo?.other_is_vendor && activeConvo?.other_vendor?.vendor_id && (
+                  <Link to={`/shop/${activeConvo.other_vendor.vendor_id}`}>
+                    <Button variant="outline" size="sm" className="gap-1 text-xs">
+                      <Store className="w-3 h-3" /> View Shop <ExternalLink className="w-3 h-3" />
+                    </Button>
+                  </Link>
+                )}
               </div>
 
               {/* Messages */}

@@ -9,7 +9,10 @@ export interface Conversation {
   last_message: string | null;
   last_message_at: string;
   created_at: string;
-  other_vendor?: { store_name: string; logo_url: string | null };
+  other_vendor?: { store_name: string; logo_url: string | null; vendor_id?: string };
+  other_profile?: { full_name: string | null };
+  other_is_vendor: boolean;
+  other_user_id: string;
 }
 
 export interface Message {
@@ -40,16 +43,31 @@ export function useConversations() {
       .order('last_message_at', { ascending: false });
 
     if (data) {
-      const otherIds = (data as Conversation[]).map(c => c.participant_1 === user.id ? c.participant_2 : c.participant_1);
+      const otherIds = (data as any[]).map(c => c.participant_1 === user.id ? c.participant_2 : c.participant_1);
+
+      // Fetch vendor info for all other participants
       const { data: vendors } = await supabase
         .from('vendors')
-        .select('user_id, store_name, logo_url')
+        .select('user_id, store_name, logo_url, id')
         .in('user_id', otherIds);
 
-      const enriched = (data as Conversation[]).map(c => {
+      // Fetch profile info for all other participants
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name')
+        .in('user_id', otherIds);
+
+      const enriched: Conversation[] = (data as any[]).map(c => {
         const otherId = c.participant_1 === user.id ? c.participant_2 : c.participant_1;
         const vendor = vendors?.find(v => v.user_id === otherId);
-        return { ...c, other_vendor: vendor ? { store_name: vendor.store_name, logo_url: vendor.logo_url } : undefined };
+        const profile = profiles?.find(p => p.user_id === otherId);
+        return {
+          ...c,
+          other_user_id: otherId,
+          other_is_vendor: !!vendor,
+          other_vendor: vendor ? { store_name: vendor.store_name, logo_url: vendor.logo_url, vendor_id: vendor.id } : undefined,
+          other_profile: profile ? { full_name: profile.full_name } : undefined,
+        };
       });
       setConversations(enriched);
     }
@@ -118,7 +136,6 @@ export function useUnreadCount() {
     if (!user) return;
 
     const fetch = async () => {
-      // Get conversations where user is participant, then count unread messages
       const { data: convos } = await fromTable('conversations')
         .select('id')
         .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`);
@@ -179,7 +196,6 @@ export async function sendMessage(
 }
 
 export async function getOrCreateConversation(userId1: string, userId2: string) {
-  // Check existing
   const { data: existing } = await fromTable('conversations')
     .select('*')
     .or(`and(participant_1.eq.${userId1},participant_2.eq.${userId2}),and(participant_1.eq.${userId2},participant_2.eq.${userId1})`)

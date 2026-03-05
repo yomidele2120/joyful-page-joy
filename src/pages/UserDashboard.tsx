@@ -10,12 +10,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { User, ShoppingBag, Heart, Bell, Package, MapPin, Phone, Mail } from 'lucide-react';
+import { User, ShoppingBag, Heart, Bell, Package, MapPin, Phone, Mail, MessageCircle } from 'lucide-react';
 import { formatNaira } from '@/lib/format';
+import { useUnreadCount } from '@/hooks/useChat';
+import UserMessages from '@/components/dashboard/UserMessages';
 
 export default function UserDashboard() {
   const { user, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
+  const unreadCount = useUnreadCount();
 
   // Fetch profile
   const { data: profile, refetch: refetchProfile } = useQuery({
@@ -161,12 +164,10 @@ export default function UserDashboard() {
           </Card>
           <Card>
             <CardContent className="p-4 flex items-center gap-3">
-              <Bell className="w-8 h-8 text-accent-foreground" />
+              <MessageCircle className="w-8 h-8 text-primary" />
               <div>
-                <p className="text-2xl font-bold">
-                  {orders?.filter(o => o.status === 'pending').length || 0}
-                </p>
-                <p className="text-xs text-muted-foreground">Pending</p>
+                <p className="text-2xl font-bold">{unreadCount}</p>
+                <p className="text-xs text-muted-foreground">Unread Messages</p>
               </div>
             </CardContent>
           </Card>
@@ -178,6 +179,14 @@ export default function UserDashboard() {
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="orders">Orders</TabsTrigger>
             <TabsTrigger value="wishlist">Wishlist</TabsTrigger>
+            <TabsTrigger value="messages" className="relative">
+              Messages
+              {unreadCount > 0 && (
+                <span className="ml-1 inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold bg-destructive text-destructive-foreground rounded-full">
+                  {unreadCount}
+                </span>
+              )}
+            </TabsTrigger>
           </TabsList>
 
           {/* Profile Tab */}
@@ -324,6 +333,11 @@ export default function UserDashboard() {
                 ))}
               </div>
             )}
+          </TabsContent>
+
+          {/* Messages Tab */}
+          <TabsContent value="messages">
+            <UserMessages />
           </TabsContent>
         </Tabs>
       </div>
