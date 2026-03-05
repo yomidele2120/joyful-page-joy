@@ -51,8 +51,8 @@ export default function ProductDetail() {
 
   return (
     <Layout>
-      <div className="container py-8">
-        <div className="grid md:grid-cols-2 gap-8">
+      <div className="container py-6 px-4">
+        <div className="grid md:grid-cols-2 gap-6">
           <div className="relative aspect-square rounded-lg overflow-hidden bg-secondary">
             <img src={product.image_url || '/placeholder.svg'} alt={product.name} className="w-full h-full object-cover" />
             {product.badge && (
@@ -79,10 +79,10 @@ export default function ProductDetail() {
               </span>
             </div>
 
-            <div className="flex gap-3 mt-6">
+            <div className="flex gap-2 mt-6">
               <Button
-                size="lg"
-                className="flex-1 font-heading font-semibold"
+                size="default"
+                className="flex-1 font-heading font-semibold text-sm"
                 disabled={product.stock_quantity <= 0}
                 onClick={() => addItem({
                   id: product.id,
@@ -92,40 +92,38 @@ export default function ProductDetail() {
                   slug: product.slug,
                 })}
               >
-                <ShoppingCart className="w-5 h-5 mr-2" /> Add to Cart
+                <ShoppingCart className="w-4 h-4 mr-1.5" /> Add to Cart
               </Button>
-              <Button size="lg" variant="outline">
-                <Heart className="w-5 h-5" />
+              <Button size="default" variant="outline" className="shrink-0">
+                <Heart className="w-4 h-4" />
               </Button>
             </div>
 
             {/* Seller Info */}
             {(product as any).vendors && (
-              <div className="mt-6 p-4 bg-secondary rounded-lg">
+              <div className="mt-6 p-3 bg-secondary rounded-lg">
                 <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Sold by</p>
-                <div className="flex items-center justify-between">
-                  <Link to={`/shop/${(product as any).vendors.id}`} className="flex items-center gap-2 hover:text-primary transition-colors">
-                    {(product as any).vendors.logo_url ? (
-                      <img src={(product as any).vendors.logo_url} className="w-8 h-8 rounded object-cover" />
-                    ) : (
-                      <Store className="w-5 h-5 text-primary" />
-                    )}
-                    <span className="font-heading font-semibold">{(product as any).vendors.store_name}</span>
-                    {(product as any).vendors.is_approved && <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">✓</span>}
-                  </Link>
-                  <div className="flex items-center gap-2">
-                    <Button size="sm" variant="outline" className="gap-1 text-xs"
-                      onClick={() => handleInAppChat((product as any).vendors.user_id || '', product.name)}>
-                      <MessageSquare className="w-3 h-3" /> Message
-                    </Button>
-                    {((product as any).vendors.whatsapp_number || (product as any).vendors.phone) && (
-                      <a href={`https://wa.me/${((product as any).vendors.whatsapp_number || (product as any).vendors.phone || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hi, I'm interested in ${product.name}`)}`} target="_blank" rel="noopener noreferrer">
-                        <Button size="sm" variant="outline" className="gap-1 text-xs">
-                          <MessageCircle className="w-3 h-3" /> WhatsApp
-                        </Button>
-                      </a>
-                    )}
-                  </div>
+                <Link to={`/shop/${(product as any).vendors.id}`} className="flex items-center gap-2 hover:text-primary transition-colors mb-2">
+                  {(product as any).vendors.logo_url ? (
+                    <img src={(product as any).vendors.logo_url} className="w-8 h-8 rounded object-cover" />
+                  ) : (
+                    <Store className="w-5 h-5 text-primary" />
+                  )}
+                  <span className="font-heading font-semibold text-sm">{(product as any).vendors.store_name}</span>
+                  {(product as any).vendors.is_approved && <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">✓</span>}
+                </Link>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" className="flex-1 gap-1 text-xs"
+                    onClick={() => handleInAppChat((product as any).vendors.user_id || '', product.name)}>
+                    <MessageSquare className="w-3 h-3" /> Message
+                  </Button>
+                  {((product as any).vendors.whatsapp_number || (product as any).vendors.phone) && (
+                    <a href={`https://wa.me/${((product as any).vendors.whatsapp_number || (product as any).vendors.phone || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hi, I'm interested in ${product.name}`)}`} target="_blank" rel="noopener noreferrer" className="flex-1">
+                      <Button size="sm" variant="outline" className="w-full gap-1 text-xs">
+                        <MessageCircle className="w-3 h-3" /> WhatsApp
+                      </Button>
+                    </a>
+                  )}
                 </div>
               </div>
             )}
