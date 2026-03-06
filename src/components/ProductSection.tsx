@@ -23,17 +23,17 @@ export default function ProductSection({ title, products, linkTo }: ProductSecti
   if (!products?.length) return null;
 
   return (
-    <section className="py-8">
+    <section className="py-5">
       <div className="container">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="font-heading text-2xl font-bold text-foreground">{title}</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-heading text-lg font-bold text-foreground">{title}</h2>
           {linkTo && (
-            <Link to={linkTo} className="flex items-center gap-1 text-sm text-primary hover:underline font-medium">
-              View All <ChevronRight className="w-4 h-4" />
+            <Link to={linkTo} className="flex items-center gap-0.5 text-xs text-primary hover:underline font-medium">
+              View All <ChevronRight className="w-3.5 h-3.5" />
             </Link>
           )}
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
           {products.map(p => (
             <ProductCard key={p.id} {...p} />
           ))}

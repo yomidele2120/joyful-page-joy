@@ -4,47 +4,48 @@ import { Laptop, Monitor, Printer, Smartphone, Gamepad2, Headphones, Cpu, Batter
 import { motion } from 'framer-motion';
 
 const iconMap: Record<string, React.ReactNode> = {
-  'laptops-computers': <Laptop className="w-6 h-6" />,
-  'desktop-computers': <Cpu className="w-6 h-6" />,
-  'phones': <Smartphone className="w-6 h-6" />,
-  'printers': <Printer className="w-6 h-6" />,
-  'monitors': <Monitor className="w-6 h-6" />,
-  'accessories': <Headphones className="w-6 h-6" />,
-  'smartphones': <Smartphone className="w-6 h-6" />,
-  'tablets-ereaders': <Tablet className="w-6 h-6" />,
-  'gaming-devices': <Gamepad2 className="w-6 h-6" />,
-  'electronics': <Package className="w-6 h-6" />,
-  'deals-refurbished': <Tag className="w-6 h-6" />,
-  'power-banks-chargers': <Battery className="w-6 h-6" />,
-  'cameras-drones': <Camera className="w-6 h-6" />,
-  'wearables': <Watch className="w-6 h-6" />,
-  'smart-tvs': <Tv className="w-6 h-6" />,
+  'laptops-computers': <Laptop className="w-5 h-5" />,
+  'desktop-computers': <Cpu className="w-5 h-5" />,
+  'phones': <Smartphone className="w-5 h-5" />,
+  'printers': <Printer className="w-5 h-5" />,
+  'monitors': <Monitor className="w-5 h-5" />,
+  'accessories': <Headphones className="w-5 h-5" />,
+  'smartphones': <Smartphone className="w-5 h-5" />,
+  'tablets-ereaders': <Tablet className="w-5 h-5" />,
+  'gaming-devices': <Gamepad2 className="w-5 h-5" />,
+  'electronics': <Package className="w-5 h-5" />,
+  'deals-refurbished': <Tag className="w-5 h-5" />,
+  'power-banks-chargers': <Battery className="w-5 h-5" />,
+  'cameras-drones': <Camera className="w-5 h-5" />,
+  'wearables': <Watch className="w-5 h-5" />,
+  'smart-tvs': <Tv className="w-5 h-5" />,
 };
 
 export default function CategoryGrid() {
   const { data: categories } = useCategories();
 
   return (
-    <section className="py-10">
+    <section className="py-6">
       <div className="container">
-        <h2 className="font-heading text-2xl font-bold text-foreground mb-6">Shop by Category</h2>
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-3">
+        <h2 className="font-heading text-lg font-bold text-foreground mb-4">Shop by Category</h2>
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
           {categories?.map((cat, i) => (
             <motion.div
               key={cat.id}
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 8 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: i * 0.05, duration: 0.3 }}
+              transition={{ delay: i * 0.03, duration: 0.25 }}
+              className="shrink-0"
             >
               <Link
                 to={`/category/${cat.slug}`}
-                className="flex flex-col items-center gap-2 p-4 rounded-lg bg-card card-shadow hover:card-hover-shadow hover:border-primary border border-transparent transition-all text-center group"
+                className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-card border border-transparent hover:border-primary/20 transition-all text-center group w-[72px]"
               >
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                  {iconMap[cat.slug] || <Package className="w-6 h-6" />}
+                <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                  {iconMap[cat.slug] || <Package className="w-5 h-5" />}
                 </div>
-                <span className="text-xs font-medium text-card-foreground leading-tight">{cat.name}</span>
+                <span className="text-[10px] font-medium text-muted-foreground leading-tight line-clamp-2">{cat.name}</span>
               </Link>
             </motion.div>
           ))}
