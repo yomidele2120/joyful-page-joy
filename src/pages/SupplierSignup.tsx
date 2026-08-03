@@ -182,7 +182,7 @@ function SignupStep2({ form, update, logoFile, setLogoFile, docFile, setDocFile,
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div><Label>Company Name *</Label><Input value={form.companyName} onChange={e => update('companyName', e.target.value)} required /></div>
         <div><Label>Company Address *</Label><Input value={form.companyAddress} onChange={e => update('companyAddress', e.target.value)} required /></div>
-        <div className="col-span-full"><Label>Product Categories</Label><Input value={form.productCategories} onChange={e => update('productCategories', e.target.value)} placeholder="Laptops, Phones, Accessories (comma separated)" /></div>
+        <div className="col-span-full"><Label>Product Categories</Label><Input value={form.productCategories} onChange={e => update('productCategories', e.target.value)} placeholder="Fashion, Electronics, Home & Kitchen (comma separated)" /></div>
         <div className="col-span-full"><Label>Store Description</Label><Textarea value={form.storeDescription} onChange={e => update('storeDescription', e.target.value)} placeholder="Tell buyers about your business..." /></div>
         <div>
           <Label>Company Logo</Label>

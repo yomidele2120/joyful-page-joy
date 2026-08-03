@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Mail, Phone, MapPin } from 'lucide-react';
+import { Mail, Phone } from 'lucide-react';
 
 export default function Footer() {
   return (
@@ -8,20 +8,20 @@ export default function Footer() {
         <div>
           <div className="flex items-center gap-2 mb-4">
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-heading font-bold text-sm">IT</span>
+              <span className="text-primary-foreground font-heading font-bold text-sm">M</span>
             </div>
-            <span className="font-heading font-bold text-lg text-background">IT Hub Africa</span>
+            <span className="font-heading font-bold text-lg text-background">MarketHub Africa</span>
           </div>
-          <p className="text-sm text-background/60">Buy, Sell, and Grow With Confidence. Nigeria's trusted tech marketplace.</p>
+          <p className="text-sm text-background/60">Buy, Sell, and Grow With Confidence. Nigeria's trusted online marketplace.</p>
         </div>
 
         <div>
           <h4 className="font-heading font-semibold text-background mb-3">Quick Links</h4>
           <div className="space-y-2 text-sm">
             <Link to="/products" className="block hover:text-primary transition-colors">All Products</Link>
-            <Link to="/category/laptops-computers" className="block hover:text-primary transition-colors">Laptops</Link>
+            <Link to="/category/fashion" className="block hover:text-primary transition-colors">Fashion</Link>
             <Link to="/category/electronics" className="block hover:text-primary transition-colors">Electronics</Link>
-            <Link to="/category/accessories" className="block hover:text-primary transition-colors">Accessories</Link>
+            <Link to="/category/home-living" className="block hover:text-primary transition-colors">Home & Living</Link>
           </div>
         </div>
 
@@ -39,23 +39,19 @@ export default function Footer() {
         <div>
           <h4 className="font-heading font-semibold text-background mb-3">Contact</h4>
           <div className="space-y-3 text-sm">
-            <div className="flex items-start gap-2">
-              <MapPin className="w-4 h-4 mt-0.5 text-primary shrink-0" />
-              <span>Suite 108, Foramot Plaza, Computer Village, Ikeja, Lagos</span>
-            </div>
             <div className="flex items-center gap-2">
               <Phone className="w-4 h-4 text-primary" />
               <span>+234 806 047 4393</span>
             </div>
             <div className="flex items-center gap-2">
               <Mail className="w-4 h-4 text-primary" />
-              <span>team@ithubafrica.com</span>
+              <span>team@markethubafrica.com</span>
             </div>
           </div>
         </div>
       </div>
       <div className="border-t border-background/10 py-4 text-center text-xs text-background/40">
-        © {new Date().getFullYear()} IT Hub Africa. All rights reserved.
+        © {new Date().getFullYear()} MarketHub Africa. All rights reserved.
       </div>
     </footer>
   );

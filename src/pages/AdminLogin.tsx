@@ -53,7 +53,7 @@ export default function AdminLogin() {
           </div>
         </div>
         <h1 className="font-heading text-xl font-bold text-center mb-1">Admin Access</h1>
-        <p className="text-sm text-muted-foreground text-center mb-6">IT Hub Africa Control Panel</p>
+        <p className="text-sm text-muted-foreground text-center mb-6">MarketHub Africa Control Panel</p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="email">Admin Email</Label>

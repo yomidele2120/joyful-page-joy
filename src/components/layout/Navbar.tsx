@@ -29,7 +29,7 @@ export default function Navbar() {
       {/* Top Bar */}
       <div className="bg-primary text-primary-foreground text-xs py-1">
         <div className="container flex items-center justify-between">
-          <span className="text-xs">Tech, Phones & Accessories</span>
+          <span className="text-xs">Fashion, Electronics, Home & More</span>
           {!user && !isVendor && (
             <Link to="/supplier-signup" className="flex items-center gap-1 text-xs hover:underline">
               <Store className="w-3 h-3" />
@@ -48,7 +48,7 @@ export default function Navbar() {
       {/* Main Nav */}
       <div className="container flex items-center justify-between h-12 gap-2">
         <Link to="/" className="flex items-center shrink-0">
-          <img src={logo} alt="IT Hub Africa" className="h-8 w-auto object-contain" />
+          <img src={logo} alt="MarketHub Africa" className="h-8 w-auto object-contain" />
         </Link>
 
         {/* Desktop Search */}
@@ -56,7 +56,7 @@ export default function Navbar() {
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Search laptops, electronics..."
+              placeholder="Search for products, brands and categories..."
               className="pl-10 bg-secondary border-none h-9 text-sm"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
@@ -130,7 +130,7 @@ export default function Navbar() {
       {/* Category Nav */}
       <nav className="hidden md:block border-t border-border">
         <div className="container flex items-center gap-5 h-9 text-xs overflow-x-auto">
-          {['Laptops & Computers', 'Desktop Computers', 'Phones', 'Printers', 'Monitors', 'Gaming Devices', 'Electronics', 'Accessories'].map(cat => (
+          {['Fashion', 'Electronics', 'Home & Living', 'Beauty & Health', 'Groceries', 'Baby & Kids', 'Sports & Outdoors', 'Phones & Accessories'].map(cat => (
             <Link
               key={cat}
               to={`/category/${cat.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-')}`}
@@ -157,7 +157,7 @@ export default function Navbar() {
                 Become a Supplier
               </Link>
             )}
-            {['Laptops & Computers', 'Desktop Computers', 'Phones', 'Printers', 'Monitors', 'Gaming Devices', 'Electronics', 'Accessories'].map(cat => (
+            {['Fashion', 'Electronics', 'Home & Living', 'Beauty & Health', 'Groceries', 'Baby & Kids', 'Sports & Outdoors', 'Phones & Accessories'].map(cat => (
               <Link
                 key={cat}
                 to={`/category/${cat.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-')}`}

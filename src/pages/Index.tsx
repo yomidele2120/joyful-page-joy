@@ -2,7 +2,6 @@ import Layout from '@/components/layout/Layout';
 import HeroSection from '@/components/HeroSection';
 import CategoryGrid from '@/components/CategoryGrid';
 import ProductSection from '@/components/ProductSection';
-import BrandLogos from '@/components/BrandLogos';
 import { useProducts } from '@/hooks/useProducts';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -24,14 +23,6 @@ export default function Index() {
       <ProductSection title="💰 Big Sales" products={saleProducts || []} linkTo="/products" />
       <ProductSection title="⭐ Premium Collection" products={premiumProducts || []} linkTo="/products" />
       <ProductSection title="🎮 Gaming" products={gamingProducts || []} linkTo="/category/gaming-devices" />
-
-      {/* Brands section */}
-      <section className="py-10 bg-secondary">
-        <div className="container">
-          <h2 className="font-heading text-2xl font-bold text-foreground mb-6 text-center">Trusted Brands</h2>
-          <BrandLogos />
-        </div>
-      </section>
 
       {/* Newsletter */}
       <section className="py-12">

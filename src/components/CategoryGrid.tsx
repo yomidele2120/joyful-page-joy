@@ -1,12 +1,13 @@
 import { Link } from 'react-router-dom';
 import { useCategories } from '@/hooks/useProducts';
-import { Laptop, Monitor, Printer, Smartphone, Gamepad2, Headphones, Cpu, Battery, Camera, Watch, Tv, Tag, Tablet, Package } from 'lucide-react';
+import { Laptop, Monitor, Printer, Smartphone, Gamepad2, Headphones, Cpu, Battery, Camera, Watch, Tv, Tag, Tablet, Package, Shirt, Home, HeartPulse, ShoppingBasket, Baby, Dumbbell, BookOpen, Sparkles, Car, PawPrint, Gem } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const iconMap: Record<string, React.ReactNode> = {
   'laptops-computers': <Laptop className="w-5 h-5" />,
   'desktop-computers': <Cpu className="w-5 h-5" />,
   'phones': <Smartphone className="w-5 h-5" />,
+  'phones-accessories': <Smartphone className="w-5 h-5" />,
   'printers': <Printer className="w-5 h-5" />,
   'monitors': <Monitor className="w-5 h-5" />,
   'accessories': <Headphones className="w-5 h-5" />,
@@ -19,6 +20,21 @@ const iconMap: Record<string, React.ReactNode> = {
   'cameras-drones': <Camera className="w-5 h-5" />,
   'wearables': <Watch className="w-5 h-5" />,
   'smart-tvs': <Tv className="w-5 h-5" />,
+  'fashion': <Shirt className="w-5 h-5" />,
+  'clothing': <Shirt className="w-5 h-5" />,
+  'home-living': <Home className="w-5 h-5" />,
+  'home-kitchen': <Home className="w-5 h-5" />,
+  'beauty-health': <HeartPulse className="w-5 h-5" />,
+  'health-beauty': <HeartPulse className="w-5 h-5" />,
+  'groceries': <ShoppingBasket className="w-5 h-5" />,
+  'food-groceries': <ShoppingBasket className="w-5 h-5" />,
+  'baby-kids': <Baby className="w-5 h-5" />,
+  'sports-outdoors': <Dumbbell className="w-5 h-5" />,
+  'books-stationery': <BookOpen className="w-5 h-5" />,
+  'beauty': <Sparkles className="w-5 h-5" />,
+  'automotive': <Car className="w-5 h-5" />,
+  'pets': <PawPrint className="w-5 h-5" />,
+  'jewelry-accessories': <Gem className="w-5 h-5" />,
 };
 
 export default function CategoryGrid() {
