@@ -1,5 +1,6 @@
 import Layout from '@/components/layout/Layout';
 import HeroSection from '@/components/HeroSection';
+import AboutSection from '@/components/AboutSection';
 import CategoryGrid from '@/components/CategoryGrid';
 import ProductSection from '@/components/ProductSection';
 import { useProducts } from '@/hooks/useProducts';
@@ -17,6 +18,7 @@ export default function Index() {
   return (
     <Layout>
       <HeroSection />
+      <AboutSection />
       <CategoryGrid />
       <ProductSection title="🔥 Featured Products" products={featured || []} linkTo="/products" />
       <ProductSection title="🆕 Latest Stock" products={newProducts || []} linkTo="/products" />
