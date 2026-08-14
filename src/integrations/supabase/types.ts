@@ -442,14 +442,16 @@ export type Database = {
           hashtags: string[]
           hls_url: string | null
           id: string
+          image_urls: string[]
           is_active: boolean
           likes_count: number
+          media_type: string
           product_id: string | null
           stream_uid: string | null
           thumbnail_url: string | null
           updated_at: string
           vendor_id: string
-          video_url: string
+          video_url: string | null
           views_count: number
         }
         Insert: {
@@ -459,14 +461,16 @@ export type Database = {
           hashtags?: string[]
           hls_url?: string | null
           id?: string
+          image_urls?: string[]
           is_active?: boolean
           likes_count?: number
+          media_type?: string
           product_id?: string | null
           stream_uid?: string | null
           thumbnail_url?: string | null
           updated_at?: string
           vendor_id: string
-          video_url: string
+          video_url?: string | null
           views_count?: number
         }
         Update: {
@@ -476,14 +480,16 @@ export type Database = {
           hashtags?: string[]
           hls_url?: string | null
           id?: string
+          image_urls?: string[]
           is_active?: boolean
           likes_count?: number
+          media_type?: string
           product_id?: string | null
           stream_uid?: string | null
           thumbnail_url?: string | null
           updated_at?: string
           vendor_id?: string
-          video_url?: string
+          video_url?: string | null
           views_count?: number
         }
         Relationships: [
@@ -824,14 +830,16 @@ export type Database = {
           hashtags: string[]
           hls_url: string | null
           id: string
+          image_urls: string[]
           is_active: boolean
           likes_count: number
+          media_type: string
           product_id: string | null
           stream_uid: string | null
           thumbnail_url: string | null
           updated_at: string
           vendor_id: string
-          video_url: string
+          video_url: string | null
           views_count: number
         }[]
         SetofOptions: {
