@@ -157,14 +157,16 @@ export default function VideoPost({ post, isActive, isLiked, onOpenComments }: V
           <span className="text-xs">Share</span>
         </button>
 
-        <Button
-          size="icon"
-          variant="ghost"
-          className="text-white hover:text-white hover:bg-white/10"
-          onClick={() => setMuted((m) => !m)}
-        >
-          {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-        </Button>
+        {!isImagePost && (
+          <Button
+            size="icon"
+            variant="ghost"
+            className="text-white hover:text-white hover:bg-white/10"
+            onClick={() => setMuted((m) => !m)}
+          >
+            {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+          </Button>
+        )}
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
