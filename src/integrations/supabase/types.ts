@@ -566,10 +566,13 @@ export type Database = {
           caption: string | null
           comments_count: number
           created_at: string
+          hashtags: string[]
+          hls_url: string | null
           id: string
           is_active: boolean
           likes_count: number
           product_id: string | null
+          stream_uid: string | null
           thumbnail_url: string | null
           updated_at: string
           vendor_id: string
@@ -580,10 +583,13 @@ export type Database = {
           caption?: string | null
           comments_count?: number
           created_at?: string
+          hashtags?: string[]
+          hls_url?: string | null
           id?: string
           is_active?: boolean
           likes_count?: number
           product_id?: string | null
+          stream_uid?: string | null
           thumbnail_url?: string | null
           updated_at?: string
           vendor_id: string
@@ -594,10 +600,13 @@ export type Database = {
           caption?: string | null
           comments_count?: number
           created_at?: string
+          hashtags?: string[]
+          hls_url?: string | null
           id?: string
           is_active?: boolean
           likes_count?: number
           product_id?: string | null
+          stream_uid?: string | null
           thumbnail_url?: string | null
           updated_at?: string
           vendor_id?: string
@@ -705,11 +714,125 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          post_id: string | null
+          recipient_id: string
+          type: string
+          vendor_id: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          post_id?: string | null
+          recipient_id: string
+          type: string
+          vendor_id?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          post_id?: string | null
+          recipient_id?: string
+          type?: string
+          vendor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reports: {
+        Row: {
+          comment_id: string | null
+          created_at: string
+          id: string
+          post_id: string | null
+          reason: string
+          reporter_id: string
+          status: string
+        }
+        Insert: {
+          comment_id?: string | null
+          created_at?: string
+          id?: string
+          post_id?: string | null
+          reason: string
+          reporter_id: string
+          status?: string
+        }
+        Update: {
+          comment_id?: string | null
+          created_at?: string
+          id?: string
+          post_id?: string | null
+          reason?: string
+          reporter_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "post_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      get_ranked_feed: {
+        Args: { page_limit: number; page_offset: number }
+        Returns: {
+          caption: string | null
+          comments_count: number
+          created_at: string
+          hashtags: string[]
+          id: string
+          is_active: boolean
+          likes_count: number
+          product_id: string | null
+          thumbnail_url: string | null
+          updated_at: string
+          vendor_id: string
+          video_url: string
+          views_count: number
+        }[]
+      }
       increment_post_views: {
         Args: { post_id_input: string }
         Returns: undefined

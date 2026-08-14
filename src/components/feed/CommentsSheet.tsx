@@ -1,10 +1,14 @@
 import { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { Send, MessageCircle } from 'lucide-react';
+import { Send, MessageCircle, MoreVertical, Trash2, Flag } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useComments, useAddComment } from '@/hooks/usePosts';
+import { useReportContent, useDeleteComment } from '@/hooks/useReports';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
@@ -18,7 +22,25 @@ export default function CommentsSheet({ postId, open, onOpenChange }: CommentsSh
   const { user } = useAuth();
   const { data: comments, isLoading } = useComments(open ? postId : null);
   const addComment = useAddComment();
+  const reportContent = useReportContent();
+  const deleteComment = useDeleteComment();
   const [text, setText] = useState('');
+
+  const handleReport = (commentId: string) => {
+    if (!user) {
+      toast.error('Sign in to report content');
+      return;
+    }
+    reportContent.mutate(
+      { commentId, reason: 'inappropriate' },
+      { onSuccess: () => toast.success('Reported — our team will review this') }
+    );
+  };
+
+  const handleDelete = (commentId: string) => {
+    if (!postId) return;
+    deleteComment.mutate({ commentId, postId });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,14 +74,34 @@ export default function CommentsSheet({ postId, open, onOpenChange }: CommentsSh
           )}
           <div className="space-y-4">
             {comments?.map((c) => (
-              <div key={c.id} className="flex flex-col gap-0.5">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-sm font-medium">Buyer</span>
-                  <span className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}
-                  </span>
+              <div key={c.id} className="flex items-start justify-between gap-2">
+                <div className="flex flex-col gap-0.5 min-w-0">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-sm font-medium">Buyer</span>
+                    <span className="text-xs text-muted-foreground">
+                      {formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}
+                    </span>
+                  </div>
+                  <p className="text-sm">{c.content}</p>
                 </div>
-                <p className="text-sm">{c.content}</p>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="text-muted-foreground shrink-0 p-1">
+                      <MoreVertical className="w-3.5 h-3.5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {user?.id === c.user_id ? (
+                      <DropdownMenuItem onClick={() => handleDelete(c.id)}>
+                        <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete
+                      </DropdownMenuItem>
+                    ) : (
+                      <DropdownMenuItem onClick={() => handleReport(c.id)}>
+                        <Flag className="w-3.5 h-3.5 mr-2" /> Report
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             ))}
           </div>

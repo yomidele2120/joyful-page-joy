@@ -1,8 +1,11 @@
-import { Link } from 'react-router-dom';
-import { ArrowLeft, ShoppingBag } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, ShoppingBag, X } from 'lucide-react';
 import VideoFeed from '@/components/feed/VideoFeed';
 
 export default function Feed() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tag = searchParams.get('tag');
+
   return (
     <div className="fixed inset-0 h-[100dvh] w-full bg-black z-40">
       {/* Minimal floating header — feed is meant to be immersive/full-bleed */}
@@ -13,7 +16,16 @@ export default function Feed() {
         >
           <ArrowLeft className="w-5 h-5" />
         </Link>
-        <span className="text-white font-semibold text-sm drop-shadow">For You</span>
+        {tag ? (
+          <button
+            onClick={() => setSearchParams({})}
+            className="pointer-events-auto flex items-center gap-1.5 rounded-full bg-black/40 backdrop-blur px-3 py-1.5 text-white text-sm font-medium"
+          >
+            #{tag} <X className="w-3.5 h-3.5" />
+          </button>
+        ) : (
+          <span className="text-white font-semibold text-sm drop-shadow">For You</span>
+        )}
         <Link
           to="/products"
           className="pointer-events-auto h-9 w-9 rounded-full bg-black/40 backdrop-blur flex items-center justify-center text-white"
@@ -22,7 +34,8 @@ export default function Feed() {
         </Link>
       </div>
 
-      <VideoFeed />
+      <VideoFeed hashtag={tag ?? undefined} />
     </div>
   );
 }
+

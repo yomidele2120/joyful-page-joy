@@ -9,8 +9,8 @@ import { usePostsFeed, useUserLikedPosts, type FeedPost } from '@/hooks/usePosts
 // <video> elements (and their decoders) alive on the page at once.
 const RENDER_WINDOW = 1;
 
-export default function VideoFeed() {
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = usePostsFeed();
+export default function VideoFeed({ hashtag }: { hashtag?: string }) {
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = usePostsFeed(hashtag);
   const posts = useMemo(() => data?.pages.flat() ?? [], [data]);
 
   const [activeIndex, setActiveIndex] = useState(0);
@@ -62,7 +62,9 @@ export default function VideoFeed() {
     return (
       <div className="h-full w-full flex flex-col items-center justify-center bg-black text-white gap-2 px-6 text-center">
         <p className="text-lg font-medium">No videos yet</p>
-        <p className="text-sm text-white/60">Vendors haven't posted any videos. Check back soon.</p>
+        <p className="text-sm text-white/60">
+          {hashtag ? `No videos tagged #${hashtag} yet.` : "Vendors haven't posted any videos. Check back soon."}
+        </p>
       </div>
     );
   }

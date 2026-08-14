@@ -1,12 +1,17 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Search, User, Menu, X, Heart, LogOut, Store, Clapperboard } from 'lucide-react';
+import { ShoppingCart, Search, User, Menu, X, Heart, LogOut, Store, Clapperboard, Bell } from 'lucide-react';
 import logo from '@/assets/logo.jpeg';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/hooks/useAuth';
 import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+import { useNotifications, useUnreadNotificationCount, useMarkNotificationsRead } from '@/hooks/useNotifications';
+import { formatDistanceToNow } from 'date-fns';
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -95,6 +100,7 @@ export default function Navbar() {
 
           {user ? (
             <>
+              <NotificationBell />
               <Link to={isAdmin ? '/admin' : isVendor ? '/supplier-dashboard' : '/user-dashboard'}>
                 <Button variant="ghost" size="icon" className="w-8 h-8">
                   <User className="w-4 h-4" />
@@ -188,5 +194,48 @@ export default function Navbar() {
         </div>
       )}
     </header>
+  );
+}
+
+function NotificationBell() {
+  const { data: notifications } = useNotifications();
+  const unreadCount = useUnreadNotificationCount();
+  const markRead = useMarkNotificationsRead();
+
+  const handleOpenChange = (open: boolean) => {
+    if (open) {
+      const unreadIds = (notifications ?? []).filter((n) => !n.is_read).map((n) => n.id);
+      if (unreadIds.length) markRead.mutate(unreadIds);
+    }
+  };
+
+  return (
+    <DropdownMenu onOpenChange={handleOpenChange}>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="w-8 h-8 relative">
+          <Bell className="w-4 h-4" />
+          {unreadCount > 0 && (
+            <Badge className="absolute -top-0.5 -right-0.5 w-4 h-4 flex items-center justify-center p-0 text-[8px] bg-accent text-accent-foreground border-none">
+              {unreadCount}
+            </Badge>
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
+        <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {(!notifications || notifications.length === 0) && (
+          <p className="px-2 py-4 text-sm text-muted-foreground text-center">No notifications yet</p>
+        )}
+        {notifications?.map((n) => (
+          <DropdownMenuItem key={n.id} className="flex flex-col items-start gap-0.5 whitespace-normal">
+            <span className="text-sm">{n.message}</span>
+            <span className="text-xs text-muted-foreground">
+              {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
+            </span>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

@@ -1,11 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
+import Hls from 'hls.js';
 import { Link } from 'react-router-dom';
-import { Heart, MessageCircle, Share2, ShoppingBag, Volume2, VolumeX, Play } from 'lucide-react';
+import { Heart, MessageCircle, Share2, ShoppingBag, Volume2, VolumeX, Play, Flag } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { formatNaira } from '@/lib/format';
 import { useAuth } from '@/hooks/useAuth';
 import { useToggleLike, useToggleFollow, useIsFollowing, useRecordView, type FeedPost } from '@/hooks/usePosts';
+import { useReportContent } from '@/hooks/useReports';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -28,7 +33,39 @@ export default function VideoPost({ post, isActive, isLiked, onOpenComments }: V
   const toggleFollow = useToggleFollow();
   const { data: isFollowing } = useIsFollowing(post.vendor_id);
   const recordView = useRecordView();
+  const reportContent = useReportContent();
   const hasCountedView = useRef(false);
+
+  // Attach playback source once per post. Cloudflare Stream videos are
+  // served as adaptive HLS: Safari/iOS play that natively, everywhere else
+  // uses hls.js to pick the right rendition for the viewer's connection.
+  // Posts without an hls_url (uploaded before Stream was configured) just
+  // use the plain file — same as before.
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    let hls: Hls | null = null;
+
+    if (post.hls_url) {
+      const canPlayNativeHls = video.canPlayType('application/vnd.apple.mpegurl');
+      if (canPlayNativeHls) {
+        video.src = post.hls_url;
+      } else if (Hls.isSupported()) {
+        hls = new Hls({ maxBufferLength: 15 });
+        hls.loadSource(post.hls_url);
+        hls.attachMedia(video);
+      } else {
+        video.src = post.video_url;
+      }
+    } else {
+      video.src = post.video_url;
+    }
+
+    return () => {
+      hls?.destroy();
+    };
+  }, [post.hls_url, post.video_url]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -92,11 +129,21 @@ export default function VideoPost({ post, isActive, isLiked, onOpenComments }: V
     toast.success('Link copied');
   };
 
+  const handleReport = (reason: string) => {
+    if (!user) {
+      toast.error('Sign in to report content');
+      return;
+    }
+    reportContent.mutate(
+      { postId: post.id, reason },
+      { onSuccess: () => toast.success('Reported — our team will review this') }
+    );
+  };
+
   return (
     <div className="relative h-full w-full snap-start snap-always bg-black flex items-center justify-center overflow-hidden">
       <video
         ref={videoRef}
-        src={post.video_url}
         poster={post.thumbnail_url ?? undefined}
         className="h-full w-full object-contain"
         loop
@@ -122,7 +169,21 @@ export default function VideoPost({ post, isActive, isLiked, onOpenComments }: V
           <span className="text-white font-medium text-sm">{post.vendors?.store_name ?? 'Vendor'}</span>
         </Link>
 
-        {post.caption && <p className="text-white text-sm mb-3 line-clamp-2">{post.caption}</p>}
+        {post.caption && <p className="text-white text-sm mb-1 line-clamp-2">{post.caption}</p>}
+
+        {post.hashtags?.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-3">
+            {post.hashtags.map((tag) => (
+              <Link
+                key={tag}
+                to={`/feed?tag=${tag}`}
+                className="text-xs text-white/90 font-medium hover:underline"
+              >
+                #{tag}
+              </Link>
+            ))}
+          </div>
+        )}
 
         {post.products && (
           <Link
@@ -130,7 +191,7 @@ export default function VideoPost({ post, isActive, isLiked, onOpenComments }: V
             className="flex items-center gap-3 bg-white/95 rounded-lg p-2 max-w-xs active:scale-[0.98] transition-transform"
           >
             {post.products.image_url && (
-              <img src={post.products.image_url} alt={post.products.name} className="h-10 w-10 rounded object-cover shrink-0" />
+              <img src={post.products.image_url} alt={post.products.name} className="h-10 w-10 rounded object-cover shrink-0" loading="lazy" decoding="async" />
             )}
             <div className="min-w-0 flex-1">
               <p className="text-xs font-medium truncate">{post.products.name}</p>
@@ -181,6 +242,20 @@ export default function VideoPost({ post, isActive, isLiked, onOpenComments }: V
         >
           {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
         </Button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex flex-col items-center gap-1 text-white/80">
+              <Flag className="w-5 h-5" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => handleReport('spam')}>Spam or misleading</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleReport('inappropriate')}>Inappropriate content</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleReport('counterfeit')}>Counterfeit product</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleReport('other')}>Other</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );

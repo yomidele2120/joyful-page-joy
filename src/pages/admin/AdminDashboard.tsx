@@ -16,9 +16,10 @@ import { useCategories } from '@/hooks/useProducts';
 import {
   Package, ShoppingCart, Users, DollarSign, Plus, LogOut, ArrowLeft,
   Trash2, Store, CheckCircle, XCircle, Eye, BarChart3, CreditCard,
-  FileText, AlertCircle, TrendingUp, Layers, FolderPlus, Pencil
+  FileText, AlertCircle, TrendingUp, Layers, FolderPlus, Pencil, Flag
 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { usePendingReports, useResolveReport, useDeactivatePost, useDeleteComment } from '@/hooks/useReports';
 
 export default function AdminDashboard() {
   const { user, isAdmin, loading, signOut } = useAuth();
@@ -177,9 +178,15 @@ export default function AdminDashboard() {
     else { toast.success('Product deleted'); queryClient.invalidateQueries({ queryKey: ['admin-products'] }); }
   };
 
+  const { data: pendingReports } = usePendingReports();
+  const resolveReport = useResolveReport();
+  const deactivatePost = useDeactivatePost();
+  const deleteComment = useDeleteComment();
+
   const tabs = [
     { key: 'overview', label: 'Overview', icon: <BarChart3 className="w-4 h-4" /> },
     { key: 'suppliers', label: `Suppliers${pendingVendors.length ? ` (${pendingVendors.length})` : ''}`, icon: <Store className="w-4 h-4" /> },
+    { key: 'moderation', label: `Moderation${pendingReports?.length ? ` (${pendingReports.length})` : ''}`, icon: <Flag className="w-4 h-4" /> },
     { key: 'orders', label: 'Orders', icon: <ShoppingCart className="w-4 h-4" /> },
     { key: 'payments', label: 'Payments', icon: <CreditCard className="w-4 h-4" /> },
     { key: 'products', label: 'Products', icon: <Package className="w-4 h-4" /> },
@@ -491,6 +498,88 @@ export default function AdminDashboard() {
         )}
 
         {/* Users */}
+        {/* Moderation */}
+        {activeTab === 'moderation' && (
+          <div className="bg-card rounded-lg card-shadow overflow-hidden">
+            <div className="p-4 border-b border-border">
+              <h2 className="font-heading font-bold">Pending Reports ({pendingReports?.length || 0})</h2>
+              <p className="text-xs text-muted-foreground mt-1">Videos and comments flagged by buyers, waiting for review.</p>
+            </div>
+            {!pendingReports?.length ? (
+              <div className="flex flex-col items-center justify-center py-10 text-muted-foreground gap-2">
+                <Flag className="w-8 h-8" />
+                <p className="text-sm">No pending reports</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-border">
+                {pendingReports.map((r) => (
+                  <div key={r.id} className="p-4 flex flex-col sm:flex-row gap-4">
+                    {r.post ? (
+                      <video
+                        src={r.post.video_url}
+                        poster={r.post.thumbnail_url ?? undefined}
+                        className="w-24 h-40 object-cover rounded-lg bg-black shrink-0"
+                        muted
+                        preload="metadata"
+                        controls
+                      />
+                    ) : (
+                      <div className="w-24 h-40 rounded-lg bg-muted flex items-center justify-center text-xs text-muted-foreground shrink-0 p-2 text-center">
+                        Comment
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <div>
+                        <Badge className="mb-1">{r.reason}</Badge>
+                        {r.post?.caption && <p className="text-sm text-muted-foreground line-clamp-2">{r.post.caption}</p>}
+                        {r.comment && (
+                          <p className="text-sm bg-muted rounded p-2 mt-1">&ldquo;{r.comment.content}&rdquo;</p>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Reported {new Date(r.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {r.post && r.post.is_active && (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => {
+                              deactivatePost.mutate({ postId: r.post!.id, isActive: false });
+                              resolveReport.mutate({ reportId: r.id, status: 'reviewed' });
+                            }}
+                          >
+                            <XCircle className="w-3.5 h-3.5 mr-1" /> Take down video
+                          </Button>
+                        )}
+                        {r.comment && (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => {
+                              deleteComment.mutate({ commentId: r.comment!.id, postId: r.comment!.post_id });
+                              resolveReport.mutate({ reportId: r.id, status: 'reviewed' });
+                            }}
+                          >
+                            <XCircle className="w-3.5 h-3.5 mr-1" /> Delete comment
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => resolveReport.mutate({ reportId: r.id, status: 'dismissed' })}
+                        >
+                          <CheckCircle className="w-3.5 h-3.5 mr-1" /> Dismiss report
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {activeTab === 'users' && (
           <div className="bg-card rounded-lg card-shadow overflow-hidden">
             <div className="p-4 border-b border-border">

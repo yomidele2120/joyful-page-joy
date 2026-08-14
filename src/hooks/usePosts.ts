@@ -10,8 +10,10 @@ export interface FeedPost {
   vendor_id: string;
   product_id: string | null;
   video_url: string;
+  hls_url: string | null;
   thumbnail_url: string | null;
   caption: string | null;
+  hashtags: string[];
   views_count: number;
   likes_count: number;
   comments_count: number;
@@ -30,30 +32,48 @@ export interface FeedPost {
   } | null;
 }
 
-// Cursor-paginated feed — only fetches PAGE_SIZE posts at a time so the
-// client never has to hold the whole table in memory.
-export function usePostsFeed() {
+// Ranked, offset-paginated feed — order comes from get_ranked_feed (a hot
+// score: engagement decayed by age), not raw recency, so active posts
+// surface even if they weren't posted five minutes ago. We then hydrate
+// each page with vendor/product info in a second query since the ranking
+// RPC returns bare post rows.
+export function usePostsFeed(hashtag?: string) {
   return useInfiniteQuery({
-    queryKey: ['posts-feed'],
-    queryFn: async ({ pageParam }: { pageParam: string | null }) => {
-      let query = supabase
-        .from('posts')
-        .select('*, vendors(id, store_name, logo_url), products(id, name, slug, price, image_url)')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false })
-        .limit(PAGE_SIZE);
-
-      if (pageParam) {
-        query = query.lt('created_at', pageParam);
+    queryKey: ['posts-feed', hashtag ?? null],
+    queryFn: async ({ pageParam }: { pageParam: number }) => {
+      if (hashtag) {
+        const { data, error } = await supabase
+          .from('posts')
+          .select('*, vendors(id, store_name, logo_url), products(id, name, slug, price, image_url)')
+          .eq('is_active', true)
+          .contains('hashtags', [hashtag.toLowerCase()])
+          .order('created_at', { ascending: false })
+          .range(pageParam, pageParam + PAGE_SIZE - 1);
+        if (error) throw error;
+        return (data ?? []) as unknown as FeedPost[];
       }
 
-      const { data, error } = await query;
-      if (error) throw error;
-      return (data ?? []) as unknown as FeedPost[];
+      const { data: ranked, error: rankedError } = await supabase.rpc('get_ranked_feed', {
+        page_limit: PAGE_SIZE,
+        page_offset: pageParam,
+      });
+      if (rankedError) throw rankedError;
+      if (!ranked?.length) return [];
+
+      const ids = ranked.map((p) => p.id);
+      const { data: hydrated, error: hydrateError } = await supabase
+        .from('posts')
+        .select('*, vendors(id, store_name, logo_url), products(id, name, slug, price, image_url)')
+        .in('id', ids);
+      if (hydrateError) throw hydrateError;
+
+      // Preserve the rank order returned by get_ranked_feed
+      const byId = new Map((hydrated ?? []).map((p) => [p.id, p]));
+      return ids.map((id) => byId.get(id)).filter(Boolean) as unknown as FeedPost[];
     },
-    initialPageParam: null as string | null,
-    getNextPageParam: (lastPage) =>
-      lastPage.length === PAGE_SIZE ? lastPage[lastPage.length - 1].created_at : undefined,
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.length === PAGE_SIZE ? allPages.length * PAGE_SIZE : undefined,
   });
 }
 
@@ -182,6 +202,21 @@ export function useToggleFollow() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['is-following', user?.id, variables.vendorId] });
     },
+  });
+}
+
+export function useVendorFollowerCount(vendorId: string | undefined) {
+  return useQuery({
+    queryKey: ['vendor-follower-count', vendorId],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('follows')
+        .select('*', { count: 'exact', head: true })
+        .eq('vendor_id', vendorId!);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    enabled: !!vendorId,
   });
 }
 
