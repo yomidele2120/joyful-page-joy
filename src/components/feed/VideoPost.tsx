@@ -1,12 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
-import Hls from 'hls.js';
+import { useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, MessageCircle, Share2, ShoppingBag, Volume2, VolumeX, Play, Flag } from 'lucide-react';
+import { Heart, MessageCircle, Share2, ShoppingBag, Volume2, VolumeX, Flag } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import PostMedia from './PostMedia';
 import { formatNaira } from '@/lib/format';
 import { useAuth } from '@/hooks/useAuth';
 import { useToggleLike, useToggleFollow, useIsFollowing, useRecordView, type FeedPost } from '@/hooks/usePosts';
@@ -21,83 +21,18 @@ interface VideoPostProps {
   onOpenComments: (postId: string) => void;
 }
 
-// Renders one video in the feed. Only the "active" post actually plays —
-// everything else stays paused so we never have more than one decoder
-// running at a time on mobile.
+// Renders one post in the feed (video or image carousel). Only the "active"
+// post plays, so we never have more than one decoder running at a time.
 export default function VideoPost({ post, isActive, isLiked, onOpenComments }: VideoPostProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
   const [muted, setMuted] = useState(true);
-  const [showPlayIcon, setShowPlayIcon] = useState(false);
   const { user } = useAuth();
   const toggleLike = useToggleLike();
   const toggleFollow = useToggleFollow();
   const { data: isFollowing } = useIsFollowing(post.vendor_id);
   const recordView = useRecordView();
   const reportContent = useReportContent();
-  const hasCountedView = useRef(false);
 
-  // Attach playback source once per post. Cloudflare Stream videos are
-  // served as adaptive HLS: Safari/iOS play that natively, everywhere else
-  // uses hls.js to pick the right rendition for the viewer's connection.
-  // Posts without an hls_url (uploaded before Stream was configured) just
-  // use the plain file — same as before.
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    let hls: Hls | null = null;
-
-    if (post.hls_url) {
-      const canPlayNativeHls = video.canPlayType('application/vnd.apple.mpegurl');
-      if (canPlayNativeHls) {
-        video.src = post.hls_url;
-      } else if (Hls.isSupported()) {
-        hls = new Hls({ maxBufferLength: 15 });
-        hls.loadSource(post.hls_url);
-        hls.attachMedia(video);
-      } else {
-        video.src = post.video_url;
-      }
-    } else {
-      video.src = post.video_url;
-    }
-
-    return () => {
-      hls?.destroy();
-    };
-  }, [post.hls_url, post.video_url]);
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    if (isActive) {
-      video.play().catch(() => {
-        // Autoplay can be blocked before the user has interacted with the
-        // page at all — that's fine, they can tap to play.
-      });
-      if (!hasCountedView.current) {
-        hasCountedView.current = true;
-        recordView(post.id);
-      }
-    } else {
-      video.pause();
-      video.currentTime = 0;
-      hasCountedView.current = false;
-    }
-  }, [isActive, post.id, recordView]);
-
-  const handleTap = () => {
-    const video = videoRef.current;
-    if (!video) return;
-    if (video.paused) {
-      video.play();
-      setShowPlayIcon(false);
-    } else {
-      video.pause();
-      setShowPlayIcon(true);
-    }
-  };
+  const handleFirstPlay = useCallback(() => recordView(post.id), [recordView, post.id]);
 
   const handleLike = () => {
     if (!user) {
@@ -140,24 +75,12 @@ export default function VideoPost({ post, isActive, isLiked, onOpenComments }: V
     );
   };
 
+  const isImagePost = post.media_type === 'images';
+
   return (
     <div className="relative h-full w-full snap-start snap-always bg-black flex items-center justify-center overflow-hidden">
-      <video
-        ref={videoRef}
-        poster={post.thumbnail_url ?? undefined}
-        className="h-full w-full object-contain"
-        loop
-        muted={muted}
-        playsInline
-        preload={isActive ? 'auto' : 'metadata'}
-        onClick={handleTap}
-      />
+      <PostMedia post={post} isActive={isActive} muted={muted} onFirstPlay={handleFirstPlay} />
 
-      {showPlayIcon && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <Play className="w-16 h-16 text-white/80" fill="white" />
-        </div>
-      )}
 
       {/* Bottom gradient + caption + shop card */}
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-4 pb-6 pr-20">
