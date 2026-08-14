@@ -6,7 +6,8 @@ import ProductSection from '@/components/ProductSection';
 import { useProducts } from '@/hooks/useProducts';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Send } from 'lucide-react';
+import { Send, PlayCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function Index() {
   const { data: featured } = useProducts({ featured: true, limit: 10 });
@@ -18,6 +19,20 @@ export default function Index() {
   return (
     <Layout>
       <HeroSection />
+
+      <section className="container py-4">
+        <Link
+          to="/feed"
+          className="flex items-center justify-between gap-3 rounded-xl bg-gradient-to-r from-primary to-accent px-5 py-4 text-primary-foreground active:scale-[0.99] transition-transform"
+        >
+          <div>
+            <p className="font-heading font-bold">Watch &amp; Shop</p>
+            <p className="text-sm opacity-90">Swipe through vendor videos and shop what you see</p>
+          </div>
+          <PlayCircle className="w-9 h-9 shrink-0" />
+        </Link>
+      </section>
+
       <AboutSection />
       <CategoryGrid />
       <ProductSection title="🔥 Featured Products" products={featured || []} linkTo="/products" />

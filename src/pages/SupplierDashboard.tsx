@@ -12,6 +12,7 @@ import { formatNaira } from '@/lib/format';
 import { useCategories } from '@/hooks/useProducts';
 import { Package, ShoppingCart, DollarSign, Plus, LogOut, ArrowLeft, Trash2, Store, Upload, MessageCircle, AlertCircle, Clock, CheckCircle, CreditCard } from 'lucide-react';
 import { useUnreadCount } from '@/hooks/useChat';
+import VendorVideosTab from '@/components/dashboard/VendorVideosTab';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 export default function SupplierDashboard() {
@@ -187,6 +188,7 @@ export default function SupplierDashboard() {
               {[
                 { key: 'overview', label: 'Overview' },
                 { key: 'products', label: 'My Products' },
+                { key: 'videos', label: 'Videos' },
                 { key: 'orders', label: 'Orders' },
                 { key: 'add-product', label: 'Add Product' },
                 { key: 'shop-settings', label: 'Settings' },
@@ -293,6 +295,10 @@ export default function SupplierDashboard() {
                   <p className="p-8 text-center text-muted-foreground">No orders yet.</p>
                 )}
               </div>
+            )}
+
+            {activeTab === 'videos' && (
+              <VendorVideosTab vendorId={vendor.id} products={(products || []).map(p => ({ id: p.id, name: p.name }))} />
             )}
 
             {activeTab === 'add-product' && (

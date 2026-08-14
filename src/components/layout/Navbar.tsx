@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Search, User, Menu, X, Heart, LogOut, Store } from 'lucide-react';
+import { ShoppingCart, Search, User, Menu, X, Heart, LogOut, Store, Clapperboard } from 'lucide-react';
 import logo from '@/assets/logo.jpeg';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -69,6 +69,12 @@ export default function Navbar() {
           <Button variant="ghost" size="icon" className="md:hidden w-8 h-8" onClick={() => setSearchOpen(!searchOpen)}>
             <Search className="w-4 h-4" />
           </Button>
+
+          <Link to="/feed" title="Watch">
+            <Button variant="ghost" size="icon" className="w-8 h-8">
+              <Clapperboard className="w-4 h-4" />
+            </Button>
+          </Link>
 
           <Link to="/wishlist">
             <Button variant="ghost" size="icon" className="w-8 h-8">
@@ -147,6 +153,14 @@ export default function Navbar() {
       {menuOpen && (
         <div className="md:hidden border-t border-border bg-card animate-slide-in">
           <div className="container py-3 space-y-1">
+            <Link
+              to="/feed"
+              className="flex items-center gap-2 py-2 text-sm font-medium"
+              onClick={() => setMenuOpen(false)}
+            >
+              <Clapperboard className="w-4 h-4" />
+              Watch
+            </Link>
             {!user && !isVendor && (
               <Link
                 to="/supplier-signup"

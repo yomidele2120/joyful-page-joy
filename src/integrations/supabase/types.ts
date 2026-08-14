@@ -561,11 +561,159 @@ export type Database = {
           },
         ]
       }
+      posts: {
+        Row: {
+          caption: string | null
+          comments_count: number
+          created_at: string
+          id: string
+          is_active: boolean
+          likes_count: number
+          product_id: string | null
+          thumbnail_url: string | null
+          updated_at: string
+          vendor_id: string
+          video_url: string
+          views_count: number
+        }
+        Insert: {
+          caption?: string | null
+          comments_count?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          likes_count?: number
+          product_id?: string | null
+          thumbnail_url?: string | null
+          updated_at?: string
+          vendor_id: string
+          video_url: string
+          views_count?: number
+        }
+        Update: {
+          caption?: string | null
+          comments_count?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          likes_count?: number
+          product_id?: string | null
+          thumbnail_url?: string | null
+          updated_at?: string
+          vendor_id?: string
+          video_url?: string
+          views_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "posts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      post_likes: {
+        Row: {
+          created_at: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      post_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      follows: {
+        Row: {
+          created_at: string
+          follower_id: string
+          vendor_id: string
+        }
+        Insert: {
+          created_at?: string
+          follower_id: string
+          vendor_id: string
+        }
+        Update: {
+          created_at?: string
+          follower_id?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "follows_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      increment_post_views: {
+        Args: { post_id_input: string }
+        Returns: undefined
+      }
       has_role:
         | {
             Args: { _role: Database["public"]["Enums"]["app_role"] }

@@ -1,3 +1,4 @@
+import { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,6 +7,11 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { CartProvider } from "@/contexts/CartContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
+
+// Lazy-loaded: the video feed pulls in its own components and isn't
+// needed for people who just land on the marketplace to shop, so it's
+// kept out of the main bundle and only fetched when visited.
+const Feed = lazy(() => import("./pages/Feed"));
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
 import CategoryPage from "./pages/CategoryPage";
@@ -36,6 +42,16 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route
+              path="/feed"
+              element={
+                <Suspense
+                  fallback={<div className="fixed inset-0 bg-black flex items-center justify-center text-white">Loading...</div>}
+                >
+                  <Feed />
+                </Suspense>
+              }
+            />
             <Route path="/products" element={<Products />} />
             <Route path="/product/:slug" element={<ProductDetail />} />
             <Route path="/category/:slug" element={<CategoryPage />} />
