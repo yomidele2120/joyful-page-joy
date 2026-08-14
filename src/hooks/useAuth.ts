@@ -1,13 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  // Starts true so protected routes wait for the saved session to be
+  // restored instead of bouncing an already-signed-in user to /login.
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isVendor, setIsVendor] = useState(false);
+  const resolvedOnce = useRef(false);
 
   const checkRoles = useCallback(async (userId: string) => {
     try {
@@ -23,8 +26,8 @@ export function useAuth() {
       setIsVendor(roles.includes('vendor'));
       return roles;
     } catch {
-      setIsAdmin(false);
-      setIsVendor(false);
+      // Offline / transient failure: don't destroy the session, just leave
+      // the previously known role flags as they are.
       return [] as string[];
     }
   }, []);
@@ -45,13 +48,23 @@ export function useAuth() {
         setIsVendor(false);
       }
 
-      if (mounted) setLoading(false);
+      if (mounted) {
+        resolvedOnce.current = true;
+        setLoading(false);
+      }
     };
 
-    setLoading(true);
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setLoading(true);
+    // Listener is registered first so a session restored from storage (or a
+    // silent token refresh) is never missed.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      // TOKEN_REFRESHED / USER_UPDATED must not flip the app back into a
+      // loading state — that's what made screens flash the login page.
+      if (!resolvedOnce.current) setLoading(true);
+      if (event === 'TOKEN_REFRESHED' && nextSession) {
+        setSession(nextSession);
+        setUser(nextSession.user);
+        return;
+      }
       void syncAuthState(nextSession);
     });
 
@@ -75,7 +88,10 @@ export function useAuth() {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName } },
+      options: {
+        data: { full_name: fullName },
+        emailRedirectTo: window.location.origin,
+      },
     });
     return { error };
   };
@@ -84,6 +100,8 @@ export function useAuth() {
     await supabase.auth.signOut();
     setIsAdmin(false);
     setIsVendor(false);
+    setUser(null);
+    setSession(null);
   };
 
   return { user, session, loading, isAdmin, isVendor, signIn, signUp, signOut };

@@ -9,9 +9,11 @@ export interface FeedPost {
   id: string;
   vendor_id: string;
   product_id: string | null;
-  video_url: string;
+  video_url: string | null;
   hls_url: string | null;
   thumbnail_url: string | null;
+  media_type: 'video' | 'images';
+  image_urls: string[];
   caption: string | null;
   hashtags: string[];
   views_count: number;

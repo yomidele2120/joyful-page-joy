@@ -121,6 +121,32 @@ export type Database = {
         }
         Relationships: []
       }
+      follows: {
+        Row: {
+          created_at: string
+          follower_id: string
+          vendor_id: string
+        }
+        Insert: {
+          created_at?: string
+          follower_id: string
+          vendor_id: string
+        }
+        Update: {
+          created_at?: string
+          follower_id?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "follows_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string
@@ -158,6 +184,57 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          post_id: string | null
+          recipient_id: string
+          type: string
+          vendor_id: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          post_id?: string | null
+          recipient_id: string
+          type: string
+          vendor_id?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          post_id?: string | null
+          recipient_id?: string
+          type?: string
+          vendor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
             referencedColumns: ["id"]
           },
         ]
@@ -299,6 +376,139 @@ export type Database = {
           },
         ]
       }
+      post_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      post_likes: {
+        Row: {
+          created_at: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      posts: {
+        Row: {
+          caption: string | null
+          comments_count: number
+          created_at: string
+          hashtags: string[]
+          hls_url: string | null
+          id: string
+          image_urls: string[]
+          is_active: boolean
+          likes_count: number
+          media_type: string
+          product_id: string | null
+          stream_uid: string | null
+          thumbnail_url: string | null
+          updated_at: string
+          vendor_id: string
+          video_url: string | null
+          views_count: number
+        }
+        Insert: {
+          caption?: string | null
+          comments_count?: number
+          created_at?: string
+          hashtags?: string[]
+          hls_url?: string | null
+          id?: string
+          image_urls?: string[]
+          is_active?: boolean
+          likes_count?: number
+          media_type?: string
+          product_id?: string | null
+          stream_uid?: string | null
+          thumbnail_url?: string | null
+          updated_at?: string
+          vendor_id: string
+          video_url?: string | null
+          views_count?: number
+        }
+        Update: {
+          caption?: string | null
+          comments_count?: number
+          created_at?: string
+          hashtags?: string[]
+          hls_url?: string | null
+          id?: string
+          image_urls?: string[]
+          is_active?: boolean
+          likes_count?: number
+          media_type?: string
+          product_id?: string | null
+          stream_uid?: string | null
+          thumbnail_url?: string | null
+          updated_at?: string
+          vendor_id?: string
+          video_url?: string | null
+          views_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "posts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           badge: string | null
@@ -415,6 +625,51 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      reports: {
+        Row: {
+          comment_id: string | null
+          created_at: string
+          id: string
+          post_id: string | null
+          reason: string
+          reporter_id: string
+          status: string
+        }
+        Insert: {
+          comment_id?: string | null
+          created_at?: string
+          id?: string
+          post_id?: string | null
+          reason: string
+          reporter_id: string
+          status?: string
+        }
+        Update: {
+          comment_id?: string | null
+          created_at?: string
+          id?: string
+          post_id?: string | null
+          reason?: string
+          reporter_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "post_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reviews: {
         Row: {
@@ -561,255 +816,6 @@ export type Database = {
           },
         ]
       }
-      posts: {
-        Row: {
-          caption: string | null
-          comments_count: number
-          created_at: string
-          hashtags: string[]
-          hls_url: string | null
-          id: string
-          is_active: boolean
-          likes_count: number
-          product_id: string | null
-          stream_uid: string | null
-          thumbnail_url: string | null
-          updated_at: string
-          vendor_id: string
-          video_url: string
-          views_count: number
-        }
-        Insert: {
-          caption?: string | null
-          comments_count?: number
-          created_at?: string
-          hashtags?: string[]
-          hls_url?: string | null
-          id?: string
-          is_active?: boolean
-          likes_count?: number
-          product_id?: string | null
-          stream_uid?: string | null
-          thumbnail_url?: string | null
-          updated_at?: string
-          vendor_id: string
-          video_url: string
-          views_count?: number
-        }
-        Update: {
-          caption?: string | null
-          comments_count?: number
-          created_at?: string
-          hashtags?: string[]
-          hls_url?: string | null
-          id?: string
-          is_active?: boolean
-          likes_count?: number
-          product_id?: string | null
-          stream_uid?: string | null
-          thumbnail_url?: string | null
-          updated_at?: string
-          vendor_id?: string
-          video_url?: string
-          views_count?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "posts_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "posts_vendor_id_fkey"
-            columns: ["vendor_id"]
-            isOneToOne: false
-            referencedRelation: "vendors"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      post_likes: {
-        Row: {
-          created_at: string
-          post_id: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          post_id: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          post_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "post_likes_post_id_fkey"
-            columns: ["post_id"]
-            isOneToOne: false
-            referencedRelation: "posts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      post_comments: {
-        Row: {
-          content: string
-          created_at: string
-          id: string
-          post_id: string
-          user_id: string
-        }
-        Insert: {
-          content: string
-          created_at?: string
-          id?: string
-          post_id: string
-          user_id: string
-        }
-        Update: {
-          content?: string
-          created_at?: string
-          id?: string
-          post_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "post_comments_post_id_fkey"
-            columns: ["post_id"]
-            isOneToOne: false
-            referencedRelation: "posts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      follows: {
-        Row: {
-          created_at: string
-          follower_id: string
-          vendor_id: string
-        }
-        Insert: {
-          created_at?: string
-          follower_id: string
-          vendor_id: string
-        }
-        Update: {
-          created_at?: string
-          follower_id?: string
-          vendor_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "follows_vendor_id_fkey"
-            columns: ["vendor_id"]
-            isOneToOne: false
-            referencedRelation: "vendors"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      notifications: {
-        Row: {
-          actor_id: string | null
-          created_at: string
-          id: string
-          is_read: boolean
-          message: string
-          post_id: string | null
-          recipient_id: string
-          type: string
-          vendor_id: string | null
-        }
-        Insert: {
-          actor_id?: string | null
-          created_at?: string
-          id?: string
-          is_read?: boolean
-          message: string
-          post_id?: string | null
-          recipient_id: string
-          type: string
-          vendor_id?: string | null
-        }
-        Update: {
-          actor_id?: string | null
-          created_at?: string
-          id?: string
-          is_read?: boolean
-          message?: string
-          post_id?: string | null
-          recipient_id?: string
-          type?: string
-          vendor_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "notifications_post_id_fkey"
-            columns: ["post_id"]
-            isOneToOne: false
-            referencedRelation: "posts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "notifications_vendor_id_fkey"
-            columns: ["vendor_id"]
-            isOneToOne: false
-            referencedRelation: "vendors"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      reports: {
-        Row: {
-          comment_id: string | null
-          created_at: string
-          id: string
-          post_id: string | null
-          reason: string
-          reporter_id: string
-          status: string
-        }
-        Insert: {
-          comment_id?: string | null
-          created_at?: string
-          id?: string
-          post_id?: string | null
-          reason: string
-          reporter_id: string
-          status?: string
-        }
-        Update: {
-          comment_id?: string | null
-          created_at?: string
-          id?: string
-          post_id?: string | null
-          reason?: string
-          reporter_id?: string
-          status?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "reports_comment_id_fkey"
-            columns: ["comment_id"]
-            isOneToOne: false
-            referencedRelation: "post_comments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "reports_post_id_fkey"
-            columns: ["post_id"]
-            isOneToOne: false
-            referencedRelation: "posts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
     Views: {
       [_ in never]: never
@@ -822,20 +828,26 @@ export type Database = {
           comments_count: number
           created_at: string
           hashtags: string[]
+          hls_url: string | null
           id: string
+          image_urls: string[]
           is_active: boolean
           likes_count: number
+          media_type: string
           product_id: string | null
+          stream_uid: string | null
           thumbnail_url: string | null
           updated_at: string
           vendor_id: string
-          video_url: string
+          video_url: string | null
           views_count: number
         }[]
-      }
-      increment_post_views: {
-        Args: { post_id_input: string }
-        Returns: undefined
+        SetofOptions: {
+          from: "*"
+          to: "posts"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       has_role:
         | {
@@ -849,6 +861,10 @@ export type Database = {
             }
             Returns: boolean
           }
+      increment_post_views: {
+        Args: { post_id_input: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user" | "vendor"
