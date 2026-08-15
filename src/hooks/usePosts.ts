@@ -84,11 +84,33 @@ export function usePostsFeed(params?: { hashtag?: string; search?: string; postI
         // (commas and parens are the query's own delimiters).
         const term = search.replace(/^#/, '').replace(/[,()]/g, '').trim();
         if (!term) return [];
+
+        // PostgREST's or() can't reliably filter on a joined table's columns
+        // (vendors.store_name) in the same expression as the base table's
+        // columns, so vendor-name matches are resolved as a separate lookup
+        // first: find matching vendor ids, then fold them into the same
+        // or() as a vendor_id.in.(...) clause alongside caption/hashtags.
+        const { data: matchingVendors, error: vendorError } = await supabase
+          .from('vendors')
+          .select('id')
+          .ilike('store_name', `%${term}%`)
+          .limit(50);
+        if (vendorError) throw vendorError;
+
+        const vendorIds = (matchingVendors ?? []).map((v) => v.id);
+        const filters = [
+          `caption.ilike.%${term}%`,
+          `hashtags.cs.{${term.toLowerCase()}}`,
+        ];
+        if (vendorIds.length) {
+          filters.push(`vendor_id.in.(${vendorIds.join(',')})`);
+        }
+
         const { data, error } = await supabase
           .from('posts')
           .select(POSTS_SELECT)
           .eq('is_active', true)
-          .or(`caption.ilike.%${term}%,hashtags.cs.{${term.toLowerCase()}}`)
+          .or(filters.join(','))
           .order('created_at', { ascending: false })
           .range(pageParam, pageParam + PAGE_SIZE - 1);
         if (error) throw error;
