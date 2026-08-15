@@ -9,9 +9,11 @@ export interface FeedPost {
   id: string;
   vendor_id: string;
   product_id: string | null;
-  video_url: string;
+  video_url: string | null;
   hls_url: string | null;
   thumbnail_url: string | null;
+  media_type: 'video' | 'images';
+  image_urls: string[];
   caption: string | null;
   hashtags: string[];
   views_count: number;
@@ -32,19 +34,71 @@ export interface FeedPost {
   } | null;
 }
 
+const POSTS_SELECT = '*, vendors(id, store_name, logo_url), products(id, name, slug, price, image_url)';
+
 // Ranked, offset-paginated feed — order comes from get_ranked_feed (a hot
 // score: engagement decayed by age), not raw recency, so active posts
 // surface even if they weren't posted five minutes ago. We then hydrate
 // each page with vendor/product info in a second query since the ranking
 // RPC returns bare post rows.
-export function usePostsFeed(hashtag?: string) {
+//
+// A hashtag filter or free-text search switches to a plain recency-ordered
+// query instead of the ranking RPC — once you're filtering to a specific
+// slice of posts, "most recent match" is more useful than "hottest overall".
+//
+// `postId` is for deep-linking (e.g. tapping a search result card or a post
+// on a vendor's profile): it anchors the feed on that exact post, then
+// continues with older posts from the same pool so swiping past it still
+// leads somewhere instead of dead-ending.
+export function usePostsFeed(params?: { hashtag?: string; search?: string; postId?: string; enabled?: boolean }) {
+  const hashtag = params?.hashtag;
+  const search = params?.search?.trim();
+  const postId = params?.postId;
+  const enabled = params?.enabled ?? true;
+
   return useInfiniteQuery({
-    queryKey: ['posts-feed', hashtag ?? null],
+    queryKey: ['posts-feed', hashtag ?? null, search ?? null, postId ?? null],
     queryFn: async ({ pageParam }: { pageParam: number }) => {
+      if (postId) {
+        const { data: anchor, error: anchorError } = await supabase
+          .from('posts')
+          .select('created_at')
+          .eq('id', postId)
+          .maybeSingle();
+        if (anchorError) throw anchorError;
+        if (!anchor) return [];
+
+        const { data, error } = await supabase
+          .from('posts')
+          .select(POSTS_SELECT)
+          .eq('is_active', true)
+          .lte('created_at', anchor.created_at)
+          .order('created_at', { ascending: false })
+          .range(pageParam, pageParam + PAGE_SIZE - 1);
+        if (error) throw error;
+        return (data ?? []) as unknown as FeedPost[];
+      }
+
+      if (search) {
+        // Strip characters that would break PostgREST's or() filter syntax
+        // (commas and parens are the query's own delimiters).
+        const term = search.replace(/^#/, '').replace(/[,()]/g, '').trim();
+        if (!term) return [];
+        const { data, error } = await supabase
+          .from('posts')
+          .select(POSTS_SELECT)
+          .eq('is_active', true)
+          .or(`caption.ilike.%${term}%,hashtags.cs.{${term.toLowerCase()}}`)
+          .order('created_at', { ascending: false })
+          .range(pageParam, pageParam + PAGE_SIZE - 1);
+        if (error) throw error;
+        return (data ?? []) as unknown as FeedPost[];
+      }
+
       if (hashtag) {
         const { data, error } = await supabase
           .from('posts')
-          .select('*, vendors(id, store_name, logo_url), products(id, name, slug, price, image_url)')
+          .select(POSTS_SELECT)
           .eq('is_active', true)
           .contains('hashtags', [hashtag.toLowerCase()])
           .order('created_at', { ascending: false })
@@ -63,7 +117,7 @@ export function usePostsFeed(hashtag?: string) {
       const ids = ranked.map((p) => p.id);
       const { data: hydrated, error: hydrateError } = await supabase
         .from('posts')
-        .select('*, vendors(id, store_name, logo_url), products(id, name, slug, price, image_url)')
+        .select(POSTS_SELECT)
         .in('id', ids);
       if (hydrateError) throw hydrateError;
 
@@ -74,6 +128,42 @@ export function usePostsFeed(hashtag?: string) {
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) =>
       lastPage.length === PAGE_SIZE ? allPages.length * PAGE_SIZE : undefined,
+    enabled,
+  });
+}
+
+// Chronological feed of posts from vendors the current user follows, so a
+// buyer who follows a shop sees its recent posts and updates without
+// having to go find that shop's profile again.
+export function useFollowingFeed(enabled: boolean = true) {
+  const { user } = useAuth();
+
+  return useInfiniteQuery({
+    queryKey: ['following-feed', user?.id],
+    queryFn: async ({ pageParam }: { pageParam: number }) => {
+      const { data: follows, error: followsError } = await supabase
+        .from('follows')
+        .select('vendor_id')
+        .eq('follower_id', user!.id);
+      if (followsError) throw followsError;
+
+      const vendorIds = (follows ?? []).map((f) => f.vendor_id);
+      if (!vendorIds.length) return [];
+
+      const { data, error } = await supabase
+        .from('posts')
+        .select(POSTS_SELECT)
+        .eq('is_active', true)
+        .in('vendor_id', vendorIds)
+        .order('created_at', { ascending: false })
+        .range(pageParam, pageParam + PAGE_SIZE - 1);
+      if (error) throw error;
+      return (data ?? []) as unknown as FeedPost[];
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.length === PAGE_SIZE ? allPages.length * PAGE_SIZE : undefined,
+    enabled: enabled && !!user,
   });
 }
 
