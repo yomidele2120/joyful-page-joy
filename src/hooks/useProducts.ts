@@ -49,3 +49,17 @@ export function useCategories() {
     },
   });
 }
+
+// Real counts for the homepage trust strip — no invented numbers.
+export function useMarketplaceStats() {
+  return useQuery({
+    queryKey: ['marketplace-stats'],
+    queryFn: async () => {
+      const [{ count: productCount }, { count: vendorCount }] = await Promise.all([
+        supabase.from('products').select('*', { count: 'exact', head: true }).eq('is_active', true),
+        supabase.from('vendors').select('*', { count: 'exact', head: true }).eq('is_approved', true),
+      ]);
+      return { productCount: productCount ?? 0, vendorCount: vendorCount ?? 0 };
+    },
+  });
+}
