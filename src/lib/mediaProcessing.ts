@@ -57,7 +57,47 @@ export async function compressImage(file: File): Promise<Blob> {
   }
 }
 
-// Grabs a poster frame from a local video file for the picker grid.
+// Grabs a poster frame (and duration) from a local video file for the picker grid.
+export function videoMetaFromFile(file: File): Promise<{ poster: string | null; duration?: number }> {
+  return new Promise((resolve) => {
+    const video = document.createElement('video');
+    const url = URL.createObjectURL(file);
+    video.preload = 'metadata';
+    video.muted = true;
+    video.playsInline = true;
+    video.src = url;
+
+    let duration: number | undefined;
+    const fail = () => {
+      URL.revokeObjectURL(url);
+      resolve({ poster: null, duration });
+    };
+
+    video.onloadedmetadata = () => {
+      duration = isFinite(video.duration) ? video.duration : undefined;
+      video.currentTime = Math.min(0.3, (video.duration || 1) / 2);
+    };
+    video.onseeked = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        const scale = Math.min(1, 320 / Math.max(video.videoWidth, video.videoHeight));
+        canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+        canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return fail();
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        URL.revokeObjectURL(url);
+        resolve({ poster: dataUrl, duration });
+      } catch {
+        fail();
+      }
+    };
+    video.onerror = fail;
+  });
+}
+
+// Backwards-compatible helper used elsewhere in the app.
 export function videoPosterFromFile(file: File): Promise<string | null> {
   return new Promise((resolve) => {
     const video = document.createElement('video');
