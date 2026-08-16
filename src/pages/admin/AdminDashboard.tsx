@@ -116,6 +116,11 @@ export default function AdminDashboard() {
     .sort((a, b) => Number(b.stock_quantity || 0) - Number(a.stock_quantity || 0))
     .slice(0, 5);
 
+  const { data: pendingReports } = usePendingReports();
+  const resolveReport = useResolveReport();
+  const deactivatePost = useDeactivatePost();
+  const deleteComment = useDeleteComment();
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -178,10 +183,6 @@ export default function AdminDashboard() {
     else { toast.success('Product deleted'); queryClient.invalidateQueries({ queryKey: ['admin-products'] }); }
   };
 
-  const { data: pendingReports } = usePendingReports();
-  const resolveReport = useResolveReport();
-  const deactivatePost = useDeactivatePost();
-  const deleteComment = useDeleteComment();
 
   const tabs = [
     { key: 'overview', label: 'Overview', icon: <BarChart3 className="w-4 h-4" /> },
