@@ -14,9 +14,9 @@ import { cn } from '@/lib/utils';
 // existing top Navbar as the only nav; this never renders at md+.
 export default function BottomNav() {
   const location = useLocation();
-  const navigate = useNavigate();
   const { user, isVendor } = useAuth();
   const { totalItems } = useCart();
+
   const [composerOpen, setComposerOpen] = useState(false);
 
   const isActive = (path: string) => (path === '/' ? location.pathname === '/' : location.pathname.startsWith(path));
