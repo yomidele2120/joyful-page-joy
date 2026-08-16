@@ -1,3 +1,4 @@
+import BackButton from '@/components/BackButton';
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -204,7 +205,7 @@ export default function AdminDashboard() {
       <header className="bg-card border-b border-border sticky top-0 z-50">
         <div className="container flex items-center justify-between h-14">
           <div className="flex items-center gap-3">
-            <Link to="/"><ArrowLeft className="w-5 h-5 text-muted-foreground hover:text-foreground transition-colors" /></Link>
+            <BackButton fallback="/" />
             <h1 className="font-heading font-bold text-lg">Admin Dashboard</h1>
             {pendingVendors.length > 0 && (
               <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
