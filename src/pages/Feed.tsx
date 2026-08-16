@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ShoppingBag, X, Search } from 'lucide-react';
 import VideoFeed from '@/components/feed/VideoFeed';
+import BottomNav from '@/components/layout/BottomNav';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
@@ -38,7 +39,7 @@ export default function Feed() {
   const isGridMode = !!q; // search results render as a light-background grid
 
   return (
-    <div className={cn('fixed inset-0 h-[100dvh] w-full z-40', isGridMode ? 'bg-background' : 'bg-black')}>
+    <div className={cn('fixed inset-x-0 top-0 bottom-14 md:bottom-0 z-30 w-full', isGridMode ? 'bg-background' : 'bg-black')}>
       {/* Minimal floating header — feed is meant to be immersive/full-bleed */}
       <div className="absolute top-0 inset-x-0 z-10 flex items-center gap-2 p-4 pointer-events-none">
         {searchOpen ? (
@@ -123,6 +124,7 @@ export default function Feed() {
         postId={post ?? undefined}
         following={isDefaultView && tab === 'following'}
       />
+      <BottomNav />
     </div>
   );
 }

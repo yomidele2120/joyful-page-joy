@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,15 @@ export default function SupplierDashboard() {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<string>('overview');
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<string>(searchParams.get('tab') || 'overview');
+  const autoCompose = searchParams.get('compose') === '1';
+
+  // Deep link from the site-wide "+" button (e.g. /supplier-dashboard?tab=videos&compose=1)
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab) setActiveTab(tab);
+  }, [searchParams]);
 
   const { data: vendor, isLoading: vendorLoading } = useQuery({
     queryKey: ['vendor-profile', user?.id],
@@ -298,7 +306,11 @@ export default function SupplierDashboard() {
             )}
 
             {activeTab === 'videos' && (
-              <VendorVideosTab vendorId={vendor.id} products={(products || []).map(p => ({ id: p.id, name: p.name }))} />
+              <VendorVideosTab
+                vendorId={vendor.id}
+                products={(products || []).map(p => ({ id: p.id, name: p.name }))}
+                autoOpenComposer={autoCompose}
+              />
             )}
 
             {activeTab === 'add-product' && (

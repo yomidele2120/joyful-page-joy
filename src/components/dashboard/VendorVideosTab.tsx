@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Film, Trash2, Upload, Loader2, Eye, Heart, MessageCircle, Users,
   ImagePlus, X, ArrowLeft, ArrowRight, AlertCircle, Images, Plus,
@@ -22,15 +22,21 @@ import { cn } from '@/lib/utils';
 interface VendorVideosTabProps {
   vendorId: string;
   products: { id: string; name: string }[];
+  autoOpenComposer?: boolean;
 }
 
-export default function VendorVideosTab({ vendorId, products }: VendorVideosTabProps) {
+export default function VendorVideosTab({ vendorId, products, autoOpenComposer }: VendorVideosTabProps) {
   const queryClient = useQueryClient();
   const { data: posts, isLoading } = useVendorPosts(vendorId);
   const { data: followerCount } = useVendorFollowerCount(vendorId);
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
+
+  // Opened via the site-wide "+" button deep link (?tab=videos&compose=1)
+  useEffect(() => {
+    if (autoOpenComposer) setComposerOpen(true);
+  }, [autoOpenComposer]);
   const [media, setMedia] = useState<PickedMedia[]>([]);
   const [failedIds, setFailedIds] = useState<string[]>([]);
   const [caption, setCaption] = useState('');

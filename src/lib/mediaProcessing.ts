@@ -5,6 +5,7 @@
 export const MAX_IMAGE_MB = 15;
 export const MAX_VIDEO_MB = 60;
 export const MAX_IMAGES_PER_POST = 10;
+export const MAX_VIDEO_DURATION_SECONDS = 90;
 
 const MAX_DIMENSION = 1440;
 const JPEG_QUALITY = 0.85;
@@ -21,6 +22,13 @@ export function validateMediaFile(file: File): string | null {
   if (isImage && file.size > MAX_IMAGE_MB * 1024 * 1024) return `Images must be under ${MAX_IMAGE_MB}MB`;
   if (isVideo && file.size > MAX_VIDEO_MB * 1024 * 1024) return `Videos must be under ${MAX_VIDEO_MB}MB`;
   return null;
+}
+
+// Duration isn't known until the file's metadata loads (async), so this is
+// checked separately from validateMediaFile — call it once `duration` comes
+// back from videoMetaFromFile / the native gallery.
+export function exceedsMaxDuration(durationSeconds: number | undefined): boolean {
+  return typeof durationSeconds === 'number' && durationSeconds > MAX_VIDEO_DURATION_SECONDS;
 }
 
 // Stable identity so the same photo can't be picked twice.

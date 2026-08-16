@@ -4,8 +4,10 @@ import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import {
   MAX_IMAGES_PER_POST,
+  MAX_VIDEO_DURATION_SECONDS,
   fileKey,
   validateMediaFile,
+  exceedsMaxDuration,
   videoMetaFromFile,
 } from '@/lib/mediaProcessing';
 import {
@@ -175,6 +177,10 @@ export default function MediaPicker({
       // Videos and image carousels are separate post types, so a selection
       // is either one video or up to maxImages images.
       if (item.kind === 'video') {
+        if (exceedsMaxDuration(item.duration)) {
+          toast.error(`Videos must be ${MAX_VIDEO_DURATION_SECONDS} seconds or shorter`);
+          return prev;
+        }
         if (prev.length) toast.info('A video is posted on its own');
         return [item.id];
       }
