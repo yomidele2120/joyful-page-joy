@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Search, User, Menu, Heart, LogOut, Store, Clapperboard, Bell } from 'lucide-react';
+import { ShoppingCart, Search, User, Menu, Heart, LogOut, Store, Clapperboard, Bell, Plus } from 'lucide-react';
 import logo from '@/assets/logo.jpeg';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +18,9 @@ const CATEGORIES = ['Fashion', 'Electronics', 'Home & Living', 'Beauty & Health'
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
   const { totalItems } = useCart();
   const { user, isAdmin, isVendor, signOut } = useAuth();
   const unreadCount = useUnreadNotificationCount();
