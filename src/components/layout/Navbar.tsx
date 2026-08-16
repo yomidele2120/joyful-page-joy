@@ -82,6 +82,18 @@ export default function Navbar() {
             </Button>
           </Link>
 
+          <Button
+            variant="ghost"
+            size="icon"
+            className="w-8 h-8"
+            title="Create"
+            aria-label="Create"
+            onClick={() => setCreateOpen(true)}
+          >
+            <Plus className="w-4 h-4" />
+          </Button>
+
+
           <Link to="/wishlist">
             <Button variant="ghost" size="icon" className="w-8 h-8">
               <Heart className="w-4 h-4" />
