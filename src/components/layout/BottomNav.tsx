@@ -1,11 +1,12 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Clapperboard, Plus, ShoppingCart, User, Package, Film, Store } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { Home, Clapperboard, Plus, ShoppingCart, User } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useCart } from '@/contexts/CartContext';
 import { Badge } from '@/components/ui/badge';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
+import CreateMenu from '@/components/CreateMenu';
 import { cn } from '@/lib/utils';
+
 
 // Fixed, mobile-only bottom tab bar shown across the whole site (including
 // the immersive /feed page, where it sits below the video rather than
