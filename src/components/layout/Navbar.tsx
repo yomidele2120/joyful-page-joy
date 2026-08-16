@@ -8,6 +8,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from '@/comp
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/hooks/useAuth';
 import { Badge } from '@/components/ui/badge';
+import ThemeToggle, { ThemeSwitchRow } from '@/components/ThemeToggle';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
@@ -76,6 +77,8 @@ export default function Navbar() {
 
         {/* Desktop icons — hidden on mobile; mobile gets everything in the menu sheet below */}
         <div className="hidden md:flex items-center gap-0.5">
+          <ThemeToggle />
+
           <Link to="/feed" title="Watch">
             <Button variant="ghost" size="icon" className="w-8 h-8">
               <Clapperboard className="w-4 h-4" />
@@ -201,6 +204,10 @@ export default function Navbar() {
                     </Link>
                   </SheetClose>
                 )}
+              </div>
+
+              <div className="border-b border-border">
+                <ThemeSwitchRow />
               </div>
 
               {!user && !isVendor && (

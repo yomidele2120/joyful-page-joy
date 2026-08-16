@@ -44,7 +44,7 @@ export default function VideoPost({ post, isActive, isLiked, onOpenComments }: V
 
   const handleFollow = () => {
     if (!user) {
-      toast.error('Sign in to follow this vendor');
+      toast.error('Sign in to connect with this vendor');
       return;
     }
     toggleFollow.mutate({ vendorId: post.vendor_id, isFollowing: !!isFollowing });
@@ -127,7 +127,7 @@ export default function VideoPost({ post, isActive, isLiked, onOpenComments }: V
 
       {/* Right-side action rail */}
       <div className="absolute right-3 bottom-24 flex flex-col items-center gap-5">
-        <button onClick={handleFollow} className="flex flex-col items-center">
+        <button onClick={handleFollow} className="flex flex-col items-center" aria-label={isFollowing ? 'Connected' : 'Connect with vendor'}>
           <Avatar className="h-11 w-11 border-2 border-white">
             <AvatarImage src={post.vendors?.logo_url ?? undefined} />
             <AvatarFallback>{post.vendors?.store_name?.[0] ?? 'V'}</AvatarFallback>

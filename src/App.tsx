@@ -1,4 +1,5 @@
 import { Suspense, lazy } from "react";
+import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -34,67 +35,69 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <CartProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route
-              path="/feed"
-              element={
-                <Suspense
-                  fallback={<div className="fixed inset-0 bg-black flex items-center justify-center text-white">Loading...</div>}
-                >
-                  <Feed />
-                </Suspense>
-              }
-            />
-            <Route path="/products" element={<Products />} />
-            <Route path="/product/:slug" element={<ProductDetail />} />
-            <Route path="/category/:slug" element={<CategoryPage />} />
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/users-login" element={<UserLogin />} />
-            <Route path="/suppliers-login" element={<SupplierLogin />} />
-            <Route path="/supplier-signup" element={<SupplierSignup />} />
-            <Route path="/shop/:vendorId" element={<SupplierShop />} />
-            <Route path="/admin-login" element={<AdminLogin />} />
-            <Route path="/dashboard" element={<Navigate to="/admin" replace />} />
-            <Route path="/wishlist" element={<Wishlist />} />
-            <Route path="/chat" element={<BuyerChat />} />
+  <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <CartProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route
+                path="/feed"
+                element={
+                  <Suspense
+                    fallback={<div className="fixed inset-0 bg-black flex items-center justify-center text-white">Loading...</div>}
+                  >
+                    <Feed />
+                  </Suspense>
+                }
+              />
+              <Route path="/products" element={<Products />} />
+              <Route path="/product/:slug" element={<ProductDetail />} />
+              <Route path="/category/:slug" element={<CategoryPage />} />
+              <Route path="/cart" element={<Cart />} />
+              <Route path="/checkout" element={<Checkout />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/users-login" element={<UserLogin />} />
+              <Route path="/suppliers-login" element={<SupplierLogin />} />
+              <Route path="/supplier-signup" element={<SupplierSignup />} />
+              <Route path="/shop/:vendorId" element={<SupplierShop />} />
+              <Route path="/admin-login" element={<AdminLogin />} />
+              <Route path="/dashboard" element={<Navigate to="/admin" replace />} />
+              <Route path="/wishlist" element={<Wishlist />} />
+              <Route path="/chat" element={<BuyerChat />} />
 
-            {/* Protected routes */}
-            <Route path="/user-dashboard" element={
-              <ProtectedRoute allowedRoles={['user']}>
-                <UserDashboard />
-              </ProtectedRoute>
-            } />
-            <Route path="/supplier-dashboard" element={
-              <ProtectedRoute allowedRoles={['vendor']}>
-                <SupplierDashboard />
-              </ProtectedRoute>
-            } />
-            <Route path="/supplier-chat" element={
-              <ProtectedRoute allowedRoles={['vendor']}>
-                <SupplierChat />
-              </ProtectedRoute>
-            } />
-            <Route path="/admin" element={
-              <ProtectedRoute allowedRoles={['admin']} redirectTo="/admin-login">
-                <AdminDashboard />
-              </ProtectedRoute>
-            } />
+              {/* Protected routes */}
+              <Route path="/user-dashboard" element={
+                <ProtectedRoute allowedRoles={['user']}>
+                  <UserDashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/supplier-dashboard" element={
+                <ProtectedRoute allowedRoles={['vendor']}>
+                  <SupplierDashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/supplier-chat" element={
+                <ProtectedRoute allowedRoles={['vendor']}>
+                  <SupplierChat />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin" element={
+                <ProtectedRoute allowedRoles={['admin']} redirectTo="/admin-login">
+                  <AdminDashboard />
+                </ProtectedRoute>
+              } />
 
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </CartProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </CartProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ThemeProvider>
 );
 
 export default App;

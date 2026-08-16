@@ -280,7 +280,7 @@ export function useToggleFollow() {
 
   return useMutation({
     mutationFn: async ({ vendorId, isFollowing }: { vendorId: string; isFollowing: boolean }) => {
-      if (!user) throw new Error('Sign in to follow vendors');
+      if (!user) throw new Error('Sign in to connect with vendors');
       if (isFollowing) {
         const { error } = await supabase.from('follows').delete().eq('vendor_id', vendorId).eq('follower_id', user.id);
         if (error) throw error;

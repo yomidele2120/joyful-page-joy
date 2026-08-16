@@ -12,7 +12,7 @@ export default function Feed() {
   const tag = searchParams.get('tag');
   const q = searchParams.get('q');
   const post = searchParams.get('post');
-  const tab = searchParams.get('tab'); // 'following' | null (For You)
+  const tab = searchParams.get('tab'); // 'following' | null — shown to the user as "Connections" / "For You"
 
   const [searchOpen, setSearchOpen] = useState(!!q);
   const [queryInput, setQueryInput] = useState(q ?? '');
@@ -93,7 +93,7 @@ export default function Feed() {
                       tab === 'following' ? 'bg-white text-black' : 'text-white/70'
                     )}
                   >
-                    Following
+                    Connections
                   </button>
                 </div>
               ) : (
