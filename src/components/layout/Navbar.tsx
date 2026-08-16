@@ -13,6 +13,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useNotifications, useUnreadNotificationCount, useMarkNotificationsRead } from '@/hooks/useNotifications';
 import { formatDistanceToNow } from 'date-fns';
+import CreateMenu from '@/components/CreateMenu';
+
 
 const CATEGORIES = ['Fashion', 'Electronics', 'Home & Living', 'Beauty & Health', 'Groceries', 'Baby & Kids', 'Sports & Outdoors', 'Phones & Accessories'];
 
@@ -279,7 +281,10 @@ export default function Navbar() {
           <Link to="/products" className="text-primary font-medium whitespace-nowrap">All Products</Link>
         </div>
       </nav>
+
+      <CreateMenu open={createOpen} onOpenChange={setCreateOpen} />
     </header>
+
   );
 }
 
