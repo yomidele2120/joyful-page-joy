@@ -178,10 +178,6 @@ export default function AdminDashboard() {
     else { toast.success('Product deleted'); queryClient.invalidateQueries({ queryKey: ['admin-products'] }); }
   };
 
-  const { data: pendingReports } = usePendingReports();
-  const resolveReport = useResolveReport();
-  const deactivatePost = useDeactivatePost();
-  const deleteComment = useDeleteComment();
 
   const tabs = [
     { key: 'overview', label: 'Overview', icon: <BarChart3 className="w-4 h-4" /> },
