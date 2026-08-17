@@ -65,19 +65,19 @@ export default function Index() {
       </section>
 
       {/* Newsletter */}
-      <section className="py-14 md:py-20 bg-foreground text-background">
+      <section className="py-14 md:py-20 bg-foreground dark:bg-black text-background dark:text-white">
         <div className="container max-w-lg text-center">
-          <h2 className="font-heading text-2xl md:text-3xl font-bold mb-2">Stay Updated</h2>
-          <p className="text-background/70 text-sm md:text-base mb-7">
+          <h2 className="font-heading text-2xl md:text-3xl font-bold mb-2 text-background dark:text-white">Stay Updated</h2>
+          <p className="text-background/70 dark:text-white/70 text-sm md:text-base mb-7">
             Get the latest deals and product updates directly to your inbox.
           </p>
           <form className="flex gap-2" onSubmit={e => e.preventDefault()}>
             <Input
               placeholder="Enter your email"
               type="email"
-              className="flex-1 bg-background/10 border-background/20 text-background placeholder:text-background/50 h-11"
+              className="flex-1 bg-background/20 dark:bg-white/10 border-background/30 dark:border-white/20 text-background dark:text-white placeholder:text-background/50 dark:placeholder:text-white/50 h-11"
             />
-            <Button type="submit" size="lg" className="shrink-0">
+            <Button type="submit" size="lg" className="shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground">
               <Send className="w-4 h-4 mr-1.5" /> Subscribe
             </Button>
           </form>

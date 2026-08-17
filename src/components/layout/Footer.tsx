@@ -3,7 +3,7 @@ import { Mail, Phone } from 'lucide-react';
 
 export default function Footer() {
   return (
-    <footer className="bg-[#0b1220] text-white mt-16">
+    <footer className="bg-foreground dark:bg-black text-background dark:text-white mt-16">
       <div className="container py-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-8 text-sm">
         {/* Brand */}
         <div className="sm:col-span-2 lg:col-span-1">
@@ -11,17 +11,17 @@ export default function Footer() {
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
               <span className="text-primary-foreground font-heading font-bold text-sm">M</span>
             </div>
-            <span className="font-heading font-bold text-lg text-white">MarketHub Africa</span>
+            <span className="font-heading font-bold text-lg text-background dark:text-white">MarketHub Africa</span>
           </div>
-          <p className="text-white/60 leading-relaxed max-w-xs">
+          <p className="text-background/60 dark:text-white/60 leading-relaxed max-w-xs">
             Buy, Sell, and Grow With Confidence. Nigeria's trusted online marketplace.
           </p>
         </div>
 
         {/* Quick Links */}
-        <div className="border-t border-white/10 pt-6 sm:border-0 sm:pt-0">
-          <h4 className="font-heading font-semibold text-white mb-3">Quick Links</h4>
-          <div className="flex flex-col gap-2.5 text-white/80">
+        <div className="border-t border-background/10 dark:border-white/10 pt-6 sm:border-0 sm:pt-0">
+          <h4 className="font-heading font-semibold text-background dark:text-white mb-3">Quick Links</h4>
+          <div className="flex flex-col gap-2.5 text-background/80 dark:text-white/80">
             <Link to="/products" className="hover:text-primary transition-colors">All Products</Link>
             <Link to="/category/fashion" className="hover:text-primary transition-colors">Fashion</Link>
             <Link to="/category/electronics" className="hover:text-primary transition-colors">Electronics</Link>
@@ -30,9 +30,9 @@ export default function Footer() {
         </div>
 
         {/* Support */}
-        <div className="border-t border-white/10 pt-6 sm:border-0 sm:pt-0">
-          <h4 className="font-heading font-semibold text-white mb-3">Support</h4>
-          <div className="flex flex-col gap-2.5 text-white/80">
+        <div className="border-t border-background/10 dark:border-white/10 pt-6 sm:border-0 sm:pt-0">
+          <h4 className="font-heading font-semibold text-background dark:text-white mb-3">Support</h4>
+          <div className="flex flex-col gap-2.5 text-background/80 dark:text-white/80">
             <Link to="/users-login" className="hover:text-primary transition-colors">My Account</Link>
             <Link to="/suppliers-login" className="hover:text-primary transition-colors">Supplier Login</Link>
             <Link to="/cart" className="hover:text-primary transition-colors">Cart</Link>
@@ -41,9 +41,9 @@ export default function Footer() {
         </div>
 
         {/* Contact */}
-        <div className="border-t border-white/10 pt-6 sm:border-0 sm:pt-0">
-          <h4 className="font-heading font-semibold text-white mb-3">Contact</h4>
-          <div className="flex flex-col gap-3 text-white/80">
+        <div className="border-t border-background/10 dark:border-white/10 pt-6 sm:border-0 sm:pt-0">
+          <h4 className="font-heading font-semibold text-background dark:text-white mb-3">Contact</h4>
+          <div className="flex flex-col gap-3 text-background/80 dark:text-white/80">
             <a
               href="tel:+2348060474393"
               className="flex items-center gap-2.5 min-w-0 hover:text-primary transition-colors"
@@ -62,8 +62,8 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="border-t border-white/10 py-4 px-6">
-        <p className="text-center text-xs text-white/40">
+      <div className="border-t border-background/10 dark:border-white/10 py-4 px-6">
+        <p className="text-center text-xs text-background/40 dark:text-white/40">
           © {new Date().getFullYear()} MarketHub Africa. All rights reserved.
         </p>
       </div>
