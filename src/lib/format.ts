@@ -13,3 +13,11 @@ export function slugify(text: string): string {
     .replace(/[^\w ]+/g, '')
     .replace(/ +/g, '-');
 }
+
+// Compact counts for marketplace stats, e.g. 1200 -> "1.2K"
+export function formatCompact(value: number): string {
+  return new Intl.NumberFormat('en-US', {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(value ?? 0);
+}

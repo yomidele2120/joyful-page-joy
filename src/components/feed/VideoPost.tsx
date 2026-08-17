@@ -44,7 +44,7 @@ export default function VideoPost({ post, isActive, isLiked, onOpenComments }: V
 
   const handleFollow = () => {
     if (!user) {
-      toast.error('Sign in to follow this vendor');
+      toast.error('Sign in to connect with this vendor');
       return;
     }
     toggleFollow.mutate({ vendorId: post.vendor_id, isFollowing: !!isFollowing });

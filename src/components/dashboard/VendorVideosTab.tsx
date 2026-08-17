@@ -206,7 +206,7 @@ export default function VendorVideosTab({ vendorId, products, autoOpenComposer }
         <MiniStat icon={<Eye className="w-4 h-4" />} label="Views" value={sumField(posts, 'views_count')} />
         <MiniStat icon={<Heart className="w-4 h-4" />} label="Likes" value={sumField(posts, 'likes_count')} />
         <MiniStat icon={<MessageCircle className="w-4 h-4" />} label="Comments" value={sumField(posts, 'comments_count')} />
-        <MiniStat icon={<Users className="w-4 h-4" />} label="Followers" value={followerCount ?? 0} />
+        <MiniStat icon={<Users className="w-4 h-4" />} label="Shoppers" value={followerCount ?? 0} />
       </div>
 
       <PostsPerformanceChart posts={posts} />
