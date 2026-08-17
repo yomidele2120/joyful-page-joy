@@ -1,4 +1,3 @@
-import BackButton from '@/components/BackButton';
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -117,11 +116,6 @@ export default function AdminDashboard() {
     .sort((a, b) => Number(b.stock_quantity || 0) - Number(a.stock_quantity || 0))
     .slice(0, 5);
 
-  const { data: pendingReports } = usePendingReports();
-  const resolveReport = useResolveReport();
-  const deactivatePost = useDeactivatePost();
-  const deleteComment = useDeleteComment();
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -184,6 +178,10 @@ export default function AdminDashboard() {
     else { toast.success('Product deleted'); queryClient.invalidateQueries({ queryKey: ['admin-products'] }); }
   };
 
+  const { data: pendingReports } = usePendingReports();
+  const resolveReport = useResolveReport();
+  const deactivatePost = useDeactivatePost();
+  const deleteComment = useDeleteComment();
 
   const tabs = [
     { key: 'overview', label: 'Overview', icon: <BarChart3 className="w-4 h-4" /> },
@@ -205,7 +203,7 @@ export default function AdminDashboard() {
       <header className="bg-card border-b border-border sticky top-0 z-50">
         <div className="container flex items-center justify-between h-14">
           <div className="flex items-center gap-3">
-            <BackButton fallback="/" />
+            <Link to="/"><ArrowLeft className="w-5 h-5 text-muted-foreground hover:text-foreground transition-colors" /></Link>
             <h1 className="font-heading font-bold text-lg">Admin Dashboard</h1>
             {pendingVendors.length > 0 && (
               <Badge variant="destructive" className="text-[10px] px-1.5 py-0">

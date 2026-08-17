@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Search, User, Menu, Heart, LogOut, Store, Clapperboard, Bell, Plus } from 'lucide-react';
+import { ShoppingCart, Search, User, Menu, Heart, LogOut, Store, Clapperboard, Bell } from 'lucide-react';
 import logo from '@/assets/logo.jpeg';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,16 +14,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useNotifications, useUnreadNotificationCount, useMarkNotificationsRead } from '@/hooks/useNotifications';
 import { formatDistanceToNow } from 'date-fns';
-import CreateMenu from '@/components/CreateMenu';
-
 
 const CATEGORIES = ['Fashion', 'Electronics', 'Home & Living', 'Beauty & Health', 'Groceries', 'Baby & Kids', 'Sports & Outdoors', 'Phones & Accessories'];
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [createOpen, setCreateOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-
   const { totalItems } = useCart();
   const { user, isAdmin, isVendor, signOut } = useAuth();
   const unreadCount = useUnreadNotificationCount();
@@ -63,7 +59,7 @@ export default function Navbar() {
       {/* Main Nav */}
       <div className="container flex items-center justify-between h-12 gap-2">
         <Link to="/" className="flex items-center shrink-0">
-          <img src={logo} alt="MarketHub Africa" className="h-8 w-auto object-contain" />
+          <img src={logo} alt="MarketHub Africa" className="h-8 w-auto object-contain dark:invert" />
         </Link>
 
         {/* Desktop Search */}
@@ -81,25 +77,11 @@ export default function Navbar() {
 
         {/* Desktop icons — hidden on mobile; mobile gets everything in the menu sheet below */}
         <div className="hidden md:flex items-center gap-0.5">
-          <ThemeToggle />
-
           <Link to="/feed" title="Watch">
             <Button variant="ghost" size="icon" className="w-8 h-8">
               <Clapperboard className="w-4 h-4" />
             </Button>
           </Link>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            className="w-8 h-8"
-            title="Create"
-            aria-label="Create"
-            onClick={() => setCreateOpen(true)}
-          >
-            <Plus className="w-4 h-4" />
-          </Button>
-
 
           <Link to="/wishlist">
             <Button variant="ghost" size="icon" className="w-8 h-8">
@@ -137,6 +119,9 @@ export default function Navbar() {
               </Button>
             </Link>
           )}
+
+          <span className="w-px h-5 bg-border mx-1" aria-hidden="true" />
+          <ThemeToggle />
         </div>
 
         {/* Mobile: a single menu trigger holds everything — search, icons, categories */}
@@ -154,7 +139,7 @@ export default function Navbar() {
           >
             <SheetHeader className="p-4 border-b border-border text-left">
               <SheetTitle className="flex items-center gap-2">
-                <img src={logo} alt="MarketHub Africa" className="h-7 w-auto object-contain" />
+                <img src={logo} alt="MarketHub Africa" className="h-7 w-auto object-contain dark:invert" />
               </SheetTitle>
             </SheetHeader>
 
@@ -288,10 +273,7 @@ export default function Navbar() {
           <Link to="/products" className="text-primary font-medium whitespace-nowrap">All Products</Link>
         </div>
       </nav>
-
-      <CreateMenu open={createOpen} onOpenChange={setCreateOpen} />
     </header>
-
   );
 }
 

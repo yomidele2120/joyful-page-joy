@@ -1,4 +1,3 @@
-import BackButton from '@/components/BackButton';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Layout from '@/components/layout/Layout';
@@ -119,7 +118,6 @@ export default function UserDashboard() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
-            <BackButton fallback="/" />
             <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
               <User className="w-6 h-6 text-primary" />
             </div>

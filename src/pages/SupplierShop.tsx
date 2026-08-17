@@ -10,7 +10,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { useVendorPosts, useVendorFollowerCount, useIsFollowing, useToggleFollow } from '@/hooks/usePosts';
 import { formatCompactNumber } from '@/lib/format';
 import { toast } from 'sonner';
-import { formatCompact } from '@/lib/format';
 
 export default function SupplierShop() {
   const { vendorId } = useParams();
@@ -97,11 +96,7 @@ export default function SupplierShop() {
                 <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground flex-wrap">
                   {vendor.address && <span className="flex items-center gap-1"><MapPin className="w-3 h-3 shrink-0" /><span className="truncate">{vendor.address}</span></span>}
                   {vendor.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3 shrink-0" />{vendor.phone}</span>}
-<<<<<<< HEAD
                   <span className="font-medium text-foreground">{formatCompactNumber(followerCount ?? 0)} Shoppers</span>
-=======
-                  <span className="font-medium text-foreground">{formatCompact(followerCount ?? 0)} Shoppers</span>
->>>>>>> 2febcb3d7aad58cf1d3d1f6567ff79008232febd
                 </div>
               </div>
             </div>

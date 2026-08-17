@@ -36,7 +36,6 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const App = () => (
-<<<<<<< HEAD
   <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
@@ -44,6 +43,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <ScrollToTop />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route
@@ -70,41 +70,6 @@ const App = () => (
               <Route path="/dashboard" element={<Navigate to="/admin" replace />} />
               <Route path="/wishlist" element={<Wishlist />} />
               <Route path="/chat" element={<BuyerChat />} />
-=======
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <CartProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <ScrollToTop />
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route
-              path="/feed"
-              element={
-                <Suspense
-                  fallback={<div className="fixed inset-0 bg-black flex items-center justify-center text-white">Loading...</div>}
-                >
-                  <Feed />
-                </Suspense>
-              }
-            />
-            <Route path="/products" element={<Products />} />
-            <Route path="/product/:slug" element={<ProductDetail />} />
-            <Route path="/category/:slug" element={<CategoryPage />} />
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/users-login" element={<UserLogin />} />
-            <Route path="/suppliers-login" element={<SupplierLogin />} />
-            <Route path="/supplier-signup" element={<SupplierSignup />} />
-            <Route path="/shop/:vendorId" element={<SupplierShop />} />
-            <Route path="/admin-login" element={<AdminLogin />} />
-            <Route path="/dashboard" element={<Navigate to="/admin" replace />} />
-            <Route path="/wishlist" element={<Wishlist />} />
-            <Route path="/chat" element={<BuyerChat />} />
->>>>>>> 2febcb3d7aad58cf1d3d1f6567ff79008232febd
 
               {/* Protected routes */}
               <Route path="/user-dashboard" element={

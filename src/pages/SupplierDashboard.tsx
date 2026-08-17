@@ -1,4 +1,3 @@
-import BackButton from '@/components/BackButton';
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -106,7 +105,7 @@ export default function SupplierDashboard() {
       <header className="bg-card border-b border-border sticky top-0 z-50">
         <div className="container flex items-center justify-between h-14">
           <div className="flex items-center gap-3">
-            <BackButton fallback="/" />
+            <Link to="/"><ArrowLeft className="w-5 h-5 text-muted-foreground" /></Link>
             <Store className="w-5 h-5 text-primary" />
             <div>
               <h1 className="font-heading font-bold text-sm leading-none">{vendor.store_name}</h1>

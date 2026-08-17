@@ -88,6 +88,10 @@ export default {
           from: { transform: "translateX(0)" },
           to: { transform: "translateX(-50%)" },
         },
+        "icon-pop": {
+          from: { opacity: "0", transform: "scale(0.5) rotate(-90deg)" },
+          to: { opacity: "1", transform: "scale(1) rotate(0deg)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -95,6 +99,7 @@ export default {
         "fade-in": "fade-in 0.5s ease-out forwards",
         "slide-in": "slide-in 0.3s ease-out",
         marquee: "marquee 22s linear infinite",
+        "icon-pop": "icon-pop 0.25s ease-out",
       },
     },
   },

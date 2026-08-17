@@ -37,7 +37,6 @@ export default function Footer() {
             <Link to="/suppliers-login" className="hover:text-primary transition-colors">Supplier Login</Link>
             <Link to="/cart" className="hover:text-primary transition-colors">Cart</Link>
             <Link to="/wishlist" className="hover:text-primary transition-colors">Wishlist</Link>
-            <Link to="/admin-login" className="text-background/40 hover:text-primary/80 transition-colors">Admin Login</Link>
           </div>
         </div>
 
