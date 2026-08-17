@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Search, User, Menu, Heart, LogOut, Store, Clapperboard, Bell } from 'lucide-react';
+import { ShoppingCart, Search, User, Menu, Heart, LogOut, Store, Clapperboard, Bell, Plus } from 'lucide-react';
 import logo from '@/assets/logo.jpeg';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,12 +14,16 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useNotifications, useUnreadNotificationCount, useMarkNotificationsRead } from '@/hooks/useNotifications';
 import { formatDistanceToNow } from 'date-fns';
+import CreateMenu from '@/components/CreateMenu';
+
 
 const CATEGORIES = ['Fashion', 'Electronics', 'Home & Living', 'Beauty & Health', 'Groceries', 'Baby & Kids', 'Sports & Outdoors', 'Phones & Accessories'];
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
   const { totalItems } = useCart();
   const { user, isAdmin, isVendor, signOut } = useAuth();
   const unreadCount = useUnreadNotificationCount();
@@ -84,6 +88,18 @@ export default function Navbar() {
               <Clapperboard className="w-4 h-4" />
             </Button>
           </Link>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className="w-8 h-8"
+            title="Create"
+            aria-label="Create"
+            onClick={() => setCreateOpen(true)}
+          >
+            <Plus className="w-4 h-4" />
+          </Button>
+
 
           <Link to="/wishlist">
             <Button variant="ghost" size="icon" className="w-8 h-8">
@@ -272,7 +288,10 @@ export default function Navbar() {
           <Link to="/products" className="text-primary font-medium whitespace-nowrap">All Products</Link>
         </div>
       </nav>
+
+      <CreateMenu open={createOpen} onOpenChange={setCreateOpen} />
     </header>
+
   );
 }
 

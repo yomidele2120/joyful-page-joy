@@ -93,7 +93,11 @@ export default function Feed() {
                       tab === 'following' ? 'bg-white text-black' : 'text-white/70'
                     )}
                   >
+<<<<<<< HEAD
                     Connections
+=======
+                    Connected
+>>>>>>> 2febcb3d7aad58cf1d3d1f6567ff79008232febd
                   </button>
                 </div>
               ) : (

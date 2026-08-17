@@ -1,11 +1,12 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Clapperboard, Plus, ShoppingCart, User, Package, Film, Store } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { Home, Clapperboard, Plus, ShoppingCart, User } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useCart } from '@/contexts/CartContext';
 import { Badge } from '@/components/ui/badge';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
+import CreateMenu from '@/components/CreateMenu';
 import { cn } from '@/lib/utils';
+
 
 // Fixed, mobile-only bottom tab bar shown across the whole site (including
 // the immersive /feed page, where it sits below the video rather than
@@ -13,9 +14,9 @@ import { cn } from '@/lib/utils';
 // existing top Navbar as the only nav; this never renders at md+.
 export default function BottomNav() {
   const location = useLocation();
-  const navigate = useNavigate();
   const { user, isVendor } = useAuth();
   const { totalItems } = useCart();
+
   const [composerOpen, setComposerOpen] = useState(false);
 
   const isActive = (path: string) => (path === '/' ? location.pathname === '/' : location.pathname.startsWith(path));
@@ -62,45 +63,8 @@ export default function BottomNav() {
         </div>
       </nav>
 
-      <Drawer open={composerOpen} onOpenChange={setComposerOpen}>
-        <DrawerContent>
-          <DrawerHeader>
-            <DrawerTitle>{isVendor ? 'Create' : 'Start selling'}</DrawerTitle>
-          </DrawerHeader>
+      <CreateMenu open={composerOpen} onOpenChange={setComposerOpen} />
 
-          {isVendor ? (
-            <div className="p-4 pt-0 grid grid-cols-2 gap-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-              <button
-                onClick={() => { setComposerOpen(false); navigate('/supplier-dashboard?tab=add-product'); }}
-                className="flex flex-col items-center gap-2 rounded-xl border border-border p-5 active:scale-[0.98] transition-transform"
-              >
-                <Package className="w-7 h-7 text-primary" />
-                <span className="text-sm font-medium">Add Product</span>
-              </button>
-              <button
-                onClick={() => { setComposerOpen(false); navigate('/supplier-dashboard?tab=videos&compose=1'); }}
-                className="flex flex-col items-center gap-2 rounded-xl border border-border p-5 active:scale-[0.98] transition-transform"
-              >
-                <Film className="w-7 h-7 text-primary" />
-                <span className="text-sm font-medium">Create Post</span>
-              </button>
-            </div>
-          ) : (
-            <div className="p-4 pt-0 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-              <p className="text-sm text-muted-foreground mb-4">
-                Only vendors can list products or post videos. Open your shop to start selling on MarketHub.
-              </p>
-              <button
-                onClick={() => { setComposerOpen(false); navigate(user ? '/supplier-signup' : '/users-login'); }}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground py-3 font-medium active:scale-[0.98] transition-transform"
-              >
-                <Store className="w-4 h-4" />
-                Become a Vendor
-              </button>
-            </div>
-          )}
-        </DrawerContent>
-      </Drawer>
     </>
   );
 }

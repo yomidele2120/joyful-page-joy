@@ -49,7 +49,11 @@ export default function VideoFeed({ hashtag, search, postId, following }: VideoF
       resetKey={`${hashtag ?? ''}:${postId ?? ''}:${following ? 'following' : 'foryou'}`}
       emptyMessage={
         following
+<<<<<<< HEAD
           ? "You haven't connected with any shops yet — hit Connect on a vendor's profile to see their updates here."
+=======
+          ? "You haven't connected with any shops yet — connect from a shop profile to see updates here."
+>>>>>>> 2febcb3d7aad58cf1d3d1f6567ff79008232febd
           : hashtag
             ? `No videos tagged #${hashtag} yet.`
             : "Vendors haven't posted any videos. Check back soon."
