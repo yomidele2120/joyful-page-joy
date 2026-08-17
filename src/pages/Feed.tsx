@@ -93,7 +93,7 @@ export default function Feed() {
                       tab === 'following' ? 'bg-white text-black' : 'text-white/70'
                     )}
                   >
-                    Following
+                    Connected
                   </button>
                 </div>
               ) : (

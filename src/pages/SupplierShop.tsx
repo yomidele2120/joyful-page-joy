@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useVendorPosts, useVendorFollowerCount, useIsFollowing, useToggleFollow } from '@/hooks/usePosts';
 import { toast } from 'sonner';
+import { formatCompact } from '@/lib/format';
 
 export default function SupplierShop() {
   const { vendorId } = useParams();
@@ -61,7 +62,7 @@ export default function SupplierShop() {
 
   const handleFollow = () => {
     if (!user) {
-      toast.error('Sign in to follow this shop');
+      toast.error('Sign in to connect with this shop');
       navigate('/users-login');
       return;
     }
@@ -95,7 +96,7 @@ export default function SupplierShop() {
                 <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground flex-wrap">
                   {vendor.address && <span className="flex items-center gap-1"><MapPin className="w-3 h-3 shrink-0" /><span className="truncate">{vendor.address}</span></span>}
                   {vendor.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3 shrink-0" />{vendor.phone}</span>}
-                  <span className="font-medium text-foreground">{(followerCount ?? 0).toLocaleString()} followers</span>
+                  <span className="font-medium text-foreground">{formatCompact(followerCount ?? 0)} Shoppers</span>
                 </div>
               </div>
             </div>
@@ -109,7 +110,7 @@ export default function SupplierShop() {
                   className="flex-1 gap-1.5 text-xs"
                 >
                   {isFollowing ? <UserCheck className="w-3.5 h-3.5" /> : <UserPlus className="w-3.5 h-3.5" />}
-                  {isFollowing ? 'Following' : 'Follow'}
+                  {isFollowing ? 'Connected' : 'Connect'}
                 </Button>
               )}
               <Button onClick={handleInAppChat} variant="outline" size="sm" className="flex-1 gap-1.5 text-xs">
