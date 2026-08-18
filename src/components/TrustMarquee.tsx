@@ -13,7 +13,7 @@ const track = [...points, ...points];
 
 export default function TrustMarquee() {
   return (
-    <div className="bg-foreground text-background overflow-hidden py-2.5 border-b border-background/10">
+    <div className="bg-strip text-strip-foreground overflow-hidden py-2.5 border-b border-white/10">
       <div className="flex w-max animate-marquee motion-reduce:animate-none gap-10">
         {track.map((p, i) => (
           <span key={i} className="flex items-center gap-2 text-xs font-medium whitespace-nowrap shrink-0">
