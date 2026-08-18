@@ -10,7 +10,7 @@ export interface Conversation {
   last_message_at: string;
   created_at: string;
   other_vendor?: { store_name: string; logo_url: string | null; vendor_id?: string };
-  other_profile?: { full_name: string | null };
+  other_profile?: { full_name: string | null; avatar_url?: string | null; phone?: string | null; city?: string | null; state?: string | null; created_at?: string };
   other_is_vendor: boolean;
   other_user_id: string;
 }
@@ -54,7 +54,7 @@ export function useConversations() {
       // Fetch profile info for all other participants
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('user_id, full_name')
+        .select('user_id, full_name, avatar_url, phone, city, state, created_at')
         .in('user_id', otherIds);
 
       const enriched: Conversation[] = (data as any[]).map(c => {
@@ -66,7 +66,7 @@ export function useConversations() {
           other_user_id: otherId,
           other_is_vendor: !!vendor,
           other_vendor: vendor ? { store_name: vendor.store_name, logo_url: vendor.logo_url, vendor_id: vendor.id } : undefined,
-          other_profile: profile ? { full_name: profile.full_name } : undefined,
+          other_profile: profile ? { full_name: profile.full_name, avatar_url: (profile as any).avatar_url, phone: (profile as any).phone, city: (profile as any).city, state: (profile as any).state, created_at: (profile as any).created_at } : undefined,
         };
       });
       setConversations(enriched);

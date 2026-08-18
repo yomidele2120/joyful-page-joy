@@ -41,6 +41,9 @@
     --card-hover-shadow: 0 8px 30px -4px hsl(220 30% 10% / 0.15);
     --badge-glow: 0 0 12px hsl(145 72% 34% / 0.3);
 
+    --strip: 220 30% 10%;
+    --strip-foreground: 220 20% 97%;
+
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
@@ -86,6 +89,9 @@
     --card-shadow: 0 2px 12px -2px hsl(0 0% 0% / 0.5);
     --card-hover-shadow: 0 8px 30px -4px hsl(0 0% 0% / 0.7);
     --badge-glow: 0 0 12px hsl(145 72% 42% / 0.35);
+
+    --strip: 0 0% 13%;
+    --strip-foreground: 0 0% 90%;
 
     --sidebar-background: 0 0% 3%;
     --sidebar-foreground: 0 0% 92%;
