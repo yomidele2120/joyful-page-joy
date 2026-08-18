@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import MediaPreview from '@/components/chat/MediaPreview';
 import VoiceRecorder from '@/components/chat/VoiceRecorder';
 import MediaUploadButton from '@/components/chat/MediaUploadButton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 export default function SupplierChat() {
   const { user, loading: authLoading } = useAuth();
@@ -221,14 +222,54 @@ export default function SupplierChat() {
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-heading font-semibold truncate">
-                      {activeConvo?.other_is_vendor ? activeConvo?.other_vendor?.store_name : activeConvo?.other_profile?.full_name || 'Buyer'}
-                    </span>
-                    <Badge variant={activeConvo?.other_is_vendor ? 'default' : 'secondary'} className="text-[10px] px-1.5 py-0">
-                      {activeConvo?.other_is_vendor ? 'Supplier' : 'Buyer'}
-                    </Badge>
-                  </div>
+                  {activeConvo?.other_is_vendor ? (
+                    <div className="flex items-center gap-2">
+                      <span className="font-heading font-semibold truncate">{activeConvo?.other_vendor?.store_name}</span>
+                      <Badge variant="default" className="text-[10px] px-1.5 py-0">Supplier</Badge>
+                    </div>
+                  ) : (
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <button className="flex items-center gap-2 min-w-0 text-left hover:opacity-80 transition-opacity">
+                          <span className="font-heading font-semibold truncate">
+                            {activeConvo?.other_profile?.full_name || 'Buyer'}
+                          </span>
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">Buyer</Badge>
+                        </button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-sm">
+                        <DialogHeader>
+                          <DialogTitle className="font-heading">Buyer details</DialogTitle>
+                        </DialogHeader>
+                        <div className="flex items-center gap-3">
+                          {activeConvo?.other_profile?.avatar_url ? (
+                            <img src={activeConvo.other_profile.avatar_url} alt="" className="w-14 h-14 rounded-full object-cover" />
+                          ) : (
+                            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                              <User className="w-6 h-6 text-primary" />
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <p className="font-semibold truncate">{activeConvo?.other_profile?.full_name || 'Buyer'}</p>
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 mt-1">Buyer</Badge>
+                          </div>
+                        </div>
+                        <dl className="text-sm space-y-2 mt-2">
+                          <InfoRow label="Phone" value={activeConvo?.other_profile?.phone} />
+                          <InfoRow
+                            label="Location"
+                            value={[activeConvo?.other_profile?.city, activeConvo?.other_profile?.state].filter(Boolean).join(', ')}
+                          />
+                          <InfoRow
+                            label="Member since"
+                            value={activeConvo?.other_profile?.created_at
+                              ? new Date(activeConvo.other_profile.created_at).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
+                              : undefined}
+                          />
+                        </dl>
+                      </DialogContent>
+                    </Dialog>
+                  )}
                 </div>
                 {activeConvo?.other_is_vendor && activeConvo?.other_vendor?.vendor_id && (
                   <Link to={`/shop/${activeConvo.other_vendor.vendor_id}`}>
@@ -293,6 +334,15 @@ export default function SupplierChat() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value?: string | null }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="truncate">{value || 'Not provided'}</dd>
     </div>
   );
 }
