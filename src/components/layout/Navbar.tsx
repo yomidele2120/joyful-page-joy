@@ -258,6 +258,19 @@ export default function Navbar() {
         </Sheet>
       </div>
 
+      <form onSubmit={handleSearch} className="md:hidden border-t border-border/70 px-3 py-2">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Search products"
+            aria-label="Search products"
+            className="h-10 rounded-full border-foreground/70 bg-secondary/40 pl-10 pr-4 text-sm"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
+        </div>
+      </form>
+
       {/* Category Nav (desktop only) */}
       <nav className="hidden md:block border-t border-border">
         <div className="container flex items-center gap-5 h-9 text-xs overflow-x-auto">
