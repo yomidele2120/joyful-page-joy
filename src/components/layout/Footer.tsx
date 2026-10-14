@@ -1,6 +1,6 @@
 import { BrandLogoPill } from '@/components/BrandLogo';
 import { Link } from 'react-router-dom';
-import { Mail, Phone } from 'lucide-react';
+import { Globe, Mail, MapPin, Phone } from 'lucide-react';
 import { useCategories } from '@/hooks/useProducts';
 
 export default function Footer() {
@@ -49,6 +49,14 @@ export default function Footer() {
         <div className="border-t border-background/10 dark:border-white/10 pt-6 sm:border-0 sm:pt-0">
           <h4 className="font-heading font-semibold text-background dark:text-white mb-3">Contact</h4>
           <div className="flex flex-col gap-3 text-background/80 dark:text-white/80">
+            <div className="flex items-start gap-2.5">
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <address className="not-italic leading-relaxed">
+                Suite 108, Foramot Plaza, Somoye Osundairo,<br />
+                by Polaris Bank, Oremeji,<br />
+                Computer Village, Ikeja, Lagos,
+              </address>
+            </div>
             <a
               href="tel:+2348060474393"
               className="flex items-center gap-2.5 min-w-0 hover:text-primary transition-colors"
@@ -57,11 +65,20 @@ export default function Footer() {
               <span className="truncate">+234 806 047 4393</span>
             </a>
             <a
-              href="mailto:team@markethubafrica.com"
+              href="mailto:team@ithubafrica.com"
               className="flex items-center gap-2.5 min-w-0 hover:text-primary transition-colors"
             >
               <Mail className="w-4 h-4 text-primary shrink-0" />
-              <span className="truncate">team@markethubafrica.com</span>
+              <span className="truncate">team@ithubafrica.com</span>
+            </a>
+            <a
+              href="https://www.ithubafrica.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2.5 min-w-0 hover:text-primary transition-colors"
+            >
+              <Globe className="w-4 h-4 text-primary shrink-0" />
+              <span className="truncate">www.ithubafrica.com</span>
             </a>
           </div>
         </div>

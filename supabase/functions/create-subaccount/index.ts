@@ -64,7 +64,14 @@ serve(async (req) => {
       });
     }
 
-    if (!vendor.bank_name || !vendor.bank_account_number || !vendor.bank_account_name) {
+    // Bank details live in the private vendor_private table
+    const { data: bank } = await adminClient
+      .from('vendor_private')
+      .select('bank_name, bank_account_number, bank_account_name')
+      .eq('vendor_id', vendor_id)
+      .maybeSingle();
+
+    if (!bank?.bank_name || !bank?.bank_account_number || !bank?.bank_account_name) {
       return new Response(JSON.stringify({ error: 'Vendor bank details incomplete. Cannot create subaccount.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
@@ -84,9 +91,9 @@ serve(async (req) => {
       'moniepoint': '50515',
     };
 
-    const bankCode = bankCodes[vendor.bank_name.toLowerCase()] || '';
+    const bankCode = bankCodes[bank.bank_name.toLowerCase()] || '';
     if (!bankCode) {
-      return new Response(JSON.stringify({ error: `Unsupported bank: ${vendor.bank_name}` }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ error: `Unsupported bank: ${bank.bank_name}` }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     // Create Paystack subaccount
@@ -99,7 +106,7 @@ serve(async (req) => {
       body: JSON.stringify({
         business_name: vendor.store_name,
         bank_code: bankCode,
-        account_number: vendor.bank_account_number,
+        account_number: bank.bank_account_number,
         percentage_charge: 5,
         description: `Subaccount for ${vendor.store_name}`,
       }),

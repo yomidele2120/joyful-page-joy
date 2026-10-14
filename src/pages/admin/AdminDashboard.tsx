@@ -67,7 +67,19 @@ export default function AdminDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase.from('vendors').select('*').order('created_at', { ascending: false });
       if (error) throw error;
-      return data || [];
+      // Bank details and verification documents are kept in a private (admin-only) table.
+      const { data: priv } = await supabase.from('vendor_private').select('*');
+      const privateByVendor = new Map((priv ?? []).map(p => [p.vendor_id, p]));
+      return (data || []).map(v => {
+        const p = privateByVendor.get(v.id);
+        return {
+          ...v,
+          bank_name: p?.bank_name ?? null,
+          bank_account_number: p?.bank_account_number ?? null,
+          bank_account_name: p?.bank_account_name ?? null,
+          verification_document_url: p?.verification_document_path ?? null,
+        };
+      });
     },
     enabled: canFetchAdminData,
   });
@@ -834,6 +846,16 @@ function SupplierTable({ vendors, onApprove, onReject }: { vendors: any[]; onApp
 
   const isImage = (url: string) => /\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/i.test(url);
 
+  // Verification documents sit in a private bucket, so open them with a short-lived signed link.
+  const openDocument = async (path: string, title: string) => {
+    const { data, error } = await supabase.storage.from('vendor-docs').createSignedUrl(path, 300);
+    if (error || !data?.signedUrl) {
+      toast.error('Could not open this document. Older uploads need the move-vendor-docs script to be run once.');
+      return;
+    }
+    openPreview(data.signedUrl, title);
+  };
+
   return (
     <>
       {/* Fullscreen document/image preview dialog */}
@@ -845,7 +867,7 @@ function SupplierTable({ vendors, onApprove, onReject }: { vendors: any[]; onApp
           {previewUrl && (
             isImage(previewUrl) ? (
               <img src={previewUrl} alt={previewTitle} className="w-full rounded-lg object-contain max-h-[70vh]" />
-            ) : previewUrl.endsWith('.pdf') ? (
+            ) : /\.pdf(\?|$)/i.test(previewUrl) ? (
               <iframe src={previewUrl} className="w-full h-[70vh] rounded-lg border border-border" title={previewTitle} />
             ) : (
               <div className="text-center py-8">
@@ -939,7 +961,7 @@ function SupplierTable({ vendors, onApprove, onReject }: { vendors: any[]; onApp
                   )}
                   {v.verification_document_url ? (
                     <button
-                      onClick={() => openPreview(v.verification_document_url, `${v.store_name} - Verification Document`)}
+                      onClick={() => openDocument(v.verification_document_url, `${v.store_name} - Verification Document`)}
                       className="inline-flex items-center gap-1 text-primary text-xs hover:underline"
                     >
                       <FileText className="w-3 h-3" /> Verification Doc

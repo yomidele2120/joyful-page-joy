@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Upload } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { secureAuth } from '@/lib/secureAuth';
+import { Recaptcha, type RecaptchaHandle } from '@/components/auth/Recaptcha';
 import {
   AuthShell, AuthFooterLink, Field, PasswordField, SelectField, PhoneField, ChoiceGroup,
   CheckboxRow, SubmitButton, SecondaryButton, LegalText, COUNTRIES,
@@ -26,6 +28,8 @@ export default function SupplierSignup() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
+  const [captcha, setCaptcha] = useState<string | null>(null);
+  const captchaRef = useRef<RecaptchaHandle>(null);
   const [form, setForm] = useState<Form>({
     country: 'Nigeria', businessName: '', firstName: '', lastName: '', email: '',
     phone: '', whatsappNumber: '', password: '', businessType: '', marketing: false,
@@ -39,26 +43,33 @@ export default function SupplierSignup() {
 
   const step1Ready =
     !!form.businessName.trim() && !!form.firstName.trim() && !!form.lastName.trim() && !!form.email.trim() &&
-    !!form.phone && !!form.whatsappNumber && form.password.length >= 6 && !!form.businessType;
+    !!form.phone && !!form.whatsappNumber && form.password.length >= 8 && !!form.businessType;
   const step2Ready = !!form.companyAddress.trim();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (step < 3) return;
+    if (!captcha) { toast.error('Please tick the reCAPTCHA box first'); return; }
+    if (logoFile && logoFile.size > 10 * 1024 * 1024) { toast.error('The logo must be smaller than 10MB'); return; }
+    if (docFile && docFile.size > 10 * 1024 * 1024) { toast.error('The verification document must be smaller than 10MB'); return; }
     setLoading(true);
     try {
       const fullName = `${form.firstName.trim()} ${form.lastName.trim()}`;
 
-      // 1. Create auth user (email verification disabled globally)
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      // 1. Create the auth user through the secure-auth function (it checks the
+      //    reCAPTCHA token on the server and signs the new user in).
+      const { error: authError, user: newUser } = await secureAuth({
+        action: 'signup',
         email: form.email.trim(),
         password: form.password,
-        options: { data: { full_name: fullName, country: form.country, marketing_opt_in: form.marketing } },
+        fullName,
+        metadata: { country: form.country, marketing_opt_in: form.marketing },
+        captchaToken: captcha,
       });
       if (authError) throw authError;
-      if (!authData.user) throw new Error('Signup failed');
+      if (!newUser) throw new Error('Signup failed');
 
-      const userId = authData.user.id;
+      const userId = newUser.id;
 
       // 2. Upload logo
       let logoUrl = null;
@@ -72,21 +83,18 @@ export default function SupplierSignup() {
         }
       }
 
-      // 3. Upload verification doc
-      let docUrl = null;
+      // 3. Upload verification doc to the PRIVATE bucket (only you and the admin can open it)
+      let docPath: string | null = null;
       if (docFile) {
         const ext = docFile.name.split('.').pop();
         const path = `${userId}/verification.${ext}`;
-        const { error: uploadErr } = await supabase.storage.from('vendor-assets').upload(path, docFile);
-        if (!uploadErr) {
-          const { data: urlData } = supabase.storage.from('vendor-assets').getPublicUrl(path);
-          docUrl = urlData.publicUrl;
-        }
+        const { error: uploadErr } = await supabase.storage.from('vendor-docs').upload(path, docFile);
+        if (!uploadErr) docPath = path;
       }
 
       // 4. Create vendor record
       const categories = form.productCategories.split(',').map(c => c.trim()).filter(Boolean);
-      const { error: vendorError } = await supabase.from('vendors').insert({
+      const { data: vendorRow, error: vendorError } = await supabase.from('vendors').insert({
         user_id: userId,
         store_name: form.businessName.trim(),
         store_description: form.storeDescription || null,
@@ -97,13 +105,22 @@ export default function SupplierSignup() {
         logo_url: logoUrl,
         business_type: BUSINESS_TYPES[form.businessType],
         product_categories: categories.length ? categories : null,
-        bank_name: form.bankName || null,
-        bank_account_number: form.bankAccountNumber || null,
-        bank_account_name: form.bankAccountName || null,
-        verification_document_url: docUrl,
         is_approved: false,
-      });
+      }).select('id').single();
       if (vendorError) throw vendorError;
+
+      // 4b. Bank details and the verification document live in a private table
+      if (form.bankName || form.bankAccountNumber || form.bankAccountName || docPath) {
+        const { error: privateError } = await supabase.from('vendor_private').insert({
+          vendor_id: vendorRow.id,
+          user_id: userId,
+          bank_name: form.bankName || null,
+          bank_account_number: form.bankAccountNumber || null,
+          bank_account_name: form.bankAccountName || null,
+          verification_document_path: docPath,
+        });
+        if (privateError) console.error('Private vendor details:', privateError);
+      }
 
       // 5. Assign vendor role
       const { error: roleError } = await supabase.from('user_roles').insert({
@@ -118,6 +135,7 @@ export default function SupplierSignup() {
       toast.error(err.message || 'Signup failed');
     } finally {
       setLoading(false);
+      captchaRef.current?.reset(); // a token can only be used once
     }
   };
 
@@ -145,7 +163,7 @@ export default function SupplierSignup() {
             <Field label="Email address" type="email" value={form.email} onChange={e => set('email', e.target.value)} autoComplete="email" required />
             <PhoneField value={form.phone} onChange={v => set('phone', v)} required />
             <PhoneField label="WhatsApp number" value={form.whatsappNumber} onChange={v => set('whatsappNumber', v)} required />
-            <PasswordField value={form.password} onChange={e => set('password', e.target.value)} autoComplete="new-password" minLength={6} required />
+            <PasswordField value={form.password} onChange={e => set('password', e.target.value)} autoComplete="new-password" minLength={8} required />
 
             <ChoiceGroup
               legend="What type of business do you own?"
@@ -167,7 +185,7 @@ export default function SupplierSignup() {
               type="button"
               disabled={!step1Ready}
               onClick={() => {
-                if (form.password.length < 6) { toast.error('Password must be at least 6 characters'); return; }
+                if (form.password.length < 8) { toast.error('Password must be at least 8 characters'); return; }
                 setStep(2);
               }}
             >
@@ -207,9 +225,10 @@ export default function SupplierSignup() {
             <Field label="Bank name" value={form.bankName} onChange={e => set('bankName', e.target.value)} />
             <Field label="Account number" inputMode="numeric" value={form.bankAccountNumber} onChange={e => set('bankAccountNumber', e.target.value)} />
             <Field label="Account name" value={form.bankAccountName} onChange={e => set('bankAccountName', e.target.value)} />
+            <Recaptcha ref={captchaRef} onToken={setCaptcha} />
             <div className="flex gap-3">
               <SecondaryButton onClick={() => setStep(2)}>Back</SecondaryButton>
-              <SubmitButton loading={loading}>Create my account</SubmitButton>
+              <SubmitButton loading={loading} disabled={!captcha}>Create my account</SubmitButton>
             </div>
           </>
         )}

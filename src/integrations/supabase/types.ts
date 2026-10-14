@@ -949,12 +949,42 @@ export type Database = {
         }
         Relationships: []
       }
-      vendors: {
+      vendor_private: {
         Row: {
-          address: string | null
           bank_account_name: string | null
           bank_account_number: string | null
           bank_name: string | null
+          created_at: string
+          updated_at: string
+          user_id: string
+          vendor_id: string
+          verification_document_path: string | null
+        }
+        Insert: {
+          bank_account_name?: string | null
+          bank_account_number?: string | null
+          bank_name?: string | null
+          created_at?: string
+          updated_at?: string
+          user_id: string
+          vendor_id: string
+          verification_document_path?: string | null
+        }
+        Update: {
+          bank_account_name?: string | null
+          bank_account_number?: string | null
+          bank_name?: string | null
+          created_at?: string
+          updated_at?: string
+          user_id?: string
+          vendor_id?: string
+          verification_document_path?: string | null
+        }
+        Relationships: []
+      }
+      vendors: {
+        Row: {
+          address: string | null
           company_name: string | null
           created_at: string
           id: string
@@ -967,7 +997,6 @@ export type Database = {
           store_name: string
           updated_at: string
           user_id: string
-          verification_document_url: string | null
           whatsapp_number: string | null
           business_type: string | null
           location: string | null
@@ -975,9 +1004,6 @@ export type Database = {
         }
         Insert: {
           address?: string | null
-          bank_account_name?: string | null
-          bank_account_number?: string | null
-          bank_name?: string | null
           company_name?: string | null
           created_at?: string
           id?: string
@@ -990,7 +1016,6 @@ export type Database = {
           store_name: string
           updated_at?: string
           user_id: string
-          verification_document_url?: string | null
           whatsapp_number?: string | null
           business_type?: string | null
           location?: string | null
@@ -998,9 +1023,6 @@ export type Database = {
         }
         Update: {
           address?: string | null
-          bank_account_name?: string | null
-          bank_account_number?: string | null
-          bank_name?: string | null
           company_name?: string | null
           created_at?: string
           id?: string
@@ -1013,7 +1035,6 @@ export type Database = {
           store_name?: string
           updated_at?: string
           user_id?: string
-          verification_document_url?: string | null
           whatsapp_number?: string | null
           business_type?: string | null
           location?: string | null

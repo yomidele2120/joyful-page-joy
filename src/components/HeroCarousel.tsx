@@ -54,7 +54,7 @@ export default function HeroCarousel({ images }: { images: string[] }) {
   }, [paused, total]);
 
   return (
-    <section className="container max-w-[1440px] pt-4">
+    <section className="container max-w-[1440px] pt-0 sm:pt-4">
       <div className="grid gap-3 lg:grid-cols-[210px_minmax(0,1fr)_250px]">
         {/* Category list (desktop) */}
         <aside className="hidden lg:block">
@@ -71,7 +71,7 @@ export default function HeroCarousel({ images }: { images: string[] }) {
 
         {/* Flyer slider */}
         <div
-          className="relative aspect-[2/1] w-full overflow-hidden sm:aspect-auto sm:h-[260px] lg:h-[380px]"
+          className="relative -mx-4 aspect-[2/1] w-[calc(100%+2rem)] overflow-hidden sm:mx-0 sm:aspect-auto sm:h-[260px] sm:w-full lg:h-[380px]"
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
           onFocus={() => setPaused(true)}

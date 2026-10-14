@@ -94,8 +94,13 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: paystackData.message }), { status: 400, headers: corsHeaders });
     }
 
-    // Create payment record
-    await supabase.from('payments').insert({
+    // Create the payment record with the service role: payment rows are only ever
+    // written by the server, never by the browser.
+    const adminClient = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    );
+    await adminClient.from('payments').insert({
       order_id: orderId,
       user_id: userId,
       amount,

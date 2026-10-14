@@ -1,5 +1,5 @@
 import { BrandLogo } from '@/components/BrandLogo';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,11 +8,14 @@ import { toast } from 'sonner';
 import { Shield } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { Recaptcha, type RecaptchaHandle } from '@/components/auth/Recaptcha';
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [captcha, setCaptcha] = useState<string | null>(null);
+  const captchaRef = useRef<RecaptchaHandle>(null);
   const { signIn, isAdmin, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -25,9 +28,10 @@ export default function AdminLogin() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!captcha) { toast.error('Please tick the reCAPTCHA box first'); return; }
     setLoading(true);
     try {
-      const { error, roles } = await signIn(email, password);
+      const { error, roles } = await signIn(email, password, captcha);
       if (error) throw error;
 
       const isUserAdmin = roles?.includes('admin');
@@ -42,6 +46,7 @@ export default function AdminLogin() {
       toast.error(err.message || 'Authentication failed');
     } finally {
       setLoading(false);
+      captchaRef.current?.reset(); // a token can only be used once
     }
   };
 
@@ -65,7 +70,8 @@ export default function AdminLogin() {
             <Label htmlFor="password">Password</Label>
             <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
           </div>
-          <Button type="submit" variant="destructive" className="w-full font-heading font-semibold" disabled={loading}>
+          <Recaptcha ref={captchaRef} onToken={setCaptcha} />
+          <Button type="submit" variant="destructive" className="w-full font-heading font-semibold" disabled={loading || !captcha}>
             {loading ? 'Verifying...' : 'Access Admin Panel'}
           </Button>
         </form>

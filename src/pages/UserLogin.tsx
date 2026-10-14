@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { Recaptcha, type RecaptchaHandle } from '@/components/auth/Recaptcha';
 import {
   AuthShell, AuthFooterLink, Field, PasswordField, SelectField, PhoneField, ChoiceGroup,
   CheckboxRow, SubmitButton, LegalText, COUNTRIES,
@@ -11,7 +12,12 @@ import {
 export default function UserLogin() {
   const [params, setParams] = useSearchParams();
   const isLogin = params.get('mode') !== 'signup';
-  const setMode = (mode: 'login' | 'signup') => setParams(mode === 'signup' ? { mode } : {}, { replace: true });
+  const [captcha, setCaptcha] = useState<string | null>(null);
+  const captchaRef = useRef<RecaptchaHandle>(null);
+  const setMode = (mode: 'login' | 'signup') => {
+    setCaptcha(null);
+    setParams(mode === 'signup' ? { mode } : {}, { replace: true });
+  };
 
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
@@ -34,15 +40,16 @@ export default function UserLogin() {
 
   const canSignUp =
     !!form.firstName.trim() && !!form.lastName.trim() && !!form.email.trim() && !!form.phone &&
-    form.password.length >= 6 && !!form.buyerType && !!form.resells;
+    form.password.length >= 8 && !!form.buyerType && !!form.resells;
   const canSignIn = !!form.email.trim() && form.password.length >= 6;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!captcha) { toast.error('Please tick the reCAPTCHA box first'); return; }
     setLoading(true);
     try {
       if (isLogin) {
-        const { error } = await signIn(form.email.trim(), form.password);
+        const { error } = await signIn(form.email.trim(), form.password, captcha);
         if (error) throw error;
         toast.success('Welcome back!');
       } else {
@@ -54,16 +61,16 @@ export default function UserLogin() {
           buyer_type: form.buyerType,
           buys_to_resell: form.resells === 'yes',
           marketing_opt_in: form.marketing,
-        });
+        }, captcha);
         if (error) throw error;
+        // The new account is already signed in (the redirect effect above takes over).
         toast.success('Account created successfully!');
-        const { error: loginError } = await signIn(form.email.trim(), form.password);
-        if (loginError) setMode('login');
       }
     } catch (err: any) {
       toast.error(err.message || 'Authentication failed');
     } finally {
       setLoading(false);
+      captchaRef.current?.reset(); // a token can only be used once
     }
   };
 
@@ -94,7 +101,7 @@ export default function UserLogin() {
           value={form.password}
           onChange={e => set('password', e.target.value)}
           autoComplete={isLogin ? 'current-password' : 'new-password'}
-          minLength={6}
+          minLength={isLogin ? 6 : 8}
           required
         />
 
@@ -125,7 +132,9 @@ export default function UserLogin() {
           </>
         )}
 
-        <SubmitButton loading={loading} disabled={isLogin ? !canSignIn : !canSignUp}>
+        <Recaptcha key={isLogin ? 'login' : 'signup'} ref={captchaRef} onToken={setCaptcha} />
+
+        <SubmitButton loading={loading} disabled={(isLogin ? !canSignIn : !canSignUp) || !captcha}>
           {isLogin ? 'Sign in' : 'Create my account'}
         </SubmitButton>
 

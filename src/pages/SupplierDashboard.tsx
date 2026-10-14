@@ -32,7 +32,16 @@ export default function SupplierDashboard() {
     queryKey: ['vendor-profile', user?.id],
     queryFn: async () => {
       const { data } = await supabase.from('vendors').select('*').eq('user_id', user!.id).maybeSingle();
-      return data;
+      if (!data) return data;
+      // Bank details and the verification document are kept in a private table.
+      const { data: priv } = await supabase.from('vendor_private').select('*').eq('vendor_id', data.id).maybeSingle();
+      return {
+        ...data,
+        bank_name: priv?.bank_name ?? null,
+        bank_account_number: priv?.bank_account_number ?? null,
+        bank_account_name: priv?.bank_account_name ?? null,
+        verification_document_url: priv?.verification_document_path ?? null,
+      };
     },
     enabled: !!user,
   });
