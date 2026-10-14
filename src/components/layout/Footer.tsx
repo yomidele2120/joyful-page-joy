@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom';
 import { Mail, Phone } from 'lucide-react';
+import { useCategories } from '@/hooks/useProducts';
 
 export default function Footer() {
+  const { data: categories } = useCategories();
   return (
     <footer className="bg-foreground dark:bg-black text-background dark:text-white mt-16">
       <div className="container py-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-8 text-sm">
@@ -18,23 +20,28 @@ export default function Footer() {
           </p>
         </div>
 
-        {/* Quick Links */}
+        {/* Buyers */}
         <div className="border-t border-background/10 dark:border-white/10 pt-6 sm:border-0 sm:pt-0">
-          <h4 className="font-heading font-semibold text-background dark:text-white mb-3">Quick Links</h4>
+          <h4 className="font-heading font-semibold text-background dark:text-white mb-3">For Buyers</h4>
           <div className="flex flex-col gap-2.5 text-background/80 dark:text-white/80">
             <Link to="/products" className="hover:text-primary transition-colors">All Products</Link>
-            <Link to="/category/fashion" className="hover:text-primary transition-colors">Fashion</Link>
-            <Link to="/category/electronics" className="hover:text-primary transition-colors">Electronics</Link>
-            <Link to="/category/home-living" className="hover:text-primary transition-colors">Home & Living</Link>
+            <Link to="/products?tab=suppliers" className="hover:text-primary transition-colors">Find Suppliers</Link>
+            <Link to="/rfq/new" className="hover:text-primary transition-colors">Request for Quotation</Link>
+            <Link to="/inquiries" className="hover:text-primary transition-colors">My Inquiries</Link>
+            <Link to="/messages" className="hover:text-primary transition-colors">Messages</Link>
+            {(categories ?? []).slice(0, 3).map(cat => (
+              <Link key={cat.id} to={`/category/${cat.slug}`} className="hover:text-primary transition-colors">{cat.name}</Link>
+            ))}
           </div>
         </div>
 
-        {/* Support */}
+        {/* Suppliers & account */}
         <div className="border-t border-background/10 dark:border-white/10 pt-6 sm:border-0 sm:pt-0">
-          <h4 className="font-heading font-semibold text-background dark:text-white mb-3">Support</h4>
+          <h4 className="font-heading font-semibold text-background dark:text-white mb-3">Suppliers &amp; Account</h4>
           <div className="flex flex-col gap-2.5 text-background/80 dark:text-white/80">
-            <Link to="/users-login" className="hover:text-primary transition-colors">My Account</Link>
+            <Link to="/supplier-signup" className="hover:text-primary transition-colors">Become a Supplier</Link>
             <Link to="/suppliers-login" className="hover:text-primary transition-colors">Supplier Login</Link>
+            <Link to="/users-login" className="hover:text-primary transition-colors">My Account</Link>
             <Link to="/cart" className="hover:text-primary transition-colors">Cart</Link>
             <Link to="/wishlist" className="hover:text-primary transition-colors">Wishlist</Link>
           </div>

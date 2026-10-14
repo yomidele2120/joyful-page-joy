@@ -1,8 +1,8 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Clapperboard, Plus, ShoppingCart, User, Package, Film, Store } from 'lucide-react';
+import { Home, Clapperboard, Plus, MessageSquare, User, Package, Film, Store } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useCart } from '@/contexts/CartContext';
+import { useUnreadCount } from '@/hooks/useChat';
 import { Badge } from '@/components/ui/badge';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { cn } from '@/lib/utils';
@@ -15,7 +15,7 @@ export default function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isVendor } = useAuth();
-  const { totalItems } = useCart();
+  const unreadMessages = useUnreadCount();
   const [composerOpen, setComposerOpen] = useState(false);
 
   const isActive = (path: string) => (path === '/' ? location.pathname === '/' : location.pathname.startsWith(path));
@@ -38,19 +38,19 @@ export default function BottomNav() {
           </button>
 
           <NavTab
-            to="/cart"
+            to="/messages"
             icon={
               <span className="relative">
-                <ShoppingCart className="w-5 h-5" />
-                {totalItems > 0 && (
-                  <Badge className="absolute -top-1.5 -right-2 w-4 h-4 flex items-center justify-center p-0 text-[8px] bg-accent text-accent-foreground border-none">
-                    {totalItems}
+                <MessageSquare className="w-5 h-5" />
+                {unreadMessages > 0 && (
+                  <Badge className="absolute -top-1.5 -right-2 min-w-4 h-4 flex items-center justify-center px-1 text-[8px] bg-accent text-accent-foreground border-none">
+                    {unreadMessages > 99 ? '99+' : unreadMessages}
                   </Badge>
                 )}
               </span>
             }
-            label="Cart"
-            active={isActive('/cart')}
+            label="Messages"
+            active={isActive('/messages')}
           />
 
           <NavTab

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
-import { useCart } from '@/contexts/CartContext';
+import { useCart, unitPrice } from '@/contexts/CartContext';
+import { pluralUnit } from '@/lib/pricing';
 import { Button } from '@/components/ui/button';
 import { Minus, Plus, Trash2, ShoppingBag } from 'lucide-react';
 import { formatNaira } from '@/lib/format';
@@ -32,9 +33,15 @@ export default function Cart() {
                 <img src={item.image_url || '/placeholder.svg'} alt={item.name} className="w-20 h-20 rounded-md object-cover bg-secondary" />
                 <div className="flex-1 min-w-0">
                   <Link to={`/product/${item.slug}`} className="font-heading font-semibold text-sm hover:text-primary line-clamp-2">{item.name}</Link>
-                  <p className="font-heading font-bold text-primary mt-1">{formatNaira(item.price)}</p>
+                  <p className="font-heading font-bold text-primary mt-1">
+                    {formatNaira(unitPrice(item))}
+                    <span className="ml-1 text-xs font-normal text-muted-foreground">/ {item.unit}</span>
+                  </p>
+                  {item.moq > 1 && (
+                    <p className="text-xs text-muted-foreground">Minimum order: {item.moq} {pluralUnit(item.unit)}</p>
+                  )}
                   <div className="flex items-center gap-2 mt-2">
-                    <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.id, item.quantity - 1)}>
+                    <Button variant="outline" size="icon" className="h-7 w-7" disabled={item.quantity <= item.moq} onClick={() => updateQuantity(item.id, item.quantity - 1)}>
                       <Minus className="w-3 h-3" />
                     </Button>
                     <span className="text-sm font-medium w-8 text-center">{item.quantity}</span>

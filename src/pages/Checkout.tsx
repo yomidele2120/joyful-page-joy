@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Layout from '@/components/layout/Layout';
-import { useCart } from '@/contexts/CartContext';
+import { useCart, unitPrice } from '@/contexts/CartContext';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,46 +50,38 @@ export default function Checkout() {
     setLoading(true);
 
     try {
-      // Create order
-      const { data: order, error: orderError } = await supabase.from('orders').insert({
-        user_id: user.id,
-        email: formData.email,
-        phone: formData.phone,
-        shipping_address: formData.address,
-        shipping_city: formData.city,
-        shipping_state: formData.state,
-        total: grandTotal,
-        status: 'pending',
-      }).select().single();
-
+      // The order is created and priced on the server: unit prices (including
+      // quantity tiers), MOQ, stock and VAT are all calculated from the
+      // database, so nothing the browser sends can change what is charged.
+      const { data: created, error: orderError } = await supabase.rpc('create_order', {
+        _items: items.map(item => ({ product_id: item.id, quantity: item.quantity })),
+        _email: formData.email,
+        _phone: formData.phone,
+        _address: formData.address,
+        _city: formData.city,
+        _state: formData.state,
+      });
       if (orderError) throw orderError;
 
-      // Create order items
-      const orderItems = items.map(item => ({
-        order_id: order.id,
-        product_id: item.id,
-        quantity: item.quantity,
-        price: item.price,
-      }));
-      await supabase.from('order_items').insert(orderItems);
+      const order = created as { order_id: string; total: number };
 
-      // Initialize payment via edge function
+      // Initialize payment via edge function (the amount is read from the order server-side)
       const { data: paymentData, error: paymentError } = await supabase.functions.invoke('initialize-payment', {
         body: {
           email: formData.email,
-          amount: grandTotal,
-          orderId: order.id,
+          orderId: order.order_id,
           metadata: { customer_name: formData.name, items_count: items.length },
         },
       });
 
       if (paymentError) throw paymentError;
+      if (paymentData?.error) throw new Error(paymentData.error);
 
       // Load Paystack inline
       const handler = (window as any).PaystackPop.setup({
         key: PAYSTACK_PUBLIC_KEY,
         email: formData.email,
-        amount: Math.round(grandTotal * 100),
+        amount: Math.round(Number(paymentData.amount) * 100),
         currency: 'NGN',
         ref: paymentData.reference,
         callback: async (response: any) => {
@@ -138,7 +130,7 @@ export default function Checkout() {
             {items.map(item => (
               <div key={item.id} className="flex justify-between text-sm py-1">
                 <span>{item.name} × {item.quantity}</span>
-                <span>{formatNaira(item.price * item.quantity)}</span>
+                <span>{formatNaira(unitPrice(item) * item.quantity)}</span>
               </div>
             ))}
             <div className="border-t border-border mt-3 pt-3 space-y-1">

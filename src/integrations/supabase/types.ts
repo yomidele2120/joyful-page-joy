@@ -147,6 +147,158 @@ export type Database = {
           },
         ]
       }
+      inquiries: {
+        Row: {
+          buyer_id: string
+          created_at: string
+          id: string
+          message: string
+          product_id: string | null
+          quantity: number
+          status: string
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          buyer_id: string
+          created_at?: string
+          id?: string
+          message: string
+          product_id?: string | null
+          quantity?: number
+          status?: string
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          buyer_id?: string
+          created_at?: string
+          id?: string
+          message?: string
+          product_id?: string | null
+          quantity?: number
+          status?: string
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inquiries_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inquiries_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfq_quotes: {
+        Row: {
+          created_at: string
+          id: string
+          lead_time: string | null
+          message: string | null
+          moq: number | null
+          rfq_id: string
+          unit_price: number
+          vendor_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lead_time?: string | null
+          message?: string | null
+          moq?: number | null
+          rfq_id: string
+          unit_price: number
+          vendor_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lead_time?: string | null
+          message?: string | null
+          moq?: number | null
+          rfq_id?: string
+          unit_price?: number
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfq_quotes_rfq_id_fkey"
+            columns: ["rfq_id"]
+            isOneToOne: false
+            referencedRelation: "rfqs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfq_quotes_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfqs: {
+        Row: {
+          buyer_id: string
+          category_id: string | null
+          created_at: string
+          description: string
+          destination: string | null
+          expires_at: string
+          id: string
+          quantity: number
+          status: string
+          target_price: number | null
+          title: string
+          unit: string
+        }
+        Insert: {
+          buyer_id: string
+          category_id?: string | null
+          created_at?: string
+          description: string
+          destination?: string | null
+          expires_at?: string
+          id?: string
+          quantity: number
+          status?: string
+          target_price?: number | null
+          title: string
+          unit?: string
+        }
+        Update: {
+          buyer_id?: string
+          category_id?: string | null
+          created_at?: string
+          description?: string
+          destination?: string | null
+          expires_at?: string
+          id?: string
+          quantity?: number
+          status?: string
+          target_price?: number | null
+          title?: string
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfqs_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string
@@ -157,6 +309,7 @@ export type Database = {
           media_type: string | null
           media_url: string | null
           sender_id: string
+          product_id: string | null
         }
         Insert: {
           content: string
@@ -167,6 +320,7 @@ export type Database = {
           media_type?: string | null
           media_url?: string | null
           sender_id: string
+          product_id?: string | null
         }
         Update: {
           content?: string
@@ -177,6 +331,7 @@ export type Database = {
           media_type?: string | null
           media_url?: string | null
           sender_id?: string
+          product_id?: string | null
         }
         Relationships: [
           {
@@ -184,6 +339,13 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
@@ -199,6 +361,7 @@ export type Database = {
           recipient_id: string
           type: string
           vendor_id: string | null
+          link: string | null
         }
         Insert: {
           actor_id?: string | null
@@ -210,6 +373,7 @@ export type Database = {
           recipient_id: string
           type: string
           vendor_id?: string | null
+          link?: string | null
         }
         Update: {
           actor_id?: string | null
@@ -221,6 +385,7 @@ export type Database = {
           recipient_id?: string
           type?: string
           vendor_id?: string | null
+          link?: string | null
         }
         Relationships: [
           {
@@ -529,6 +694,11 @@ export type Database = {
           stock_quantity: number
           updated_at: string
           vendor_id: string | null
+          moq: number
+          price_tiers: Json
+          specs: Json
+          unit: string
+          video_url: string | null
         }
         Insert: {
           badge?: string | null
@@ -549,6 +719,11 @@ export type Database = {
           stock_quantity?: number
           updated_at?: string
           vendor_id?: string | null
+          moq?: number
+          price_tiers?: Json
+          specs?: Json
+          unit?: string
+          video_url?: string | null
         }
         Update: {
           badge?: string | null
@@ -569,6 +744,11 @@ export type Database = {
           stock_quantity?: number
           updated_at?: string
           vendor_id?: string | null
+          moq?: number
+          price_tiers?: Json
+          specs?: Json
+          unit?: string
+          video_url?: string | null
         }
         Relationships: [
           {
@@ -744,6 +924,9 @@ export type Database = {
           user_id: string
           verification_document_url: string | null
           whatsapp_number: string | null
+          business_type: string | null
+          location: string | null
+          year_established: number | null
         }
         Insert: {
           address?: string | null
@@ -764,6 +947,9 @@ export type Database = {
           user_id: string
           verification_document_url?: string | null
           whatsapp_number?: string | null
+          business_type?: string | null
+          location?: string | null
+          year_established?: number | null
         }
         Update: {
           address?: string | null
@@ -784,6 +970,9 @@ export type Database = {
           user_id?: string
           verification_document_url?: string | null
           whatsapp_number?: string | null
+          business_type?: string | null
+          location?: string | null
+          year_established?: number | null
         }
         Relationships: []
       }
@@ -821,6 +1010,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_order: {
+        Args: {
+          _address: string
+          _city: string
+          _email: string
+          _items: Json
+          _phone: string
+          _state: string
+        }
+        Returns: Json
+      }
+      tier_price: {
+        Args: { _product_id: string; _qty: number }
+        Returns: number
+      }
       get_ranked_feed: {
         Args: { page_limit: number; page_offset: number }
         Returns: {

@@ -49,8 +49,8 @@ export default function SupplierChat() {
     const fileName = `${user!.id}/${Date.now()}.${ext}`;
     const { error } = await supabase.storage.from('chat-media').upload(fileName, file);
     if (error) { toast.error('Upload failed'); return null; }
-    const { data: urlData } = supabase.storage.from('chat-media').getPublicUrl(fileName);
-    return urlData.publicUrl;
+    // The bucket is private: store the path and sign it when it is displayed.
+    return fileName;
   };
 
   const handleSend = async () => {

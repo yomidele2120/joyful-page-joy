@@ -30,7 +30,30 @@ serve(async (req) => {
     }
     const userId = claimsData.claims.sub;
 
-    const { email, amount, orderId, metadata, subaccount_code } = await req.json();
+    const { email, orderId, metadata } = await req.json();
+
+    // The amount is NEVER taken from the browser. It comes from the order
+    // that create_order() priced on the server, and only for the caller's
+    // own order that is still waiting for payment.
+    if (!orderId) {
+      return new Response(JSON.stringify({ error: 'orderId is required' }), { status: 400, headers: corsHeaders });
+    }
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .select('id, total, status, user_id')
+      .eq('id', orderId)
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (orderError || !order) {
+      return new Response(JSON.stringify({ error: 'Order not found' }), { status: 404, headers: corsHeaders });
+    }
+    if (order.status !== 'pending') {
+      return new Response(JSON.stringify({ error: 'This order is not awaiting payment' }), { status: 400, headers: corsHeaders });
+    }
+    const amount = Number(order.total);
+    if (!(amount > 0)) {
+      return new Response(JSON.stringify({ error: 'Invalid order total' }), { status: 400, headers: corsHeaders });
+    }
 
     const PAYSTACK_SECRET_KEY = Deno.env.get('PAYSTACK_SECRET_KEY');
     if (!PAYSTACK_SECRET_KEY) {
@@ -45,17 +68,15 @@ serve(async (req) => {
       reference: `itha_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       callback_url: req.headers.get('origin') || '',
       metadata: {
+        ...(metadata && typeof metadata === 'object' ? metadata : {}),
         order_id: orderId,
         user_id: userId,
-        ...metadata,
       },
     };
 
-    // Add split payment if subaccount provided
-    if (subaccount_code) {
-      paystackPayload.subaccount = subaccount_code;
-      paystackPayload.bearer = 'account'; // Customer bears Paystack fees
-    }
+    // NOTE: split-payment subaccounts must never come from the browser.
+    // If vendor splits are enabled later, derive the subaccount from the
+    // order's vendor on the server.
 
     // Initialize transaction with Paystack
     const paystackRes = await fetch('https://api.paystack.co/transaction/initialize', {
@@ -88,6 +109,7 @@ serve(async (req) => {
       authorization_url: paystackData.data.authorization_url,
       access_code: paystackData.data.access_code,
       reference: paystackData.data.reference,
+      amount,
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Internal server error';

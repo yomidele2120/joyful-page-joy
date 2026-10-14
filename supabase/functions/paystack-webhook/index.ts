@@ -40,20 +40,34 @@ serve(async (req) => {
     );
 
     if (event.event === 'charge.success') {
-      const { reference, metadata, channel, amount } = event.data;
+      const { reference, channel, amount } = event.data;
 
-      await supabase.from('payments')
-        .update({
-          status: 'success',
-          payment_method: channel,
-          metadata: event.data,
-        })
-        .eq('paystack_reference', reference);
+      // Use our own payment record (created server-side) to find the order,
+      // and only mark it paid when the amount collected covers the total.
+      const { data: paymentRow } = await supabase.from('payments')
+        .select('order_id')
+        .eq('paystack_reference', reference)
+        .maybeSingle();
 
-      if (metadata?.order_id) {
-        await supabase.from('orders')
-          .update({ status: 'paid' })
-          .eq('id', metadata.order_id);
+      if (paymentRow?.order_id) {
+        const { data: order } = await supabase.from('orders')
+          .select('id, total')
+          .eq('id', paymentRow.order_id)
+          .maybeSingle();
+
+        const expectedKobo = Math.round(Number(order?.total ?? 0) * 100);
+        if (order && Number(amount) >= expectedKobo) {
+          await supabase.from('payments')
+            .update({ status: 'success', payment_method: channel, metadata: event.data })
+            .eq('paystack_reference', reference);
+          await supabase.from('orders')
+            .update({ status: 'paid' })
+            .eq('id', order.id);
+        } else {
+          await supabase.from('payments')
+            .update({ status: 'failed', metadata: event.data })
+            .eq('paystack_reference', reference);
+        }
       }
     }
 

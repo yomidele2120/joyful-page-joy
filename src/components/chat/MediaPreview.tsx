@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X, Play, Maximize2 } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { useSignedMediaUrl } from '@/hooks/useSignedMedia';
 
 interface MediaPreviewProps {
   url: string;
@@ -8,8 +9,13 @@ interface MediaPreviewProps {
   isOwn: boolean;
 }
 
-export default function MediaPreview({ url, type, isOwn }: MediaPreviewProps) {
+export default function MediaPreview({ url: storedUrl, type }: MediaPreviewProps) {
   const [fullscreen, setFullscreen] = useState(false);
+  const url = useSignedMediaUrl(storedUrl);
+
+  if (!url) {
+    return <div className="h-24 w-40 animate-pulse rounded-lg bg-secondary" />;
+  }
 
   if (type === 'voice') {
     return (

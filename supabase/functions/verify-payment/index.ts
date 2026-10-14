@@ -52,7 +52,34 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
-    // Update payment record
+    // Trust our own payment record, not the metadata echoed back by the
+    // client-influenced Paystack payload.
+    const callerId = claimsData.claims.sub;
+    const { data: paymentRow } = await adminClient.from('payments')
+      .select('order_id, user_id')
+      .eq('paystack_reference', reference)
+      .maybeSingle();
+
+    if (!paymentRow || paymentRow.user_id !== callerId) {
+      return new Response(JSON.stringify({ error: 'Payment record not found' }), { status: 404, headers: corsHeaders });
+    }
+
+    const orderId = paymentRow.order_id;
+    const { data: order } = await adminClient.from('orders')
+      .select('id, total, status')
+      .eq('id', orderId)
+      .maybeSingle();
+
+    // The amount Paystack actually collected must match the order total.
+    const paidKobo = Number(verifyData.data.amount);
+    const expectedKobo = Math.round(Number(order?.total ?? 0) * 100);
+    if (!order || paidKobo < expectedKobo) {
+      await adminClient.from('payments')
+        .update({ status: 'failed', metadata: verifyData.data })
+        .eq('paystack_reference', reference);
+      return new Response(JSON.stringify({ error: 'Amount paid does not match the order total' }), { status: 400, headers: corsHeaders });
+    }
+
     await adminClient.from('payments')
       .update({
         status: 'success',
@@ -61,13 +88,9 @@ serve(async (req) => {
       })
       .eq('paystack_reference', reference);
 
-    // Update order status
-    const orderId = verifyData.data.metadata?.order_id;
-    if (orderId) {
-      await adminClient.from('orders')
-        .update({ status: 'paid' })
-        .eq('id', orderId);
-    }
+    await adminClient.from('orders')
+      .update({ status: 'paid' })
+      .eq('id', orderId);
 
     return new Response(JSON.stringify({
       success: true,

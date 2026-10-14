@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
@@ -24,6 +24,7 @@ export interface Message {
   created_at: string;
   media_url?: string | null;
   media_type?: 'image' | 'video' | 'voice' | null;
+  product_id?: string | null;
 }
 
 function fromTable(table: string) {
@@ -118,7 +119,7 @@ export function useMessages(conversationId: string | null) {
         table: 'messages',
         filter: `conversation_id=eq.${conversationId}`,
       }, (payload) => {
-        setMessages(prev => [...prev, payload.new as Message]);
+        setMessages(prev => prev.some(m => m.id === (payload.new as Message).id) ? prev : [...prev, payload.new as Message]);
       })
       .subscribe();
 
@@ -131,6 +132,9 @@ export function useMessages(conversationId: string | null) {
 export function useUnreadCount() {
   const { user } = useAuth();
   const [count, setCount] = useState(0);
+  // Several components can mount this hook at once (header + tab bar), so each
+  // instance needs its own realtime channel name.
+  const channelName = useRef(`unread-messages-${Math.random().toString(36).slice(2)}`);
 
   useEffect(() => {
     if (!user) return;
@@ -155,7 +159,7 @@ export function useUnreadCount() {
     fetch();
 
     const channel = supabase
-      .channel('unread-messages')
+      .channel(channelName.current)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, () => fetch())
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, () => fetch())
       .subscribe();
@@ -172,7 +176,8 @@ export async function sendMessage(
   _receiverId: string,
   message: string,
   mediaUrl?: string,
-  mediaType?: 'image' | 'video' | 'voice'
+  mediaType?: 'image' | 'video' | 'voice',
+  productId?: string | null
 ) {
   const insertData: any = {
     conversation_id: conversationId,
@@ -183,11 +188,12 @@ export async function sendMessage(
     insertData.media_url = mediaUrl;
     insertData.media_type = mediaType;
   }
+  if (productId) insertData.product_id = productId;
   const { error } = await fromTable('messages').insert(insertData);
 
   if (!error) {
     await fromTable('conversations').update({
-      last_message: message,
+      last_message: message || (mediaType === 'voice' ? 'Voice note' : mediaType === 'video' ? 'Video' : mediaType === 'image' ? 'Photo' : ''),
       last_message_at: new Date().toISOString(),
     }).eq('id', conversationId);
   }

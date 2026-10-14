@@ -57,7 +57,7 @@ export default function SupplierShop() {
       toast.info("This is your own shop");
       return;
     }
-    navigate(`/chat?vendor=${vendor.user_id}`);
+    navigate(`/messages?vendor=${vendor.user_id}`);
   };
 
   const handleFollow = () => {

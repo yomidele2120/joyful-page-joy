@@ -1,14 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
-export function useProducts(options?: { categorySlug?: string; featured?: boolean; badge?: string; limit?: number; search?: string }) {
+export function useProducts(options?: { categorySlug?: string; featured?: boolean; badge?: string; limit?: number; search?: string; vendorId?: string; maxMoq?: number; orderBy?: 'newest' | 'oldest' }) {
   return useQuery({
     queryKey: ['products', options],
     queryFn: async () => {
-      let query = supabase.from('products').select('*, categories(name, slug)').eq('is_active', true);
+      let query = supabase.from('products').select('*, categories(name, slug), vendors(id, user_id, store_name, logo_url, is_approved, location)').eq('is_active', true);
 
       if (options?.featured) query = query.eq('is_featured', true);
       if (options?.badge) query = query.eq('badge', options.badge);
+      if (options?.vendorId) query = query.eq('vendor_id', options.vendorId);
+      if (options?.maxMoq) query = query.lte('moq', options.maxMoq);
       if (options?.limit) query = query.limit(options.limit);
       if (options?.search) query = query.ilike('name', `%${options.search}%`);
       if (options?.categorySlug) {
@@ -16,7 +18,7 @@ export function useProducts(options?: { categorySlug?: string; featured?: boolea
         if (cat) query = query.eq('category_id', cat.id);
       }
 
-      const { data, error } = await query.order('created_at', { ascending: false });
+      const { data, error } = await query.order('created_at', { ascending: options?.orderBy === 'oldest' });
       if (error) throw error;
       return data;
     },
@@ -29,7 +31,7 @@ export function useProduct(slug: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
-        .select('*, categories(name, slug), vendors(id, user_id, store_name, whatsapp_number, phone, logo_url, is_approved)')
+        .select('*, categories(name, slug), vendors(id, user_id, store_name, whatsapp_number, phone, logo_url, is_approved, location, business_type, year_established)')
         .eq('slug', slug)
         .single();
       if (error) throw error;
@@ -60,6 +62,45 @@ export function useMarketplaceStats() {
         supabase.from('vendors').select('*', { count: 'exact', head: true }).eq('is_approved', true),
       ]);
       return { productCount: productCount ?? 0, vendorCount: vendorCount ?? 0 };
+    },
+  });
+}
+
+export interface SupplierSummary {
+  id: string;
+  user_id: string;
+  store_name: string;
+  logo_url: string | null;
+  store_description: string | null;
+  location: string | null;
+  business_type: string | null;
+  year_established: number | null;
+  is_approved: boolean | null;
+  product_count: number;
+}
+
+// Approved suppliers with a real product count (no invented numbers).
+export function useSuppliers(options?: { limit?: number; search?: string }) {
+  return useQuery({
+    queryKey: ['suppliers', options],
+    queryFn: async () => {
+      let query = supabase
+        .from('vendors')
+        .select('id, user_id, store_name, logo_url, store_description, location, business_type, year_established, is_approved')
+        .eq('is_approved', true)
+        .order('created_at', { ascending: false });
+      if (options?.search) query = query.ilike('store_name', `%${options.search}%`);
+      if (options?.limit) query = query.limit(options.limit);
+      const { data: vendors, error } = await query;
+      if (error) throw error;
+
+      const ids = (vendors ?? []).map(v => v.id);
+      const counts = new Map<string, number>();
+      if (ids.length) {
+        const { data: rows } = await supabase.from('products').select('vendor_id').eq('is_active', true).in('vendor_id', ids);
+        (rows ?? []).forEach(r => { if (r.vendor_id) counts.set(r.vendor_id, (counts.get(r.vendor_id) ?? 0) + 1); });
+      }
+      return (vendors ?? []).map(v => ({ ...v, product_count: counts.get(v.id) ?? 0 })) as SupplierSummary[];
     },
   });
 }

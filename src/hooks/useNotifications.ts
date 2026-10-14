@@ -4,7 +4,8 @@ import { useAuth } from '@/hooks/useAuth';
 
 export interface AppNotification {
   id: string;
-  type: 'follow' | 'like' | 'comment' | 'new_post';
+  type: 'follow' | 'like' | 'comment' | 'new_post' | 'message' | 'inquiry' | 'quote';
+  link: string | null;
   message: string;
   post_id: string | null;
   vendor_id: string | null;

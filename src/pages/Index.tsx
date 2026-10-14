@@ -1,85 +1,120 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, PackageSearch, Send, ShieldCheck, Sparkles, Store, Truck } from 'lucide-react';
+import { FileText, PackageSearch, Send, Store } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
+import HeroCarousel from '@/components/HeroCarousel';
+import TrustStrip from '@/components/TrustStrip';
+import ScrollRow, { ScrollItem } from '@/components/ScrollRow';
+import SupplierCard from '@/components/SupplierCard';
 import ProductCard from '@/components/ProductCard';
-import { useCategories, useProducts } from '@/hooks/useProducts';
+import { useProducts, useSuppliers } from '@/hooks/useProducts';
+import { getMoq } from '@/lib/pricing';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
+const FEED_PAGE = 20;
+
 export default function Index() {
-  const { data: products, isLoading } = useProducts({ limit: 30 });
-  const { data: featured } = useProducts({ featured: true, limit: 8 });
-  const { data: categories } = useCategories();
+  const { isVendor } = useAuth();
+  const { data: products, isLoading } = useProducts({ limit: 120 });
+  const { data: featured } = useProducts({ featured: true, limit: 12 });
+  const { data: lowMoq } = useProducts({ maxMoq: 5, limit: 12 });
+  const { data: suppliers } = useSuppliers({ limit: 10 });
+  const [visible, setVisible] = useState(FEED_PAGE);
+  const sentinel = useRef<HTMLDivElement>(null);
+
+  const deals = useMemo(
+    () => (products ?? []).filter(p => p.compare_at_price && p.compare_at_price > p.price).slice(0, 12),
+    [products],
+  );
+  const newest = (products ?? []).slice(0, 12);
+  const feed = products ?? [];
+
+  // Endless feed: reveal more cards as the sentinel scrolls into view.
+  useEffect(() => {
+    const node = sentinel.current;
+    if (!node || visible >= feed.length) return;
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) setVisible(v => v + FEED_PAGE);
+    }, { rootMargin: '400px' });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [visible, feed.length]);
 
   return (
     <Layout>
-      <div className="bg-secondary/60 border-b border-border/70">
-        <div className="container flex items-center gap-5 overflow-x-auto py-3 scrollbar-hide">
-          <Link to="/products" className="shrink-0 text-sm font-semibold text-foreground">All products</Link>
-          {categories?.slice(0, 10).map(category => (
-            <Link key={category.id} to={`/category/${category.slug}`} className="shrink-0 text-sm text-muted-foreground hover:text-primary transition-colors">
-              {category.name}
-            </Link>
-          ))}
-        </div>
-      </div>
+      <HeroCarousel />
+      <TrustStrip />
 
-      <div className="container max-w-[1440px] py-5 sm:py-8">
-        <section className="grid grid-cols-1 sm:grid-cols-3 gap-px overflow-hidden rounded-lg border border-border bg-border">
-          <MarketAction icon={<PackageSearch />} title="Explore products" description="Browse the full marketplace" href="/products" />
-          <MarketAction icon={<ShieldCheck />} title="Shop with confidence" description="See seller and stock details" href="/products" />
-          <MarketAction icon={<Store />} title="Sell on MarketHub" description="Bring your business online" href="/supplier-signup" />
+      <div className="container max-w-[1440px] pb-6">
+        <section className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+          <ActionTile to="/rfq/new" icon={<FileText />} title="Post RFQ" text="Request a quotation" />
+          <ActionTile to="/products?tab=suppliers" icon={<Store />} title="Suppliers" text="Browse verified sellers" />
+          <ActionTile to="/products" icon={<PackageSearch />} title="Products" text="Explore the marketplace" />
+          {isVendor ? (
+            <ActionTile to="/supplier-dashboard" icon={<Store />} title="Seller dashboard" text="Manage your store" />
+          ) : (
+            <ActionTile to="/supplier-signup" icon={<Store />} title="Sell on MarketHub" text="Open your store" />
+          )}
         </section>
 
+        {!!suppliers?.length && (
+          <ScrollRow eyebrow="Trusted sellers" title="Verified suppliers" linkTo="/products?tab=suppliers">
+            {suppliers.map(s => <ScrollItem key={s.id} wide><SupplierCard supplier={s} /></ScrollItem>)}
+          </ScrollRow>
+        )}
+
+        {!!lowMoq?.length && (products ?? []).some(p => getMoq(p) > 5) && (
+          <ScrollRow eyebrow="Start small" title="Low MOQ" linkTo="/products">
+            {lowMoq.map(p => <ScrollItem key={p.id}><ProductCard {...p} /></ScrollItem>)}
+          </ScrollRow>
+        )}
+
         {!!featured?.length && (
-          <section className="mt-8 sm:mt-10">
-            <div className="mb-3 flex items-end justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase text-primary">Picked for you</p>
-                <h2 className="mt-1 font-heading text-xl font-bold sm:text-2xl">Featured products</h2>
-              </div>
-              <Link to="/products" className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary">
-                View all <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
-              {featured.slice(0, 4).map(product => <ProductCard key={product.id} {...product} />)}
-            </div>
-          </section>
+          <ScrollRow eyebrow="Picked for you" title="Featured products" linkTo="/products">
+            {featured.map(p => <ScrollItem key={p.id}><ProductCard {...p} /></ScrollItem>)}
+          </ScrollRow>
+        )}
+
+        {!!deals.length && (
+          <ScrollRow eyebrow="Price drops" title="Best deals" linkTo="/products">
+            {deals.map(p => <ScrollItem key={p.id}><ProductCard {...p} /></ScrollItem>)}
+          </ScrollRow>
+        )}
+
+        {!!newest.length && (
+          <ScrollRow eyebrow="Just in" title="New arrivals" linkTo="/products">
+            {newest.map(p => <ScrollItem key={p.id}><ProductCard {...p} /></ScrollItem>)}
+          </ScrollRow>
         )}
 
         <section className="mt-9 sm:mt-12">
-          <div className="mb-3 flex items-end justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-1.5 text-xs font-semibold uppercase text-primary">
-                <Sparkles className="h-3.5 w-3.5" /> Marketplace picks
-              </div>
-              <h1 className="mt-1 font-heading text-2xl font-bold sm:text-3xl">You may like</h1>
-            </div>
-            <Link to="/products" className="shrink-0 text-sm font-medium text-primary hover:underline">See all</Link>
-          </div>
-
+          <h2 className="mb-3 font-heading text-xl font-bold sm:text-2xl">You may like</h2>
           {isLoading ? (
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 sm:gap-3">
               {Array.from({ length: 10 }).map((_, index) => <div key={index} className="aspect-[3/4] animate-pulse rounded-lg bg-secondary" />)}
             </div>
-          ) : products?.length ? (
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 sm:gap-3">
-              {products.map(product => <ProductCard key={product.id} {...product} />)}
-            </div>
+          ) : feed.length ? (
+            <>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 sm:gap-3">
+                {feed.slice(0, visible).map(product => <ProductCard key={product.id} {...product} />)}
+              </div>
+              <div ref={sentinel} className="h-10" aria-hidden="true" />
+              {visible < feed.length && (
+                <div className="text-center">
+                  <Button variant="outline" onClick={() => setVisible(v => v + FEED_PAGE)}>Load more</Button>
+                </div>
+              )}
+            </>
           ) : (
             <div className="border-y border-border py-14 text-center text-sm text-muted-foreground">
               Products will appear here as sellers add them.
             </div>
           )}
-        </section>
-
-        <section className="mt-8 flex flex-col gap-3 border-y border-border py-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <Truck className="h-5 w-5 shrink-0 text-primary" />
-            <p className="text-sm text-muted-foreground">Find products from independent sellers across Nigeria.</p>
+          <div className="mt-6 text-center">
+            <Link to="/products" className="text-sm font-semibold text-primary hover:underline">Browse all products</Link>
           </div>
-          <Link to="/feed" className="text-sm font-semibold text-primary">Watch products in action <ArrowRight className="ml-1 inline h-4 w-4" /></Link>
         </section>
       </div>
 
@@ -105,15 +140,14 @@ export default function Index() {
   );
 }
 
-function MarketAction({ icon, title, description, href }: { icon: React.ReactNode; title: string; description: string; href: string }) {
+function ActionTile({ to, icon, title, text }: { to: string; icon: React.ReactNode; title: string; text: string }) {
   return (
-    <Link to={href} className="flex min-w-0 items-center gap-3 bg-card px-4 py-3 transition-colors hover:bg-secondary/60 sm:px-5">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">{icon}</span>
+    <Link to={to} className="flex min-w-0 items-center gap-3 rounded-lg border border-border bg-card px-3 py-3 transition-colors hover:bg-secondary/60 sm:px-4">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary [&_svg]:h-5 [&_svg]:w-5">{icon}</span>
       <span className="min-w-0">
         <span className="block truncate text-sm font-semibold">{title}</span>
-        <span className="mt-0.5 block truncate text-xs text-muted-foreground">{description}</span>
+        <span className="mt-0.5 block truncate text-xs text-muted-foreground">{text}</span>
       </span>
-      <ArrowRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
     </Link>
   );
 }

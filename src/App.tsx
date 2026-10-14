@@ -4,8 +4,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from "react-router-dom";
 import { CartProvider } from "@/contexts/CartContext";
+import { InquiryBasketProvider } from "@/contexts/InquiryBasketContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ScrollToTop from "@/components/ScrollToTop";
 import Index from "./pages/Index";
@@ -30,16 +31,27 @@ import SupplierShop from "./pages/SupplierShop";
 import AdminLogin from "./pages/AdminLogin";
 import Wishlist from "./pages/Wishlist";
 import AdminDashboard from "./pages/admin/AdminDashboard";
-import BuyerChat from "./pages/BuyerChat";
+import Messages from "./pages/Messages";
+import Inquiries from "./pages/Inquiries";
+import RfqNew from "./pages/RfqNew";
+import Rfqs from "./pages/Rfqs";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
+// Old /chat?vendor=... links now open the unified inbox.
+function ChatRedirect() {
+  const [params] = useSearchParams();
+  const vendor = params.get('vendor');
+  return <Navigate to={vendor ? `/messages?vendor=${encodeURIComponent(vendor)}` : '/messages'} replace />;
+}
 
 const App = () => (
   <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <CartProvider>
+          <InquiryBasketProvider>
           <Toaster />
           <Sonner />
           <BrowserRouter>
@@ -69,7 +81,11 @@ const App = () => (
               <Route path="/admin-login" element={<AdminLogin />} />
               <Route path="/dashboard" element={<Navigate to="/admin" replace />} />
               <Route path="/wishlist" element={<Wishlist />} />
-              <Route path="/chat" element={<BuyerChat />} />
+              <Route path="/chat" element={<ChatRedirect />} />
+              <Route path="/messages" element={<Messages />} />
+              <Route path="/inquiries" element={<Inquiries />} />
+              <Route path="/rfq" element={<Rfqs />} />
+              <Route path="/rfq/new" element={<RfqNew />} />
 
               {/* Protected routes */}
               <Route path="/user-dashboard" element={
@@ -96,6 +112,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
+          </InquiryBasketProvider>
         </CartProvider>
       </TooltipProvider>
     </QueryClientProvider>

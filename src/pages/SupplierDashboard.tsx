@@ -350,8 +350,11 @@ function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string
 function SupplierAddProduct({ vendorId, categories, onSuccess }: { vendorId: string; categories: any[]; onSuccess: () => void }) {
   const [form, setForm] = useState({
     name: '', price: '', compare_at_price: '', category_id: '', brand: '', stock_quantity: '10',
-    description: '', image_url: '', badge: '',
+    description: '', image_url: '', badge: '', moq: '1', unit: 'Piece', video_url: '',
   });
+  const [tiers, setTiers] = useState<{ min_qty: string; price: string }[]>([{ min_qty: '', price: '' }]);
+  const [specs, setSpecs] = useState<{ key: string; value: string }[]>([{ key: '', value: '' }, { key: '', value: '' }]);
+  const [extraImages, setExtraImages] = useState<File[]>([]);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -368,8 +371,36 @@ function SupplierAddProduct({ vendorId, categories, onSuccess }: { vendorId: str
         imageUrl = data.publicUrl;
       }
     }
+    // B2B fields: MOQ, quantity price breaks and specifications
+    const moq = Math.max(1, Math.floor(Number(form.moq)) || 1);
+    const priceTiers = tiers
+      .filter(t => t.min_qty.trim() && t.price.trim())
+      .map(t => ({ min_qty: Math.floor(Number(t.min_qty)), price: Number(t.price) }));
+    if (priceTiers.some(t => !(t.min_qty > moq) || !(t.price >= 0))) {
+      setLoading(false);
+      toast.error(`Each price break must start above the minimum order (${moq}) and have a valid price`);
+      return;
+    }
+    if (new Set(priceTiers.map(t => t.min_qty)).size !== priceTiers.length) {
+      setLoading(false);
+      toast.error('Two price breaks cannot start at the same quantity');
+      return;
+    }
+    const specsObject: Record<string, string> = {};
+    specs.forEach(sp => { if (sp.key.trim() && sp.value.trim()) specsObject[sp.key.trim()] = sp.value.trim(); });
+
+    const extraUrls: string[] = [];
+    for (const file of extraImages) {
+      const ext = file.name.split('.').pop();
+      const path = `${vendorId}/products/${Date.now()}-${extraUrls.length}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from('vendor-assets').upload(path, file);
+      if (!uploadError) extraUrls.push(supabase.storage.from('vendor-assets').getPublicUrl(path).data.publicUrl);
+    }
+
     const slug = form.name.toLowerCase().replace(/[^\w ]+/g, '').replace(/ +/g, '-') + '-' + Date.now();
     const { error } = await supabase.from('products').insert({
+      moq, unit: form.unit.trim() || 'Piece', price_tiers: priceTiers, specs: specsObject,
+      video_url: form.video_url.trim() || null, images: extraUrls,
       name: form.name, slug, price: Number(form.price),
       compare_at_price: form.compare_at_price ? Number(form.compare_at_price) : null,
       category_id: form.category_id || null, brand: form.brand || null,
@@ -409,6 +440,64 @@ function SupplierAddProduct({ vendorId, categories, onSuccess }: { vendorId: str
         <div><Label>Badge</Label><Input placeholder="New, Sale" value={form.badge} onChange={e => setForm(p => ({ ...p, badge: e.target.value }))} /></div>
       </div>
       <div><Label>Image URL (or upload above)</Label><Input value={form.image_url} onChange={e => setForm(p => ({ ...p, image_url: e.target.value }))} /></div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label>Minimum order (MOQ)</Label>
+          <Input type="number" min={1} value={form.moq} onChange={e => setForm(p => ({ ...p, moq: e.target.value }))} />
+        </div>
+        <div>
+          <Label>Unit</Label>
+          <Input placeholder="Piece, Carton, Kg..." value={form.unit} onChange={e => setForm(p => ({ ...p, unit: e.target.value }))} />
+        </div>
+      </div>
+
+      <div>
+        <Label>Price breaks (optional)</Label>
+        <p className="text-xs text-muted-foreground mb-2">The price above applies from your MOQ. Add lower prices for bigger quantities, e.g. 20 pieces and above at a cheaper price.</p>
+        <div className="space-y-2">
+          {tiers.map((t, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <Input type="number" min={2} placeholder="From quantity" value={t.min_qty} onChange={e => setTiers(prev => prev.map((x, j) => j === i ? { ...x, min_qty: e.target.value } : x))} />
+              <Input type="number" min={0} placeholder="Unit price (₦)" value={t.price} onChange={e => setTiers(prev => prev.map((x, j) => j === i ? { ...x, price: e.target.value } : x))} />
+              <Button type="button" variant="ghost" size="icon" onClick={() => setTiers(prev => prev.length > 1 ? prev.filter((_, j) => j !== i) : [{ min_qty: '', price: '' }])} aria-label="Remove price break"><Trash2 className="w-4 h-4" /></Button>
+            </div>
+          ))}
+        </div>
+        {tiers.length < 4 && (
+          <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => setTiers(prev => [...prev, { min_qty: '', price: '' }])}>
+            <Plus className="w-3.5 h-3.5 mr-1" /> Add price break
+          </Button>
+        )}
+      </div>
+
+      <div>
+        <Label>Specifications (optional)</Label>
+        <div className="space-y-2 mt-1">
+          {specs.map((sp, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <Input placeholder="e.g. Material" value={sp.key} onChange={e => setSpecs(prev => prev.map((x, j) => j === i ? { ...x, key: e.target.value } : x))} />
+              <Input placeholder="e.g. Stainless steel" value={sp.value} onChange={e => setSpecs(prev => prev.map((x, j) => j === i ? { ...x, value: e.target.value } : x))} />
+              <Button type="button" variant="ghost" size="icon" onClick={() => setSpecs(prev => prev.length > 1 ? prev.filter((_, j) => j !== i) : [{ key: '', value: '' }])} aria-label="Remove specification"><Trash2 className="w-4 h-4" /></Button>
+            </div>
+          ))}
+        </div>
+        {specs.length < 10 && (
+          <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => setSpecs(prev => [...prev, { key: '', value: '' }])}>
+            <Plus className="w-3.5 h-3.5 mr-1" /> Add specification
+          </Button>
+        )}
+      </div>
+
+      <div>
+        <Label>More product photos (optional)</Label>
+        <label className="flex items-center gap-2 px-4 py-2 rounded-md border border-border cursor-pointer hover:bg-secondary transition-colors text-sm mt-1">
+          <Upload className="w-4 h-4" />
+          {extraImages.length ? `${extraImages.length} photo(s) selected` : 'Upload photos'}
+          <input type="file" accept="image/*" multiple className="hidden" onChange={e => setExtraImages(Array.from(e.target.files ?? []).slice(0, 8))} />
+        </label>
+      </div>
+      <div><Label>Product video URL (optional)</Label><Input placeholder="https://..." value={form.video_url} onChange={e => setForm(p => ({ ...p, video_url: e.target.value }))} /></div>
+
       <div><Label>Description</Label><Textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} /></div>
       <Button type="submit" disabled={loading}>{loading ? 'Adding...' : 'Add Product'}</Button>
     </form>
@@ -422,12 +511,20 @@ function ShopSettings({ vendor, onUpdate }: { vendor: any; onUpdate: () => void 
     phone: vendor.phone || '',
     whatsapp_number: vendor.whatsapp_number || '',
     address: vendor.address || '',
+    business_type: vendor.business_type || '',
+    location: vendor.location || '',
+    year_established: vendor.year_established ? String(vendor.year_established) : '',
   });
   const [loading, setLoading] = useState(false);
 
   const handleSave = async () => {
     setLoading(true);
-    const { error } = await supabase.from('vendors').update(form).eq('id', vendor.id);
+    const { error } = await supabase.from('vendors').update({
+      ...form,
+      business_type: form.business_type.trim() || null,
+      location: form.location.trim() || null,
+      year_established: form.year_established ? Math.floor(Number(form.year_established)) : null,
+    }).eq('id', vendor.id);
     setLoading(false);
     if (error) toast.error(error.message);
     else { toast.success('Settings saved!'); onUpdate(); }
@@ -441,6 +538,9 @@ function ShopSettings({ vendor, onUpdate }: { vendor: any; onUpdate: () => void 
         <div><Label>Phone</Label><Input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} /></div>
         <div><Label>WhatsApp Number</Label><Input value={form.whatsapp_number} onChange={e => setForm(p => ({ ...p, whatsapp_number: e.target.value }))} /></div>
         <div><Label>Address</Label><Input value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} /></div>
+        <div><Label>Business type</Label><Input placeholder="Manufacturer, Wholesaler, Retailer..." value={form.business_type} onChange={e => setForm(p => ({ ...p, business_type: e.target.value }))} /></div>
+        <div><Label>Location</Label><Input placeholder="City, State" value={form.location} onChange={e => setForm(p => ({ ...p, location: e.target.value }))} /></div>
+        <div><Label>Year established</Label><Input type="number" min={1900} max={2100} value={form.year_established} onChange={e => setForm(p => ({ ...p, year_established: e.target.value }))} /></div>
         <div className="col-span-full"><Label>Description</Label><Textarea value={form.store_description} onChange={e => setForm(p => ({ ...p, store_description: e.target.value }))} /></div>
       </div>
       <Button onClick={handleSave} disabled={loading}>{loading ? 'Saving...' : 'Save Settings'}</Button>
