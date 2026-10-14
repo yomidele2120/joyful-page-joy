@@ -93,6 +93,10 @@ export default function AdminDashboard() {
   });
 
   const { data: categories, isLoading: categoriesLoading } = useCategories();
+  const { data: pendingReports } = usePendingReports();
+  const resolveReport = useResolveReport();
+  const deactivatePost = useDeactivatePost();
+  const deleteComment = useDeleteComment();
 
   const successfulPayments = payments?.filter(p => p.status === 'success') || [];
   const totalRevenue = successfulPayments.reduce((s, p) => s + Number(p.amount), 0);
@@ -180,11 +184,6 @@ export default function AdminDashboard() {
     if (error) toast.error(error.message);
     else { toast.success('Product deleted'); queryClient.invalidateQueries({ queryKey: ['admin-products'] }); }
   };
-
-  const { data: pendingReports } = usePendingReports();
-  const resolveReport = useResolveReport();
-  const deactivatePost = useDeactivatePost();
-  const deleteComment = useDeleteComment();
 
   const navItems: DashNavItem[] = [
     { key: 'overview', label: 'Overview', icon: LayoutDashboard, group: 'Dashboard' },
