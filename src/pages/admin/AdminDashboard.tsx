@@ -387,4 +387,738 @@ export default function AdminDashboard() {
                         <td className="p-3 text-muted-foreground">{new Date(o.created_at).toLocaleDateString()}</td>
                         <td className="p-3">
                           <Select value={o.status} onValueChange={v => updateOrderStatus(o.id, v)}>
-                            <SelectTrigger className="h-7 te
+                            <SelectTrigger className="h-7 text-xs w-28"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pending">Pending</SelectItem>
+                              <SelectItem value="paid">Paid</SelectItem>
+                              <SelectItem value="processing">Processing</SelectItem>
+                              <SelectItem value="shipped">Shipped</SelectItem>
+                              <SelectItem value="delivered">Delivered</SelectItem>
+                              <SelectItem value="cancelled">Cancelled</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="p-8 text-center text-muted-foreground">No orders yet.</p>
+            )}
+          </div>
+        )}
+
+        {/* Payments */}
+        {activeTab === 'payments' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <StatCard icon={<DollarSign className="w-5 h-5 text-primary" />} label="Total Payments" value={formatNaira(totalRevenue)} loading={paymentsLoading} />
+              <StatCard icon={<CreditCard className="w-5 h-5 text-accent" />} label="Successful" value={String(successfulPayments.length)} loading={paymentsLoading} />
+              <StatCard icon={<AlertCircle className="w-5 h-5 text-destructive" />} label="Pending" value={String(payments?.filter(p => p.status === 'pending').length || 0)} loading={paymentsLoading} />
+            </div>
+            <div className="bg-card rounded-xl border border-border overflow-hidden">
+              <div className="p-4 border-b border-border">
+                <h2 className="font-heading font-bold">All Transactions ({payments?.length || 0})</h2>
+              </div>
+              {paymentsLoading ? <TableSkeleton /> : payments?.length ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-secondary">
+                      <tr>
+                        <th className="text-left p-3 font-heading">Reference</th>
+                        <th className="text-left p-3 font-heading">Amount</th>
+                        <th className="text-left p-3 font-heading">Status</th>
+                        <th className="text-left p-3 font-heading">Method</th>
+                        <th className="text-left p-3 font-heading">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {payments.map(p => (
+                        <tr key={p.id} className="border-t border-border">
+                          <td className="p-3 font-mono text-xs">{p.paystack_reference || p.transaction_reference || p.id.slice(0, 8)}</td>
+                          <td className="p-3 font-medium">{formatNaira(Number(p.amount))}</td>
+                          <td className="p-3"><StatusBadge status={p.status} /></td>
+                          <td className="p-3 text-muted-foreground">{p.payment_method || '-'}</td>
+                          <td className="p-3 text-muted-foreground">{new Date(p.created_at).toLocaleDateString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="p-8 text-center text-muted-foreground">No transactions yet.</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Products */}
+        {activeTab === 'products' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="font-heading font-bold">All Products ({products?.length || 0})</h2>
+              <Button size="sm" onClick={() => setActiveTab('add-product')}><Plus className="w-4 h-4 mr-1" /> Add Product</Button>
+            </div>
+            <div className="bg-card rounded-xl border border-border overflow-hidden">
+              {productsLoading ? <TableSkeleton /> : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-secondary">
+                      <tr>
+                        <th className="text-left p-3 font-heading">Product</th>
+                        <th className="text-left p-3 font-heading">Seller</th>
+                        <th className="text-left p-3 font-heading">Category</th>
+                        <th className="text-left p-3 font-heading">Price</th>
+                        <th className="text-left p-3 font-heading">Stock</th>
+                        <th className="text-left p-3 font-heading">Status</th>
+                        <th className="text-left p-3 font-heading">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {products?.map(p => (
+                        <tr key={p.id} className="border-t border-border">
+                          <td className="p-3">
+                            <div className="flex items-center gap-2">
+                              <img src={p.image_url || '/placeholder.svg'} alt="" className="w-8 h-8 rounded object-cover" />
+                              <span className="font-medium line-clamp-1">{p.name}</span>
+                            </div>
+                          </td>
+                          <td className="p-3 text-muted-foreground">{(p.vendors as any)?.store_name || 'Admin'}</td>
+                          <td className="p-3 text-muted-foreground">{(p.categories as any)?.name || '-'}</td>
+                          <td className="p-3 font-medium">{formatNaira(p.price)}</td>
+                          <td className="p-3">{p.stock_quantity}</td>
+                          <td className="p-3"><StatusBadge status={p.is_active ? 'active' : 'inactive'} /></td>
+                          <td className="p-3">
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteProduct(p.id)}>
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Categories */}
+        {activeTab === 'flyers' && <FlyersTab />}
+
+        {activeTab === 'categories' && (
+          <CategoriesTab categories={categories || []} loading={categoriesLoading} onRefresh={() => queryClient.invalidateQueries({ queryKey: ['categories'] })} />
+        )}
+
+        {/* Users */}
+        {/* Moderation */}
+        {activeTab === 'moderation' && (
+          <div className="bg-card rounded-xl border border-border overflow-hidden">
+            <div className="p-4 border-b border-border">
+              <h2 className="font-heading font-bold">Pending Reports ({pendingReports?.length || 0})</h2>
+              <p className="text-xs text-muted-foreground mt-1">Videos and comments flagged by buyers, waiting for review.</p>
+            </div>
+            {!pendingReports?.length ? (
+              <div className="flex flex-col items-center justify-center py-10 text-muted-foreground gap-2">
+                <Flag className="w-8 h-8" />
+                <p className="text-sm">No pending reports</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-border">
+                {pendingReports.map((r) => (
+                  <div key={r.id} className="p-4 flex flex-col sm:flex-row gap-4">
+                    {r.post ? (
+                      <video
+                        src={r.post.video_url}
+                        poster={r.post.thumbnail_url ?? undefined}
+                        className="w-24 h-40 object-cover rounded-lg bg-black shrink-0"
+                        muted
+                        preload="metadata"
+                        controls
+                      />
+                    ) : (
+                      <div className="w-24 h-40 rounded-lg bg-muted flex items-center justify-center text-xs text-muted-foreground shrink-0 p-2 text-center">
+                        Comment
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <div>
+                        <Badge className="mb-1">{r.reason}</Badge>
+                        {r.post?.caption && <p className="text-sm text-muted-foreground line-clamp-2">{r.post.caption}</p>}
+                        {r.comment && (
+                          <p className="text-sm bg-muted rounded p-2 mt-1">&ldquo;{r.comment.content}&rdquo;</p>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Reported {new Date(r.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {r.post && r.post.is_active && (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => {
+                              deactivatePost.mutate({ postId: r.post!.id, isActive: false });
+                              resolveReport.mutate({ reportId: r.id, status: 'reviewed' });
+                            }}
+                          >
+                            <XCircle className="w-3.5 h-3.5 mr-1" /> Take down video
+                          </Button>
+                        )}
+                        {r.comment && (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => {
+                              deleteComment.mutate({ commentId: r.comment!.id, postId: r.comment!.post_id });
+                              resolveReport.mutate({ reportId: r.id, status: 'reviewed' });
+                            }}
+                          >
+                            <XCircle className="w-3.5 h-3.5 mr-1" /> Delete comment
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => resolveReport.mutate({ reportId: r.id, status: 'dismissed' })}
+                        >
+                          <CheckCircle className="w-3.5 h-3.5 mr-1" /> Dismiss report
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'users' && (
+          <div className="bg-card rounded-xl border border-border overflow-hidden">
+            <div className="p-4 border-b border-border">
+              <h2 className="font-heading font-bold">All Users ({profiles?.length || 0})</h2>
+            </div>
+            {profilesLoading ? <TableSkeleton /> : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-secondary">
+                    <tr>
+                      <th className="text-left p-3 font-heading">Name</th>
+                      <th className="text-left p-3 font-heading">Phone</th>
+                      <th className="text-left p-3 font-heading">City</th>
+                      <th className="text-left p-3 font-heading">State</th>
+                      <th className="text-left p-3 font-heading">Joined</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {profiles?.map(p => (
+                      <tr key={p.id} className="border-t border-border">
+                        <td className="p-3 font-medium">{p.full_name || 'Unknown'}</td>
+                        <td className="p-3 text-muted-foreground">{p.phone || '-'}</td>
+                        <td className="p-3 text-muted-foreground">{p.city || '-'}</td>
+                        <td className="p-3 text-muted-foreground">{p.state || '-'}</td>
+                        <td className="p-3 text-muted-foreground">{new Date(p.created_at).toLocaleDateString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Analytics */}
+        {activeTab === 'analytics' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <StatCard icon={<Users className="w-5 h-5 text-primary" />} label="New Suppliers" value={String(pendingVendors.length)} loading={vendorsLoading} />
+              <StatCard icon={<ShoppingCart className="w-5 h-5 text-accent" />} label="Orders (7 days)" value={String((ordersPerDay || []).reduce((sum, [, count]) => sum + Number(count), 0))} loading={ordersLoading} />
+              <StatCard icon={<DollarSign className="w-5 h-5 text-primary" />} label="Total Sales" value={formatNaira(totalRevenue)} loading={paymentsLoading} />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="bg-card rounded-xl border border-border overflow-hidden">
+                <div className="p-4 border-b border-border">
+                  <h2 className="font-heading font-bold">Orders per Day (Last 7)</h2>
+                </div>
+                {ordersLoading ? <TableSkeleton /> : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-secondary">
+                        <tr>
+                          <th className="text-left p-3 font-heading">Day</th>
+                          <th className="text-left p-3 font-heading">Orders</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ordersPerDay.length ? ordersPerDay.map(([day, count]) => (
+                          <tr key={day} className="border-t border-border">
+                            <td className="p-3">{day}</td>
+                            <td className="p-3 font-medium">{count}</td>
+                          </tr>
+                        )) : (
+                          <tr><td className="p-3 text-muted-foreground" colSpan={2}>No order data yet.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-card rounded-xl border border-border overflow-hidden">
+                <div className="p-4 border-b border-border">
+                  <h2 className="font-heading font-bold">Popular Products</h2>
+                </div>
+                {productsLoading ? <TableSkeleton /> : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-secondary">
+                        <tr>
+                          <th className="text-left p-3 font-heading">Product</th>
+                          <th className="text-left p-3 font-heading">Stock</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {popularProducts.length ? popularProducts.map((product) => (
+                          <tr key={product.id} className="border-t border-border">
+                            <td className="p-3 font-medium">{product.name}</td>
+                            <td className="p-3">{product.stock_quantity}</td>
+                          </tr>
+                        )) : (
+                          <tr><td className="p-3 text-muted-foreground" colSpan={2}>No products available.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Settings */}
+        {activeTab === 'settings' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-card rounded-xl border border-border p-4">
+                <h3 className="font-heading font-semibold mb-3">Access & Security</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Authenticated admin</span><StatusBadge status={isAdmin ? 'approved' : 'pending'} /></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Current user</span><span className="font-mono text-xs">{user?.id?.slice(0, 8)}...</span></div>
+                </div>
+              </div>
+
+              <div className="bg-card rounded-xl border border-border p-4">
+                <h3 className="font-heading font-semibold mb-3">System Connectivity</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Suppliers with Paystack subaccount</span><span className="font-medium">{vendors?.filter(v => !!v.paystack_subaccount_code).length || 0}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Pending document reviews</span><span className="font-medium">{pendingVendors.length}</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-card rounded-xl border border-border p-4 flex items-center gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+                  queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+                  queryClient.invalidateQueries({ queryKey: ['admin-vendors'] });
+                  queryClient.invalidateQueries({ queryKey: ['admin-payments'] });
+                  queryClient.invalidateQueries({ queryKey: ['admin-profiles'] });
+                  queryClient.invalidateQueries({ queryKey: ['categories'] });
+                  toast.success('Dashboard data refreshed');
+                }}
+              >
+                Refresh Dashboard Data
+              </Button>
+              <Button variant="ghost" onClick={() => { signOut(); navigate('/admin-login'); }}>
+                Sign out admin
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Earnings */}
+        {activeTab === 'earnings' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <StatCard icon={<DollarSign className="w-5 h-5 text-primary" />} label="Total Revenue" value={formatNaira(totalRevenue)} loading={paymentsLoading} />
+              <StatCard icon={<DollarSign className="w-5 h-5 text-accent" />} label="Platform Commission (5%)" value={formatNaira(platformCommission)} loading={paymentsLoading} />
+              <StatCard icon={<Store className="w-5 h-5 text-primary" />} label="Supplier Payouts" value={formatNaira(supplierEarnings)} loading={paymentsLoading} />
+            </div>
+            <div className="bg-card rounded-xl border border-border overflow-hidden">
+              <div className="p-4 border-b border-border">
+                <h2 className="font-heading font-bold">Supplier Earnings Breakdown</h2>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-secondary">
+                    <tr>
+                      <th className="text-left p-3 font-heading">Supplier</th>
+                      <th className="text-left p-3 font-heading">Subaccount</th>
+                      <th className="text-left p-3 font-heading">Status</th>
+                      <th className="text-left p-3 font-heading">Bank</th>
+                      <th className="text-left p-3 font-heading">Verified</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {vendors?.map(v => (
+                      <tr key={v.id} className="border-t border-border">
+                        <td className="p-3 font-medium">{v.store_name}</td>
+                        <td className="p-3 font-mono text-xs text-muted-foreground">{v.paystack_subaccount_code || 'Not created'}</td>
+                        <td className="p-3"><StatusBadge status={v.paystack_subaccount_code ? 'active' : 'pending'} /></td>
+                        <td className="p-3 text-muted-foreground">{v.bank_name || '-'} {v.bank_account_number ? `(***${v.bank_account_number.slice(-4)})` : ''}</td>
+                        <td className="p-3"><StatusBadge status={v.is_approved ? 'approved' : 'pending'} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add Product */}
+        {activeTab === 'add-product' && (
+          <AddProductForm categories={categories || []} onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+            setActiveTab('products');
+          }} />
+        )}
+    </DashboardShell>
+  );
+}
+
+/* ── Helper Components ── */
+
+function StatusBadge({ status }: { status: string }) {
+  const colors: Record<string, string> = {
+    success: 'bg-primary/10 text-primary',
+    active: 'bg-primary/10 text-primary',
+    approved: 'bg-primary/10 text-primary',
+    paid: 'bg-primary/10 text-primary',
+    delivered: 'bg-primary/10 text-primary',
+    pending: 'bg-accent/10 text-accent',
+    processing: 'bg-accent/10 text-accent',
+    shipped: 'bg-accent/10 text-accent',
+    inactive: 'bg-muted text-muted-foreground',
+    failed: 'bg-destructive/10 text-destructive',
+    cancelled: 'bg-destructive/10 text-destructive',
+    rejected: 'bg-destructive/10 text-destructive',
+  };
+  return (
+    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colors[status] || 'bg-secondary text-foreground'}`}>
+      {status}
+    </span>
+  );
+}
+
+function TableSkeleton() {
+  return (
+    <div className="p-4 space-y-3">
+      {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-10 w-full" />)}
+    </div>
+  );
+}
+
+function SupplierTable({ vendors, onApprove, onReject }: { vendors: any[]; onApprove: (id: string) => void; onReject: (id: string) => void }) {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewTitle, setPreviewTitle] = useState('');
+
+  const openPreview = (url: string, title: string) => {
+    setPreviewUrl(url);
+    setPreviewTitle(title);
+  };
+
+  const isImage = (url: string) => /\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/i.test(url);
+
+  return (
+    <>
+      {/* Fullscreen document/image preview dialog */}
+      <Dialog open={!!previewUrl} onOpenChange={() => setPreviewUrl(null)}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>{previewTitle}</DialogTitle>
+          </DialogHeader>
+          {previewUrl && (
+            isImage(previewUrl) ? (
+              <img src={previewUrl} alt={previewTitle} className="w-full rounded-lg object-contain max-h-[70vh]" />
+            ) : previewUrl.endsWith('.pdf') ? (
+              <iframe src={previewUrl} className="w-full h-[70vh] rounded-lg border border-border" title={previewTitle} />
+            ) : (
+              <div className="text-center py-8">
+                <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+                <p className="text-sm text-muted-foreground mb-3">Preview not available for this file type.</p>
+                <a href={previewUrl} target="_blank" rel="noopener noreferrer">
+                  <Button size="sm">Download / Open in new tab</Button>
+                </a>
+              </div>
+            )
+          )}
+          <div className="flex justify-end">
+            <a href={previewUrl || '#'} target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" size="sm">Open in new tab</Button>
+            </a>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <table className="w-full text-sm">
+        <thead className="bg-secondary">
+          <tr>
+            <th className="text-left p-3 font-heading">Store</th>
+            <th className="text-left p-3 font-heading">Contact</th>
+            <th className="text-left p-3 font-heading">Bank Details</th>
+            <th className="text-left p-3 font-heading">Uploads</th>
+            <th className="text-left p-3 font-heading">Status</th>
+            <th className="text-left p-3 font-heading">Paystack</th>
+            <th className="text-left p-3 font-heading">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {vendors.map(v => (
+            <tr key={v.id} className="border-t border-border">
+              {/* Store info */}
+              <td className="p-3">
+                <div className="flex items-center gap-2">
+                  {v.logo_url ? (
+                    <img
+                      src={v.logo_url}
+                      className="w-10 h-10 rounded object-cover cursor-pointer border border-border hover:ring-2 hover:ring-primary/50 transition-all"
+                      onClick={() => openPreview(v.logo_url, `${v.store_name} - Logo`)}
+                      alt="Logo"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded bg-secondary flex items-center justify-center">
+                      <Store className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div>
+                    <span className="font-medium block">{v.store_name}</span>
+                    {v.company_name && <span className="text-xs text-muted-foreground">{v.company_name}</span>}
+                    {v.address && <span className="block text-[10px] text-muted-foreground">{v.address}</span>}
+                  </div>
+                </div>
+              </td>
+
+              {/* Contact */}
+              <td className="p-3 text-xs">
+                <div className="space-y-0.5">
+                  <div className="text-muted-foreground">{v.phone || '-'}</div>
+                  {v.whatsapp_number && <div className="text-[10px] text-muted-foreground">WA: {v.whatsapp_number}</div>}
+                </div>
+              </td>
+
+              {/* Bank Details - Full */}
+              <td className="p-3 text-xs">
+                {v.bank_name ? (
+                  <div className="space-y-0.5 bg-secondary/50 rounded p-2">
+                    <div className="font-medium text-foreground">{v.bank_name}</div>
+                    <div className="font-mono text-muted-foreground">{v.bank_account_number || 'No account number'}</div>
+                    <div className="text-muted-foreground">{v.bank_account_name || 'No account name'}</div>
+                  </div>
+                ) : (
+                  <span className="text-muted-foreground italic">No bank details</span>
+                )}
+              </td>
+
+              {/* Uploads - Logo + Verification Doc */}
+              <td className="p-3">
+                <div className="flex flex-col gap-1.5">
+                  {v.logo_url ? (
+                    <button
+                      onClick={() => openPreview(v.logo_url, `${v.store_name} - Logo`)}
+                      className="inline-flex items-center gap-1 text-primary text-xs hover:underline"
+                    >
+                      <Eye className="w-3 h-3" /> Logo
+                    </button>
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground">No logo</span>
+                  )}
+                  {v.verification_document_url ? (
+                    <button
+                      onClick={() => openPreview(v.verification_document_url, `${v.store_name} - Verification Document`)}
+                      className="inline-flex items-center gap-1 text-primary text-xs hover:underline"
+                    >
+                      <FileText className="w-3 h-3" /> Verification Doc
+                    </button>
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground">No document</span>
+                  )}
+                </div>
+              </td>
+
+              {/* Status */}
+              <td className="p-3"><StatusBadge status={v.is_approved ? 'approved' : 'pending'} /></td>
+
+              {/* Paystack */}
+              <td className="p-3">
+                <StatusBadge status={v.paystack_subaccount_code ? 'active' : 'pending'} />
+                {v.paystack_subaccount_code && (
+                  <div className="font-mono text-[10px] text-muted-foreground mt-0.5">{v.paystack_subaccount_code}</div>
+                )}
+              </td>
+
+              {/* Actions */}
+              <td className="p-3">
+                <div className="flex gap-1">
+                  {!v.is_approved && (
+                    <Button size="sm" variant="outline" className="h-7 text-xs text-primary" onClick={() => onApprove(v.id)}>
+                      <CheckCircle className="w-3 h-3 mr-1" /> Approve
+                    </Button>
+                  )}
+                  {v.is_approved && (
+                    <Button size="sm" variant="outline" className="h-7 text-xs text-destructive" onClick={() => onReject(v.id)}>
+                      <XCircle className="w-3 h-3 mr-1" /> Revoke
+                    </Button>
+                  )}
+                  <Link to={`/shop/${v.id}`}>
+                    <Button size="sm" variant="ghost" className="h-7 text-xs"><Eye className="w-3 h-3" /></Button>
+                  </Link>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
+  );
+}
+
+/* ── Categories Tab ── */
+
+function CategoriesTab({ categories, loading, onRefresh }: { categories: any[]; loading: boolean; onRefresh: () => void }) {
+  const [name, setName] = useState('');
+  const [slug, setSlug] = useState('');
+  const [description, setDescription] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const addCategory = async () => {
+    if (!name || !slug) { toast.error('Name and slug are required'); return; }
+    setSaving(true);
+    const { error } = await supabase.from('categories').insert({
+      name, slug: slug.toLowerCase().replace(/\s+/g, '-'),
+      description: description || null, image_url: imageUrl || null,
+    });
+    setSaving(false);
+    if (error) toast.error(error.message);
+    else {
+      toast.success('Category added!');
+      setName(''); setSlug(''); setDescription(''); setImageUrl('');
+      onRefresh();
+    }
+  };
+
+  const deleteCategory = async (id: string) => {
+    const { error } = await supabase.from('categories').delete().eq('id', id);
+    if (error) toast.error(error.message);
+    else { toast.success('Category deleted'); onRefresh(); }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-card p-6 rounded-lg card-shadow max-w-lg space-y-4">
+        <h2 className="font-heading text-lg font-bold flex items-center gap-2"><FolderPlus className="w-5 h-5" /> Add Category</h2>
+        <div className="grid grid-cols-2 gap-3">
+          <div><Label>Name *</Label><Input value={name} onChange={e => { setName(e.target.value); setSlug(e.target.value.toLowerCase().replace(/\s+/g, '-')); }} /></div>
+          <div><Label>Slug *</Label><Input value={slug} onChange={e => setSlug(e.target.value)} /></div>
+          <div className="col-span-2"><Label>Description</Label><Input value={description} onChange={e => setDescription(e.target.value)} /></div>
+          <div className="col-span-2"><Label>Image URL</Label><Input value={imageUrl} onChange={e => setImageUrl(e.target.value)} /></div>
+        </div>
+        <Button onClick={addCategory} disabled={saving}>{saving ? 'Adding...' : 'Add Category'}</Button>
+      </div>
+
+      <div className="bg-card rounded-xl border border-border overflow-hidden">
+        <div className="p-4 border-b border-border">
+          <h2 className="font-heading font-bold">All Categories ({categories.length})</h2>
+        </div>
+        {loading ? <TableSkeleton /> : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-secondary">
+                <tr>
+                  <th className="text-left p-3 font-heading">Name</th>
+                  <th className="text-left p-3 font-heading">Slug</th>
+                  <th className="text-left p-3 font-heading">Description</th>
+                  <th className="text-left p-3 font-heading">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {categories.map(c => (
+                  <tr key={c.id} className="border-t border-border">
+                    <td className="p-3 font-medium">{c.name}</td>
+                    <td className="p-3 font-mono text-xs text-muted-foreground">{c.slug}</td>
+                    <td className="p-3 text-muted-foreground text-xs">{c.description || '-'}</td>
+                    <td className="p-3">
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteCategory(c.id)}>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Add Product Form ── */
+
+function AddProductForm({ categories, onSuccess }: { categories: any[]; onSuccess: () => void }) {
+  const [form, setForm] = useState({
+    name: '', price: '', compare_at_price: '', category_id: '', brand: '', stock_quantity: '10',
+    description: '', image_url: '', badge: '', sku: '',
+  });
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    const slug = form.name.toLowerCase().replace(/[^\w ]+/g, '').replace(/ +/g, '-') + '-' + Date.now();
+    const { error } = await supabase.from('products').insert({
+      name: form.name, slug,
+      price: Number(form.price),
+      compare_at_price: form.compare_at_price ? Number(form.compare_at_price) : null,
+      category_id: form.category_id || null,
+      brand: form.brand || null,
+      stock_quantity: Number(form.stock_quantity),
+      description: form.description || null,
+      image_url: form.image_url || null,
+      badge: form.badge || null,
+      sku: form.sku || null,
+    });
+    setLoading(false);
+    if (error) toast.error(error.message);
+    else { toast.success('Product added!'); onSuccess(); }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="bg-card p-6 rounded-lg card-shadow max-w-2xl space-y-4">
+      <h2 className="font-heading text-xl font-bold flex items-center gap-2"><Plus className="w-5 h-5" /> Add Product</h2>
+      <div className="grid grid-cols-2 gap-4">
+        <div><Label>Name *</Label><Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required /></div>
+        <div><Label>Brand</Label><Input value={form.brand} onChange={e => setForm(p => ({ ...p, brand: e.target.value }))} /></div>
+        <div><Label>Price (₦) *</Label><Input type="number" value={form.price} onChange={e => setForm(p => ({ ...p, price: e.target.value }))} required /></div>
+        <div><Label>Compare Price</Label><Input type="number" value={form.compare_at_price} onChange={e => setForm(p => ({ ...p, compare_at_price: e.target.value }))} /></div>
+        <div>
+          <Label>Category</Label>
+          <Select value={form.category_id} onValueChange={v => setForm(p => ({ ...p, category_id: v }))}>
+            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+            <SelectContent>{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+        <div><Label>Stock</Label><Input type="number" value={form.stock_quantity} onChange={e => setForm(p => ({ ...p, stock_quantity: e.target.value }))} /></div>
+        <div><Label>Image URL</Label><Input value={form.image_url} onChange={e => setForm(p => ({ ...p, image_url: e.target.value }))} /></div>
+        <div><Label>Badge</Label><Input placeholder="New, Sale, etc." value={form.badge} onChange={e => setForm(p => ({ ...p, badge: e.target.value }))} /></div>
+      </div>
+      <div><Label>Description</Label><Textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} /></div>
+      <Button type="submit" disabled={loading}>{loading ? 'Adding...' : 'Add Product'}</Button>
+    </form>
+  );
+}
