@@ -27,17 +27,25 @@ function Picture({ flyer, className }: { flyer: UploadedFlyer; className: string
 /** Keeps the image's own proportions, full width. For banners between content. */
 export function ImageFlyerBanner({ flyer, className = '' }: { flyer: UploadedFlyer; className?: string }) {
   return (
-    <FlyerLink flyer={flyer} className={`block overflow-hidden rounded-lg bg-secondary ${focusRing} ${className}`}>
+    <FlyerLink flyer={flyer} className={`block overflow-hidden bg-secondary ${focusRing} ${className}`}>
       <Picture flyer={flyer} className="block h-auto w-full" />
     </FlyerLink>
   );
 }
 
 /** Fills whatever box it is given (cropping edges). For slides, tiles and cards. */
-export function ImageFlyerFill({ flyer, className = '', tabIndex }: { flyer: UploadedFlyer; className?: string; tabIndex?: number }) {
+export function ImageFlyerFill({ flyer, className = '', tabIndex, fit = 'cover' }: { flyer: UploadedFlyer; className?: string; tabIndex?: number; fit?: 'cover' | 'contain' }) {
   return (
-    <FlyerLink flyer={flyer} tabIndex={tabIndex} className={`relative block h-full w-full overflow-hidden rounded-lg bg-secondary ${focusRing} ${className}`}>
-      <Picture flyer={flyer} className="absolute inset-0 h-full w-full object-cover" />
+    <FlyerLink flyer={flyer} tabIndex={tabIndex} className={`relative block h-full w-full overflow-hidden bg-secondary ${focusRing} ${className}`}>
+      {fit === 'contain' ? (
+        <>
+          {/* Soft blurred copy fills any spare space, so the whole image always shows, never cropped */}
+          <img src={flyer.image_url} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-2xl" />
+          <Picture flyer={flyer} className="absolute inset-0 h-full w-full object-contain" />
+        </>
+      ) : (
+        <Picture flyer={flyer} className="absolute inset-0 h-full w-full object-cover" />
+      )}
     </FlyerLink>
   );
 }

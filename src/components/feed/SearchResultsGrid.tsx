@@ -49,7 +49,7 @@ export default function SearchResultsGrid({
           <button
             key={post.id}
             onClick={() => navigate(`/feed?post=${post.id}`)}
-            className="relative aspect-[9/16] rounded-lg overflow-hidden bg-muted text-left active:scale-[0.98] transition-transform"
+            className="relative aspect-[9/16] overflow-hidden bg-muted text-left active:scale-[0.98] transition-transform"
           >
             {post.thumbnail_url ? (
               <img src={post.thumbnail_url} alt={post.caption ?? ''} className="h-full w-full object-cover" loading="lazy" decoding="async" />

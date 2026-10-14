@@ -36,5 +36,5 @@ export default function ScrollRow({ title, eyebrow, linkTo, linkLabel = 'View al
 }
 
 export function ScrollItem({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
-  return <div className={`shrink-0 snap-start ${wide ? 'w-64 sm:w-72' : 'w-40 sm:w-48 lg:w-52'}`}>{children}</div>;
+  return <div className={`shrink-0 snap-start ${wide ? 'w-64 sm:w-72' : 'w-[calc(25%-6px)] sm:w-48 lg:w-52'}`}>{children}</div>;
 }

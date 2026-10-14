@@ -19,7 +19,7 @@ import { FlyerCard, pickImages } from '@/components/flyers/Flyers';
 import { FLYERS } from '@/lib/flyers';
 import { useFlyers } from '@/hooks/useFlyers';
 import { ImageFlyerBanner, ImageFlyerFill } from '@/components/flyers/ImageFlyers';
-import { BrandFlyerBanner } from '@/components/flyers/BrandFlyerImage';
+import { BrandFlyerBanner, BrandFlyerFill } from '@/components/flyers/BrandFlyerImage';
 import { BRAND_FLYERS } from '@/lib/brandFlyers';
 
 const PAGE_SIZE = 24;
@@ -191,20 +191,22 @@ export default function Products() {
                 <p className="mb-3 text-sm text-muted-foreground">{isLoading ? 'Loading products...' : `${filtered.length} product${filtered.length === 1 ? '' : 's'}`}</p>
 
                 {isLoading ? (
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4 sm:gap-3">
-                    {Array.from({ length: 8 }).map((_, i) => <div key={i} className="aspect-[3/4] animate-pulse rounded-lg bg-secondary" />)}
+                  <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-3 xl:grid-cols-4 sm:gap-3">
+                    {Array.from({ length: 8 }).map((_, i) => <div key={i} className="aspect-[3/4] animate-pulse bg-secondary" />)}
                   </div>
                 ) : pageItems.length ? (
                   view === 'grid' ? (
-                    <div className="grid grid-flow-dense grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4 sm:gap-3">
+                    <div className="grid grid-flow-dense grid-cols-4 gap-1.5 sm:grid-cols-3 xl:grid-cols-4 sm:gap-3">
                       {pageItems.flatMap((product, i) => {
                         const cells: React.ReactNode[] = [<ProductCard key={product.id} {...product} />];
                         // Flyers inside the listing: one card-sized after the 6th product,
                         // one full-width banner after the 12th.
                         if (i === 5 && flyersReady) {
                           cells.push(feedCards.length
-                            ? <div key="fc" className="min-h-[260px]"><ImageFlyerFill flyer={feedCards[(current - 1) % feedCards.length]} /></div>
-                            : <FlyerCard key="fc" flyer={FLYERS.rfq} images={pickImages(photos, current * 3, 2)} />);
+                            ? <div key="fc" className="col-span-2 min-h-[260px] sm:col-span-1"><ImageFlyerFill flyer={feedCards[(current - 1) % feedCards.length]} /></div>
+                            : current % 2 === 1
+                              ? <div key="fc" className="col-span-2 min-h-[260px] sm:col-span-1"><BrandFlyerFill flyer={BRAND_FLYERS.mysteryDeal} fit="contain" /></div>
+                              : <div key="fc" className="col-span-2 sm:col-span-1"><FlyerCard flyer={FLYERS.rfq} images={pickImages(photos, current * 3, 2)} /></div>);
                         }
                         if (i === 11 && flyersReady) {
                           cells.push(feedBanners.length
@@ -217,8 +219,8 @@ export default function Products() {
                   ) : (
                     <div className="space-y-3">
                       {pageItems.map(product => (
-                        <article key={product.id} className="flex gap-3 rounded-lg border border-border bg-card p-3 sm:gap-4 sm:p-4">
-                          <Link to={`/product/${product.slug}`} className="h-28 w-28 shrink-0 overflow-hidden rounded-md bg-white sm:h-36 sm:w-36">
+                        <article key={product.id} className="flex gap-3 border border-border bg-card p-3 sm:gap-4 sm:p-4">
+                          <Link to={`/product/${product.slug}`} className="h-28 w-28 shrink-0 overflow-hidden bg-white sm:h-36 sm:w-36">
                             <img src={product.image_url || '/placeholder.svg'} alt={product.name} className="h-full w-full object-contain p-1" loading="lazy" />
                           </Link>
                           <div className="min-w-0 flex-1">
@@ -252,7 +254,7 @@ export default function Products() {
                 )}
               </>
             ) : suppliersLoading ? (
-              <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-24 animate-pulse rounded-lg bg-secondary" />)}</div>
+              <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-24 animate-pulse bg-secondary" />)}</div>
             ) : suppliers?.length ? (
               <div className="grid gap-3 md:grid-cols-2">
                 {suppliers.map(s => <SupplierCard key={s.id} supplier={s} layout="row" />)}

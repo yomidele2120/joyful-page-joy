@@ -22,16 +22,16 @@ export interface ProductCardProps {
   vendors?: { store_name: string; is_approved: boolean | null } | null;
 }
 
-export function ProductPrice({ product, className = '' }: { product: Pick<ProductCardProps, 'price' | 'price_tiers' | 'compare_at_price'>; className?: string }) {
+export function ProductPrice({ product, className = '', compact = false }: { product: Pick<ProductCardProps, 'price' | 'price_tiers' | 'compare_at_price'>; className?: string; compact?: boolean }) {
   const { min, max } = priceRange({ price: product.price, price_tiers: product.price_tiers });
   const hasRange = max > min;
   return (
     <div className={`flex flex-wrap items-baseline gap-x-1.5 ${className}`}>
-      <span className="font-heading font-bold text-sm sm:text-base text-foreground">
+      <span className={`font-heading font-bold text-foreground ${compact ? 'text-[11px] leading-tight sm:text-base' : 'text-sm sm:text-base'}`}>
         {hasRange ? `${formatNaira(min)} - ${formatNaira(max)}` : formatNaira(min)}
       </span>
       {!hasRange && product.compare_at_price && (
-        <span className="text-[10px] text-muted-foreground line-through">{formatNaira(product.compare_at_price)}</span>
+        <span className={`text-muted-foreground line-through ${compact ? 'hidden text-[10px] sm:inline' : 'text-[10px]'}`}>{formatNaira(product.compare_at_price)}</span>
       )}
     </div>
   );
@@ -49,42 +49,43 @@ export default function ProductCard({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-30px" }}
       transition={{ duration: 0.3 }}
-      className="group bg-card rounded-lg overflow-hidden h-full flex flex-col border border-border/70"
+      className="group bg-card rounded-none overflow-hidden h-full flex flex-col border border-border/70"
     >
       <Link to={`/product/${slug}`} className="block relative aspect-square overflow-hidden bg-white">
         <img
           src={image_url || '/placeholder.svg'}
           alt={name}
-          className="w-full h-full object-contain p-2 sm:p-3 group-hover:scale-[1.03] transition-transform duration-300"
+          className="w-full h-full object-contain p-1 sm:p-3 group-hover:scale-[1.03] transition-transform duration-300"
           loading="lazy"
         />
         {badge && (
-          <Badge className="absolute top-2 left-2 bg-primary/10 text-primary border-none text-[10px] px-2 py-0.5 rounded-sm">
+          <Badge className="absolute top-1 left-1 bg-primary/10 text-primary border-none text-[8px] px-1 py-0 sm:top-2 sm:left-2 sm:text-[10px] sm:px-2 sm:py-0.5 rounded-none">
             {badge}
           </Badge>
         )}
         {discount > 0 && (
-          <span className="absolute bottom-2 left-2 bg-accent text-accent-foreground text-[10px] font-semibold px-2 py-0.5 rounded-sm">
+          <span className="absolute bottom-1 left-1 bg-accent text-accent-foreground text-[8px] font-semibold px-1 py-0 sm:bottom-2 sm:left-2 sm:text-[10px] sm:px-2 sm:py-0.5 rounded-none">
             -{discount}%
           </span>
         )}
       </Link>
 
-      <div className="px-2.5 pb-3 pt-2 flex flex-col flex-1 sm:px-3">
-        <Link to={`/product/${slug}`} className="min-h-9">
-          <h3 className="font-medium text-xs sm:text-sm leading-snug line-clamp-2 text-foreground group-hover:text-primary transition-colors">
+      <div className="px-1.5 pb-2 pt-1.5 flex flex-col flex-1 sm:px-3 sm:pb-3 sm:pt-2">
+        <Link to={`/product/${slug}`} className="min-h-[26px] sm:min-h-9">
+          <h3 className="font-medium text-[10px] leading-tight sm:text-sm sm:leading-snug line-clamp-2 text-foreground group-hover:text-primary transition-colors">
             {name}
           </h3>
         </Link>
-        <ProductPrice product={{ price, price_tiers, compare_at_price }} className="mt-2" />
-        <p className="mt-0.5 text-[11px] sm:text-xs text-muted-foreground">{formatMoq({ price, moq, unit })}</p>
-        <div className="mt-1.5 flex items-center justify-between gap-2 text-[10px] sm:text-xs text-muted-foreground">
+        <ProductPrice product={{ price, price_tiers, compare_at_price }} compact className="mt-1 sm:mt-2" />
+        <p className="mt-0.5 hidden text-[11px] sm:block sm:text-xs text-muted-foreground">{formatMoq({ price, moq, unit })}</p>
+        <div className="mt-1.5 hidden items-center justify-between gap-2 text-[10px] sm:flex sm:text-xs text-muted-foreground">
           <span className="flex min-w-0 items-center gap-1">
             {vendors?.is_approved && <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-primary" aria-label="Verified supplier" />}
             <span className="truncate">{vendors?.store_name || brand || 'IT Hub Africa seller'}</span>
           </span>
           {typeof stock_quantity === 'number' && stock_quantity <= 0 && <span className="shrink-0 text-destructive">Sold out</span>}
         </div>
+        {typeof stock_quantity === 'number' && stock_quantity <= 0 && <p className="mt-0.5 text-[9px] text-destructive sm:hidden">Sold out</p>}
       </div>
     </motion.div>
   );

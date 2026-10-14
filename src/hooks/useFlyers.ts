@@ -30,8 +30,13 @@ export function useFlyers() {
       if (error) throw error;
       return data ?? [];
     },
-    staleTime: 60_000,
+    staleTime: 15_000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    retry: 2,
   });
+
+  if (query.error) console.error('[flyers] could not load uploaded flyers. Has the flyers migration been applied to your Supabase project?', query.error);
 
   const live = (query.data ?? []).filter(f => isLive(f));
   return {

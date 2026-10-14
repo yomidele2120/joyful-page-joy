@@ -7,7 +7,7 @@ import { FLYERS } from '@/lib/flyers';
 import { CtaPill, FlyerArt, FlyerTile, TONES, pickImages } from '@/components/flyers/Flyers';
 import { ImageFlyerFill } from '@/components/flyers/ImageFlyers';
 import { BrandFlyerFill } from '@/components/flyers/BrandFlyerImage';
-import { BRAND_FLYERS } from '@/lib/brandFlyers';
+import { HERO_IMAGE_SLIDES } from '@/lib/brandFlyers';
 
 // Hero = category list | auto-playing flyer slider | two flyer tiles (desktop).
 // On phones the slider comes first and the two tiles sit right under it.
@@ -31,10 +31,15 @@ export default function HeroCarousel({ images }: { images: string[] }) {
 
   const uploadedSlides = forPlacement('hero_slide');
   const uploadedSide = forPlacement('hero_side').slice(0, 2);
-  const useUploaded = uploadedSlides.length > 0;
+  const U = uploadedSlides.length;
+  // Uploaded slides always come first. Built-in slides keep the slideshow
+  // moving until the admin has uploaded 3 or more of their own.
+  const showBuiltIn = U < 3;
 
   const picks = (featured ?? []).filter(p => !!p.image_url).slice(0, 4);
-  const total = !ready ? 0 : useUploaded ? uploadedSlides.length : 1 + SLIDE_FLYERS.length + (picks.length >= 2 ? 1 : 0);
+  const IMG = HERO_IMAGE_SLIDES.length;
+  const builtInCount = showBuiltIn ? IMG + SLIDE_FLYERS.length + (picks.length >= 2 ? 1 : 0) : 0;
+  const total = !ready ? 0 : U + builtInCount;
 
   const go = useCallback((next: number) => total > 0 && setIndex(((next % total) + total) % total), [total]);
 
@@ -53,7 +58,7 @@ export default function HeroCarousel({ images }: { images: string[] }) {
       <div className="grid gap-3 lg:grid-cols-[210px_minmax(0,1fr)_250px]">
         {/* Category list (desktop) */}
         <aside className="hidden lg:block">
-          <nav aria-label="Categories" className="h-[320px] overflow-y-auto rounded-lg border border-border bg-card py-2">
+          <nav aria-label="Categories" className="h-[320px] overflow-y-auto border border-border bg-card py-2">
             <p className="px-4 pb-1 pt-1 font-heading text-sm font-semibold">Categories</p>
             {(categories ?? []).map(cat => (
               <Link key={cat.id} to={`/category/${cat.slug}`} className="block px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-primary">
@@ -66,7 +71,7 @@ export default function HeroCarousel({ images }: { images: string[] }) {
 
         {/* Flyer slider */}
         <div
-          className="relative h-[200px] overflow-hidden rounded-lg sm:h-[260px] lg:h-[320px]"
+          className="relative aspect-[2/1] w-full overflow-hidden sm:aspect-auto sm:h-[260px] lg:h-[320px]"
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
           onFocus={() => setPaused(true)}
@@ -79,26 +84,26 @@ export default function HeroCarousel({ images }: { images: string[] }) {
             <div className="h-full w-full animate-pulse bg-secondary" />
           ) : (
             <div className="flex h-full transition-transform duration-500 ease-out motion-reduce:transition-none" style={{ transform: `translateX(-${index * 100}%)` }}>
-              {useUploaded && uploadedSlides.map((flyer, i) => (
+              {uploadedSlides.map((flyer, i) => (
                 <div key={flyer.id} className="h-full w-full shrink-0" aria-hidden={index !== i}>
-                  <ImageFlyerFill flyer={flyer} tabIndex={index === i ? 0 : -1} className="rounded-none" />
+                  <ImageFlyerFill flyer={flyer} fit="contain" tabIndex={index === i ? 0 : -1} />
                 </div>
               ))}
 
-              {!useUploaded && (
-                <div className="h-full w-full shrink-0" aria-hidden={index !== 0}>
-                  <BrandFlyerFill flyer={BRAND_FLYERS.elevate} tabIndex={index === 0 ? 0 : -1} imgClassName="object-[65%_center] sm:object-center" />
+              {showBuiltIn && HERO_IMAGE_SLIDES.map((flyer, i) => (
+                <div key={flyer.id} className="h-full w-full shrink-0" aria-hidden={index !== U + i}>
+                  <BrandFlyerFill flyer={flyer} tabIndex={index === U + i ? 0 : -1} fit="contain" />
                 </div>
-              )}
+              ))}
 
-              {!useUploaded && SLIDE_FLYERS.map((flyer, i) => {
+              {showBuiltIn && SLIDE_FLYERS.map((flyer, i) => {
                 const art = pickImages(images, flyer.offset, 3);
                 return (
-                  <div key={flyer.id} className={`flex h-full w-full shrink-0 items-center justify-between gap-2 px-5 sm:px-12 ${TONES[flyer.tone].surface}`} aria-hidden={index !== i + 1}>
+                  <div key={flyer.id} className={`flex h-full w-full shrink-0 items-center justify-between gap-2 px-5 sm:px-12 ${TONES[flyer.tone].surface}`} aria-hidden={index !== U + IMG + i}>
                     <div className="max-w-[58%] sm:max-w-md">
                       <h2 className="font-heading text-xl font-bold leading-tight sm:text-3xl lg:text-4xl">{flyer.title}</h2>
                       <p className={`mt-2 hidden text-sm sm:block lg:text-base ${TONES[flyer.tone].muted}`}>{flyer.text}</p>
-                      <Link to={flyer.href} tabIndex={index === i + 1 ? 0 : -1} className="mt-4 inline-block rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white sm:mt-5">
+                      <Link to={flyer.href} tabIndex={index === U + IMG + i ? 0 : -1} className="mt-4 inline-block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white sm:mt-5">
                         <CtaPill flyer={flyer} />
                       </Link>
                     </div>
@@ -108,17 +113,17 @@ export default function HeroCarousel({ images }: { images: string[] }) {
                 );
               })}
 
-              {!useUploaded && picks.length >= 2 && (
-                <div className="flex h-full w-full shrink-0 items-center gap-4 bg-secondary px-4 sm:px-12" aria-hidden={index !== SLIDE_FLYERS.length + 1}>
+              {showBuiltIn && picks.length >= 2 && (
+                <div className="flex h-full w-full shrink-0 items-center gap-4 bg-secondary px-4 sm:px-12" aria-hidden={index !== U + IMG + SLIDE_FLYERS.length}>
                   <div className="hidden max-w-[240px] sm:block">
                     <h2 className="font-heading text-2xl font-bold leading-tight lg:text-3xl">Featured by our suppliers</h2>
-                    <Link to="/products" tabIndex={index === SLIDE_FLYERS.length + 1 ? 0 : -1} className="mt-5 inline-flex items-center gap-2 rounded-full border border-foreground px-5 py-2 text-sm font-semibold">
+                    <Link to="/products" tabIndex={index === U + IMG + SLIDE_FLYERS.length ? 0 : -1} className="mt-5 inline-flex items-center gap-2 border border-foreground px-5 py-2 text-sm font-semibold">
                       Source now <ArrowRight className="h-4 w-4" />
                     </Link>
                   </div>
                   <div className="grid flex-1 grid-cols-4 gap-2 sm:ml-auto sm:max-w-[460px]">
                     {picks.map(p => (
-                      <Link key={p.id} to={`/product/${p.slug}`} tabIndex={index === SLIDE_FLYERS.length + 1 ? 0 : -1} className="aspect-square overflow-hidden rounded-lg bg-white">
+                      <Link key={p.id} to={`/product/${p.slug}`} tabIndex={index === U + IMG + SLIDE_FLYERS.length ? 0 : -1} className="aspect-square overflow-hidden bg-white">
                         <img src={p.image_url!} alt={p.name} className="h-full w-full object-contain p-1" loading="lazy" />
                       </Link>
                     ))}
@@ -157,7 +162,7 @@ export default function HeroCarousel({ images }: { images: string[] }) {
         {/* Side flyers: right column on desktop, a 2-up row under the slider on phones */}
         <div className="grid grid-cols-2 gap-3 lg:h-[320px] lg:grid-cols-1 lg:grid-rows-2">
           {!ready
-            ? SIDE_DEFAULTS.map(f => <div key={f.id} className="min-h-[120px] animate-pulse rounded-lg bg-secondary" />)
+            ? SIDE_DEFAULTS.map(f => <div key={f.id} className="min-h-[120px] animate-pulse bg-secondary" />)
             : SIDE_DEFAULTS.map((fallback, i) => {
                 const uploaded = uploadedSide[i];
                 return uploaded

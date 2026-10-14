@@ -11,13 +11,13 @@ export default function SupplierCard({ supplier, layout = 'card' }: { supplier: 
   ].filter(Boolean).join(' - ');
 
   const logo = supplier.logo_url ? (
-    <img src={supplier.logo_url} alt="" className="h-12 w-12 shrink-0 rounded-md bg-white object-cover" />
+    <img src={supplier.logo_url} alt="" className="h-12 w-12 shrink-0 bg-white object-cover" />
   ) : (
-    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-primary/10"><Store className="h-6 w-6 text-primary" /></span>
+    <span className="flex h-12 w-12 shrink-0 items-center justify-center bg-primary/10"><Store className="h-6 w-6 text-primary" /></span>
   );
 
   return (
-    <div className={`rounded-lg border border-border bg-card p-4 ${layout === 'row' ? 'flex flex-col gap-3 sm:flex-row sm:items-center' : 'h-full'}`}>
+    <div className={`border border-border bg-card p-4 ${layout === 'row' ? 'flex flex-col gap-3 sm:flex-row sm:items-center' : 'h-full'}`}>
       <Link to={`/shop/${supplier.id}`} className="flex min-w-0 flex-1 items-center gap-3">
         {logo}
         <span className="min-w-0">

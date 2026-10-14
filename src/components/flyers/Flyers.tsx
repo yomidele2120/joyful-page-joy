@@ -41,14 +41,14 @@ export function FlyerArt({
   if (!images.length) {
     return (
       <div className={`flex items-center justify-center ${className}`} aria-hidden="true">
-        <span className={`flex items-center justify-center rounded-2xl ${tone.tile} ${size === 'sm' ? 'h-12 w-12' : 'h-24 w-24'}`}>
+        <span className={`flex items-center justify-center ${tone.tile} ${size === 'sm' ? 'h-12 w-12' : 'h-24 w-24'}`}>
           <Icon className={size === 'sm' ? 'h-6 w-6' : 'h-12 w-12'} />
         </span>
       </div>
     );
   }
 
-  const dim = size === 'sm' ? 'h-[72px] w-[72px]' : size === 'lg' ? 'h-36 w-36 lg:h-44 lg:w-44' : 'h-24 w-24 sm:h-28 sm:w-28';
+  const dim = size === 'sm' ? 'h-[60px] w-[60px] sm:h-[72px] sm:w-[72px]' : size === 'lg' ? 'h-36 w-36 lg:h-44 lg:w-44' : 'h-14 w-14 min-[400px]:h-[68px] min-[400px]:w-[68px] sm:h-28 sm:w-28';
   const rotations = ['-rotate-6', 'rotate-2', 'rotate-6'];
 
   return (
@@ -59,8 +59,8 @@ export function FlyerArt({
           src={src}
           alt=""
           loading="lazy"
-          className={`${dim} ${rotations[i % 3]} shrink-0 rounded-xl bg-white object-contain p-1.5 shadow-[0_6px_18px_-6px_rgba(0,0,0,0.45)]`}
-          style={{ marginLeft: i === 0 ? 0 : -(size === 'sm' ? 28 : size === 'lg' ? 56 : 40), zIndex: i }}
+          className={`${dim} ${rotations[i % 3]} shrink-0 bg-white object-contain p-1.5 shadow-[0_6px_18px_-6px_rgba(0,0,0,0.45)]`}
+          style={{ marginLeft: i === 0 ? 0 : -(size === 'sm' ? 24 : size === 'lg' ? 56 : 32), zIndex: i }}
         />
       ))}
     </div>
@@ -69,7 +69,7 @@ export function FlyerArt({
 
 export function CtaPill({ flyer, className = '' }: { flyer: Flyer; className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold ${TONES[flyer.tone].button} ${className}`}>
+    <span className={`inline-flex items-center gap-1.5 whitespace-nowrap px-3 py-2 text-xs font-semibold sm:px-4 sm:text-sm ${TONES[flyer.tone].button} ${className}`}>
       {flyer.cta} <ArrowRight className="h-4 w-4" />
     </span>
   );
@@ -83,14 +83,14 @@ export function FlyerBanner({
   return (
     <Link
       to={flyer.href}
-      className={`group relative flex min-h-[140px] items-center justify-between gap-3 overflow-hidden rounded-lg px-5 py-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:min-h-[168px] sm:px-8 ${tone.surface} ${className}`}
+      className={`group relative flex min-h-[104px] items-center justify-between gap-2 overflow-hidden px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:min-h-[168px] sm:gap-3 sm:px-8 sm:py-5 ${tone.surface} ${className}`}
     >
-      <div className="relative z-10 max-w-[60%] sm:max-w-md">
-        <h3 className="font-heading text-lg font-bold leading-tight sm:text-2xl lg:text-[28px]">{flyer.title}</h3>
+      <div className="relative z-10 min-w-0 max-w-[58%] sm:max-w-md">
+        <h3 className="font-heading text-[15px] font-bold leading-tight min-[400px]:text-base sm:text-2xl lg:text-[28px]">{flyer.title}</h3>
         <p className={`mt-1.5 hidden text-sm sm:block ${tone.muted}`}>{flyer.text}</p>
-        <CtaPill flyer={flyer} className="mt-3 sm:mt-4" />
+        <CtaPill flyer={flyer} className="mt-2 sm:mt-4" />
       </div>
-      <FlyerArt flyer={flyer} images={images.slice(0, 3)} size="md" className="shrink-0 translate-x-2 transition-transform duration-300 group-hover:translate-x-0 sm:translate-x-0" />
+      <FlyerArt flyer={flyer} images={images.slice(0, 3)} size="md" className="shrink-0 max-w-[44%] overflow-hidden max-sm:[&>img:nth-child(3)]:hidden" />
     </Link>
   );
 }
@@ -115,7 +115,7 @@ export function FlyerTile({
   return (
     <Link
       to={flyer.href}
-      className={`group relative flex h-full min-h-[120px] flex-col justify-between overflow-hidden rounded-lg p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:p-4 ${tone.surface} ${className}`}
+      className={`group relative flex h-full min-h-[120px] flex-col justify-between overflow-hidden p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:p-4 ${tone.surface} ${className}`}
     >
       <div className="relative z-10 max-w-[75%] lg:max-w-[80%]">
         <h3 className="font-heading text-sm font-bold leading-snug sm:text-base">{flyer.title}</h3>
@@ -134,7 +134,7 @@ export function FlyerCard({ flyer, images }: { flyer: Flyer; images: string[] })
   return (
     <Link
       to={flyer.href}
-      className={`group flex h-full flex-col overflow-hidden rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${tone.surface}`}
+      className={`group flex h-full flex-col overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${tone.surface}`}
     >
       <div className="flex aspect-square items-center justify-center overflow-hidden">
         <FlyerArt flyer={flyer} images={images.slice(0, 2)} size="md" />

@@ -16,7 +16,7 @@ import { FlyerBanner, FlyerCard, pickImages } from '@/components/flyers/Flyers';
 import { FLYERS } from '@/lib/flyers';
 import { useFlyers } from '@/hooks/useFlyers';
 import { ImageFlyerBanner, ImageFlyerFill } from '@/components/flyers/ImageFlyers';
-import { BrandFlyerBanner } from '@/components/flyers/BrandFlyerImage';
+import { BrandFlyerBanner, BrandFlyerFill } from '@/components/flyers/BrandFlyerImage';
 import { BRAND_FLYERS } from '@/lib/brandFlyers';
 
 const FEED_PAGE = 20;
@@ -48,6 +48,7 @@ export default function Index() {
   // is one for it, and the built-in flyer otherwise.
   const { ready: flyersReady, forPlacement } = useFlyers();
   const rowBanners = forPlacement('row_banner');
+  const hasUploadedRows = rowBanners.length > 0;
   const feedBanners = forPlacement('feed_banner');
   const feedCards = forPlacement('feed_card');
 
@@ -88,7 +89,7 @@ export default function Index() {
         {/* Flyer: "Seamless payment" banner between the suppliers row and the product rows */}
         {flyersReady && (rowBanners[0]
           ? <ImageFlyerBanner className="mt-8 sm:mt-10" flyer={rowBanners[0]} />
-          : <BrandFlyerBanner className="mt-8 sm:mt-10" flyer={BRAND_FLYERS.seamlessPurple} />)}
+          : hasUploadedRows ? null : <BrandFlyerBanner className="mt-8 sm:mt-10" flyer={BRAND_FLYERS.seamlessPurple} />)}
 
         {!!lowMoq?.length && (products ?? []).some(p => getMoq(p) > 5) && (
           <ScrollRow eyebrow="Start small" title="Low MOQ" linkTo="/products">
@@ -105,7 +106,7 @@ export default function Index() {
         {/* Flyer: wide banner after the featured row */}
         {flyersReady && (rowBanners[1]
           ? <ImageFlyerBanner className="mt-8 sm:mt-10" flyer={rowBanners[1]} />
-          : <FlyerBanner className="mt-8 sm:mt-10" flyer={FLYERS.lowMoq} images={art(FLYERS.lowMoq.offset)} />)}
+          : hasUploadedRows ? null : <FlyerBanner className="mt-8 sm:mt-10" flyer={FLYERS.lowMoq} images={art(FLYERS.lowMoq.offset)} />)}
 
         {!!deals.length && (
           <ScrollRow eyebrow="Price drops" title="Best deals" linkTo="/products">
@@ -122,17 +123,17 @@ export default function Index() {
         {/* Flyer: wide banner before the endless feed */}
         {flyersReady && (rowBanners[2]
           ? <ImageFlyerBanner className="mt-8 sm:mt-10" flyer={rowBanners[2]} />
-          : <BrandFlyerBanner className="mt-8 sm:mt-10" flyer={BRAND_FLYERS.seamlessOlive} />)}
+          : hasUploadedRows ? null : <BrandFlyerBanner className="mt-8 sm:mt-10" flyer={BRAND_FLYERS.seamlessOlive} />)}
 
         <section className="mt-9 sm:mt-12">
           <h2 className="mb-3 font-heading text-xl font-bold sm:text-2xl">You may like</h2>
           {isLoading ? (
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 sm:gap-3">
-              {Array.from({ length: 10 }).map((_, index) => <div key={index} className="aspect-[3/4] animate-pulse rounded-lg bg-secondary" />)}
+            <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 sm:gap-3">
+              {Array.from({ length: 10 }).map((_, index) => <div key={index} className="aspect-[3/4] animate-pulse bg-secondary" />)}
             </div>
           ) : feed.length ? (
             <>
-              <div className="grid grid-flow-dense grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 sm:gap-3">
+              <div className="grid grid-flow-dense grid-cols-4 gap-1.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 sm:gap-3">
                 {feed.slice(0, visible).flatMap((product, i) => {
                   const cells: React.ReactNode[] = [<ProductCard key={product.id} {...product} />];
                   // Flyers inside the feed: a card-sized one after the 6th product of
@@ -143,10 +144,14 @@ export default function Index() {
                   if (slot === 6 && flyersReady) {
                     if (feedCards.length) {
                       const u = feedCards[round % feedCards.length];
-                      cells.push(<div key={`fc-${i}`} className="min-h-[260px]"><ImageFlyerFill flyer={u} /></div>);
+                      cells.push(<div key={`fc-${i}`} className="col-span-2 min-h-[260px] sm:col-span-1"><ImageFlyerFill flyer={u} /></div>);
                     } else {
-                      const f = [FLYERS.suppliers, FLYERS.rfq, FLYERS.sell][round % 3];
-                      cells.push(<FlyerCard key={`fc-${i}`} flyer={f} images={art(f.offset + round * 2, 2)} />);
+                      if (round % 2 === 0) {
+                        cells.push(<div key={`fc-${i}`} className="col-span-2 min-h-[260px] sm:col-span-1"><BrandFlyerFill flyer={BRAND_FLYERS.mysteryDeal} fit="contain" /></div>);
+                      } else {
+                        const f = [FLYERS.suppliers, FLYERS.rfq, FLYERS.sell][Math.floor(round / 2) % 3];
+                        cells.push(<div key={`fc-${i}`} className="col-span-2 sm:col-span-1"><FlyerCard flyer={f} images={art(f.offset + round * 2, 2)} /></div>);
+                      }
                     }
                   }
                   if (slot === 14 && flyersReady) {
@@ -203,7 +208,7 @@ export default function Index() {
 
 function ActionTile({ to, icon, title, text }: { to: string; icon: React.ReactNode; title: string; text: string }) {
   return (
-    <Link to={to} className="flex min-w-0 items-center gap-3 rounded-lg border border-border bg-card px-3 py-3 transition-colors hover:bg-secondary/60 sm:px-4">
+    <Link to={to} className="flex min-w-0 items-center gap-3 border border-border bg-card px-3 py-3 transition-colors hover:bg-secondary/60 sm:px-4">
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary [&_svg]:h-5 [&_svg]:w-5">{icon}</span>
       <span className="min-w-0">
         <span className="block truncate text-sm font-semibold">{title}</span>
