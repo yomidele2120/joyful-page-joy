@@ -38,7 +38,7 @@ export default function AboutSection() {
               A marketplace built around the people selling, not just the products
             </h2>
             <p className="text-sm md:text-base text-muted-foreground leading-relaxed max-w-md">
-              IT Hub Africa started as a simple idea: give independent vendors the same
+              MarketHub Africa started as a simple idea: give independent vendors the same
               reach as big stores, without losing the direct relationship they have with their
               customers. Buyers get to chat with the person behind the shop, not a call centre.
             </p>

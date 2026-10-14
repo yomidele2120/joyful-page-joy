@@ -1,4 +1,3 @@
-import { BrandLogo } from '@/components/BrandLogo';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -48,14 +47,13 @@ export default function AdminLogin() {
   return (
     <div className="min-h-screen bg-foreground flex items-center justify-center p-4">
       <div className="w-full max-w-sm bg-card p-8 rounded-lg shadow-2xl">
-        <div className="flex flex-col items-center justify-center gap-4 mb-6">
-          <BrandLogo className="h-10" />
+        <div className="flex items-center justify-center gap-2 mb-8">
           <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
             <Shield className="w-6 h-6 text-destructive" />
           </div>
         </div>
         <h1 className="font-heading text-xl font-bold text-center mb-1">Admin Access</h1>
-        <p className="text-sm text-muted-foreground text-center mb-6">IT Hub Africa Control Panel</p>
+        <p className="text-sm text-muted-foreground text-center mb-6">MarketHub Africa Control Panel</p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="email">Admin Email</Label>

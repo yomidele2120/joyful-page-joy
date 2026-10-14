@@ -10,10 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { formatNaira } from '@/lib/format';
 import { useCategories } from '@/hooks/useProducts';
-import { Package, ShoppingCart, DollarSign, Plus, LogOut, ArrowLeft, Trash2, Store, Upload, MessageCircle, AlertCircle, Clock, CheckCircle, CreditCard, LayoutDashboard, Film, Settings, ExternalLink } from 'lucide-react';
-import DashboardShell, { Panel, StatCard, WelcomeBanner, useTabParam, type DashNavItem } from '@/components/dashboard/DashboardShell';
-import { BrandFlyerBanner } from '@/components/flyers/BrandFlyerImage';
-import { BRAND_FLYERS } from '@/lib/brandFlyers';
+import { Package, ShoppingCart, DollarSign, Plus, LogOut, ArrowLeft, Trash2, Store, Upload, MessageCircle, AlertCircle, Clock, CheckCircle, CreditCard } from 'lucide-react';
 import { useUnreadCount } from '@/hooks/useChat';
 import VendorVideosTab from '@/components/dashboard/VendorVideosTab';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -24,8 +21,14 @@ export default function SupplierDashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useTabParam('overview', ['overview', 'products', 'videos', 'orders', 'add-product', 'shop-settings']);
+  const [activeTab, setActiveTab] = useState<string>(searchParams.get('tab') || 'overview');
   const autoCompose = searchParams.get('compose') === '1';
+
+  // Deep link from the site-wide "+" button (e.g. /supplier-dashboard?tab=videos&compose=1)
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab) setActiveTab(tab);
+  }, [searchParams]);
 
   const { data: vendor, isLoading: vendorLoading } = useQuery({
     queryKey: ['vendor-profile', user?.id],
@@ -96,32 +99,45 @@ export default function SupplierDashboard() {
     );
   }
 
-  const navItems: DashNavItem[] = isApproved
-    ? [
-        { key: 'overview', label: 'Overview', icon: LayoutDashboard, group: 'Store' },
-        { key: 'products', label: 'My products', icon: Package, group: 'Store' },
-        { key: 'add-product', label: 'Add product', icon: Plus, group: 'Store' },
-        { key: 'orders', label: 'Orders', icon: ShoppingCart, group: 'Sales' },
-        { key: 'videos', label: 'Videos', icon: Film, group: 'Grow' },
-        { key: 'shop-settings', label: 'Shop settings', icon: Settings, group: 'Account' },
-      ]
-    : [{ key: 'shop-settings', label: 'Shop settings', icon: Settings, group: 'Account' }];
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="bg-card border-b border-border sticky top-0 z-50">
+        <div className="container flex items-center justify-between h-14">
+          <div className="flex items-center gap-3">
+            <Link to="/"><ArrowLeft className="w-5 h-5 text-muted-foreground" /></Link>
+            <Store className="w-5 h-5 text-primary" />
+            <div>
+              <h1 className="font-heading font-bold text-sm leading-none">{vendor.store_name}</h1>
+              <span className={`text-[10px] flex items-center gap-1 ${isApproved ? 'text-primary' : 'text-accent'}`}>
+                {isApproved ? <><CheckCircle className="w-3 h-3" /> Approved</> : <><Clock className="w-3 h-3" /> Pending Approval</>}
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {isApproved && (
+              <>
+                <Link to={`/shop/${vendor.id}`}>
+                  <Button variant="outline" size="sm" className="text-xs">View Shop</Button>
+                </Link>
+                <Link to="/supplier-chat">
+                  <Button variant="outline" size="sm" className="text-xs relative">
+                    <MessageCircle className="w-4 h-4 mr-1" /> Chat
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive text-destructive-foreground rounded-full text-[10px] flex items-center justify-center">{unreadCount}</span>
+                    )}
+                  </Button>
+                </Link>
+              </>
+            )}
+            <Button variant="ghost" size="sm" onClick={() => { signOut(); navigate('/'); }}>
+              <LogOut className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      </header>
 
-  const drawerActions = isApproved ? (
-    <>
-      <Link to={`/shop/${vendor.id}`} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-white/70 hover:bg-white/5 hover:text-white">
-        <ExternalLink className="h-[18px] w-[18px]" /> View my shop
-      </Link>
-      <Link to="/supplier-chat" className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-white/70 hover:bg-white/5 hover:text-white">
-        <MessageCircle className="h-[18px] w-[18px]" />
-        <span className="flex-1">Customer chat</span>
-        {unreadCount > 0 && <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[10px] font-bold text-accent-foreground">{unreadCount}</span>}
-      </Link>
-    </>
-  ) : undefined;
-
-  const notice = (
-    <>
+      <div className="container py-6">
         {/* Pending Verification Banner */}
         {!isApproved && (
           <div className="bg-accent/10 border border-accent/30 rounded-lg p-6 mb-6">
@@ -173,53 +189,45 @@ export default function SupplierDashboard() {
           </div>
         )}
 
-    </>
-  );
-
-  return (
-    <DashboardShell
-      panelLabel="Seller centre"
-      title={vendor.store_name}
-      subtitle={isApproved ? 'Approved seller' : 'Pending approval'}
-      items={navItems}
-      active={isApproved ? activeTab : 'shop-settings'}
-      onSelect={setActiveTab}
-      onSignOut={() => { signOut(); navigate('/'); }}
-      drawerActions={drawerActions}
-      notice={notice}
-    >
         {/* Only show tabs/features if approved */}
         {isApproved ? (
           <>
+            <div className="flex gap-2 mb-6 overflow-x-auto">
+              {[
+                { key: 'overview', label: 'Overview' },
+                { key: 'products', label: 'My Products' },
+                { key: 'videos', label: 'Videos' },
+                { key: 'orders', label: 'Orders' },
+                { key: 'add-product', label: 'Add Product' },
+                { key: 'shop-settings', label: 'Settings' },
+              ].map(tab => (
+                <Button key={tab.key} variant={activeTab === tab.key ? 'default' : 'outline'} size="sm"
+                  onClick={() => setActiveTab(tab.key as any)}>{tab.label}</Button>
+              ))}
+            </div>
+
             {activeTab === 'overview' && (
-              <div className="space-y-5">
-                <WelcomeBanner title={`Welcome back, ${vendor.store_name}`} text="Manage your catalogue, orders and videos from one place.">
-                  <Button size="sm" variant="secondary" onClick={() => setActiveTab('add-product')}><Plus className="mr-1.5 h-4 w-4" />Add product</Button>
-                  <Button size="sm" variant="secondary" asChild><Link to={`/shop/${vendor.id}`}>View my shop</Link></Button>
-                </WelcomeBanner>
-
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  <StatCard icon={<Package />} label="Products" value={String(stats.products)} />
-                  <StatCard icon={<ShoppingCart />} tone="accent" label="Orders" value={String(stats.orders)} />
-                  <StatCard icon={<DollarSign />} tone="sky" label="Revenue" value={formatNaira(stats.revenue)} />
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <StatCard icon={<Package className="w-6 h-6 text-primary" />} label="Products" value={String(stats.products)} />
+                  <StatCard icon={<ShoppingCart className="w-6 h-6 text-accent" />} label="Orders" value={String(stats.orders)} />
+                  <StatCard icon={<DollarSign className="w-6 h-6 text-primary" />} label="Revenue" value={formatNaira(stats.revenue)} />
                 </div>
-
                 {hasPaystack && (
-                  <Panel title="Payment account">
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between gap-3"><span className="text-muted-foreground">Paystack subaccount</span><span className="truncate font-mono text-xs">{vendor.paystack_subaccount_code}</span></div>
-                      <div className="flex justify-between gap-3"><span className="text-muted-foreground">Bank</span><span>{vendor.bank_name} (***{vendor.bank_account_number?.slice(-4)})</span></div>
-                      <div className="flex justify-between gap-3"><span className="text-muted-foreground">Status</span><span className="font-medium text-primary">Active</span></div>
+                  <div className="bg-card rounded-lg card-shadow p-4">
+                    <h3 className="font-heading font-semibold text-sm mb-2">Payment Account</h3>
+                    <div className="text-sm space-y-1">
+                      <div className="flex justify-between"><span className="text-muted-foreground">Paystack Subaccount</span><span className="font-mono text-xs">{vendor.paystack_subaccount_code}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Bank</span><span>{vendor.bank_name} (***{vendor.bank_account_number?.slice(-4)})</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Status</span><span className="text-primary font-medium">Active</span></div>
                     </div>
-                  </Panel>
+                  </div>
                 )}
-
-                <BrandFlyerBanner flyer={BRAND_FLYERS.seamlessOlive} />
               </div>
             )}
 
             {activeTab === 'products' && (
-              <div className="bg-card rounded-xl border border-border overflow-hidden">
+              <div className="bg-card rounded-lg card-shadow overflow-hidden">
                 {products?.length ? (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
@@ -267,7 +275,7 @@ export default function SupplierDashboard() {
             )}
 
             {activeTab === 'orders' && (
-              <div className="bg-card rounded-xl border border-border overflow-hidden">
+              <div className="bg-card rounded-lg card-shadow overflow-hidden">
                 {orders?.length ? (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
@@ -322,7 +330,20 @@ export default function SupplierDashboard() {
             <ShopSettings vendor={vendor} onUpdate={() => queryClient.invalidateQueries({ queryKey: ['vendor-profile'] })} />
           </div>
         )}
-    </DashboardShell>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="bg-card p-6 rounded-lg card-shadow flex items-center gap-4">
+      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">{icon}</div>
+      <div>
+        <p className="text-sm text-muted-foreground">{label}</p>
+        <p className="font-heading text-2xl font-bold">{value}</p>
+      </div>
+    </div>
   );
 }
 

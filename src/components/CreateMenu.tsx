@@ -41,7 +41,7 @@ export default function CreateMenu({ open, onOpenChange }: { open: boolean; onOp
         ) : (
           <div className="p-4 pt-0 pb-[calc(1rem+env(safe-area-inset-bottom))] max-w-md mx-auto w-full">
             <p className="text-sm text-muted-foreground mb-4">
-              Only vendors can list products or post videos. Open your shop to start selling on IT Hub Africa.
+              Only vendors can list products or post videos. Open your shop to start selling on MarketHub.
             </p>
             <button
               onClick={() => go(user ? '/supplier-signup' : '/users-login')}

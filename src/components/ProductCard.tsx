@@ -81,7 +81,7 @@ export default function ProductCard({
         <div className="mt-1.5 flex items-center justify-between gap-2 text-[10px] sm:text-xs text-muted-foreground">
           <span className="flex min-w-0 items-center gap-1">
             {vendors?.is_approved && <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-primary" aria-label="Verified supplier" />}
-            <span className="truncate">{vendors?.store_name || brand || 'IT Hub Africa seller'}</span>
+            <span className="truncate">{vendors?.store_name || brand || 'MarketHub seller'}</span>
           </span>
           {typeof stock_quantity === 'number' && stock_quantity <= 0 && <span className="shrink-0 text-destructive">Sold out</span>}
         </div>

@@ -84,12 +84,12 @@ export function useAuth() {
     return { error, roles };
   };
 
-  const signUp = async (email: string, password: string, fullName: string, extra: Record<string, string | boolean> = {}) => {
+  const signUp = async (email: string, password: string, fullName: string) => {
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name: fullName, ...extra },
+        data: { full_name: fullName },
         emailRedirectTo: window.location.origin,
       },
     });

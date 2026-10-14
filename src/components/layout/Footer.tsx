@@ -1,4 +1,3 @@
-import { BrandLogoPill } from '@/components/BrandLogo';
 import { Link } from 'react-router-dom';
 import { Mail, Phone } from 'lucide-react';
 import { useCategories } from '@/hooks/useProducts';
@@ -10,9 +9,12 @@ export default function Footer() {
       <div className="container py-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-8 text-sm">
         {/* Brand */}
         <div className="sm:col-span-2 lg:col-span-1">
-          <Link to="/" aria-label="IT Hub Africa home" className="mb-4 inline-block">
-            <BrandLogoPill logoClassName="h-10" />
-          </Link>
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
+              <span className="text-primary-foreground font-heading font-bold text-sm">M</span>
+            </div>
+            <span className="font-heading font-bold text-lg text-background dark:text-white">MarketHub Africa</span>
+          </div>
           <p className="text-background/60 dark:text-white/60 leading-relaxed max-w-xs">
             Buy, Sell, and Grow With Confidence. Nigeria's trusted online marketplace.
           </p>
@@ -69,7 +71,7 @@ export default function Footer() {
 
       <div className="border-t border-background/10 dark:border-white/10 py-4 px-6">
         <p className="text-center text-xs text-background/40 dark:text-white/40">
-          © {new Date().getFullYear()} IT Hub Africa. All rights reserved.
+          © {new Date().getFullYear()} MarketHub Africa. All rights reserved.
         </p>
       </div>
     </footer>

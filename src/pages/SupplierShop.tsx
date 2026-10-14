@@ -118,7 +118,7 @@ export default function SupplierShop() {
               </Button>
               {whatsappNumber && (
                 <a href={`https://wa.me/${whatsappNumber}`} target="_blank" rel="noopener noreferrer" className="flex-1">
-                  <Button size="sm" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5 text-xs">
+                  <Button size="sm" className="w-full bg-[hsl(142,70%,45%)] hover:bg-[hsl(142,70%,40%)] text-white gap-1.5 text-xs">
                     <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
                   </Button>
                 </a>

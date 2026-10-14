@@ -16,19 +16,16 @@ import { useCategories } from '@/hooks/useProducts';
 import {
   Package, ShoppingCart, Users, DollarSign, Plus, LogOut, ArrowLeft,
   Trash2, Store, CheckCircle, XCircle, Eye, BarChart3, CreditCard,
-  FileText, AlertCircle, TrendingUp, Layers, FolderPlus, Pencil, Flag, Image as ImageIcon,
-  LayoutDashboard, Megaphone, Settings, Wallet, ChevronRight
+  FileText, AlertCircle, TrendingUp, Layers, FolderPlus, Pencil, Flag
 } from 'lucide-react';
-import DashboardShell, { Panel, StatCard, WelcomeBanner, useTabParam, type DashNavItem } from '@/components/dashboard/DashboardShell';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import FlyersTab from '@/components/admin/FlyersTab';
 import { usePendingReports, useResolveReport, useDeactivatePost, useDeleteComment } from '@/hooks/useReports';
 
 export default function AdminDashboard() {
   const { user, isAdmin, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useTabParam('overview');
+  const [activeTab, setActiveTab] = useState<string>('overview');
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) {
@@ -185,34 +182,57 @@ export default function AdminDashboard() {
     else { toast.success('Product deleted'); queryClient.invalidateQueries({ queryKey: ['admin-products'] }); }
   };
 
-  const navItems: DashNavItem[] = [
-    { key: 'overview', label: 'Overview', icon: LayoutDashboard, group: 'Dashboard' },
-    { key: 'analytics', label: 'Analytics', icon: BarChart3, group: 'Dashboard' },
-    { key: 'earnings', label: 'Earnings', icon: TrendingUp, group: 'Dashboard' },
-    { key: 'suppliers', label: 'Suppliers', icon: Store, badge: pendingVendors.length, group: 'Marketplace' },
-    { key: 'products', label: 'Products', icon: Package, group: 'Marketplace' },
-    { key: 'add-product', label: 'Add product', icon: Plus, group: 'Marketplace' },
-    { key: 'categories', label: 'Categories', icon: Layers, group: 'Marketplace' },
-    { key: 'flyers', label: 'Flyers', icon: Megaphone, group: 'Marketplace' },
-    { key: 'orders', label: 'Orders', icon: ShoppingCart, group: 'Sales' },
-    { key: 'payments', label: 'Payments', icon: CreditCard, group: 'Sales' },
-    { key: 'users', label: 'Users', icon: Users, group: 'Community' },
-    { key: 'moderation', label: 'Moderation', icon: Flag, badge: pendingReports?.length ?? 0, group: 'Community' },
-    { key: 'settings', label: 'Settings', icon: Settings, group: 'System' },
+  const tabs = [
+    { key: 'overview', label: 'Overview', icon: <BarChart3 className="w-4 h-4" /> },
+    { key: 'suppliers', label: `Suppliers${pendingVendors.length ? ` (${pendingVendors.length})` : ''}`, icon: <Store className="w-4 h-4" /> },
+    { key: 'moderation', label: `Moderation${pendingReports?.length ? ` (${pendingReports.length})` : ''}`, icon: <Flag className="w-4 h-4" /> },
+    { key: 'orders', label: 'Orders', icon: <ShoppingCart className="w-4 h-4" /> },
+    { key: 'payments', label: 'Payments', icon: <CreditCard className="w-4 h-4" /> },
+    { key: 'products', label: 'Products', icon: <Package className="w-4 h-4" /> },
+    { key: 'categories', label: 'Categories', icon: <Layers className="w-4 h-4" /> },
+    { key: 'users', label: 'Users', icon: <Users className="w-4 h-4" /> },
+    { key: 'analytics', label: 'Analytics', icon: <BarChart3 className="w-4 h-4" /> },
+    { key: 'settings', label: 'Settings', icon: <Pencil className="w-4 h-4" /> },
+    { key: 'earnings', label: 'Earnings', icon: <TrendingUp className="w-4 h-4" /> },
+    { key: 'add-product', label: 'Add product', icon: <Plus className="w-4 h-4" /> },
   ];
 
-  const recentOrders = (orders ?? []).slice(0, 5);
-
   return (
-    <DashboardShell
-      panelLabel="Admin console"
-      title="Administrator"
-      subtitle={user?.email}
-      items={navItems}
-      active={activeTab}
-      onSelect={setActiveTab}
-      onSignOut={() => { signOut(); navigate('/'); }}
-    >
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="bg-card border-b border-border sticky top-0 z-50">
+        <div className="container flex items-center justify-between h-14">
+          <div className="flex items-center gap-3">
+            <Link to="/"><ArrowLeft className="w-5 h-5 text-muted-foreground hover:text-foreground transition-colors" /></Link>
+            <h1 className="font-heading font-bold text-lg">Admin Dashboard</h1>
+            {pendingVendors.length > 0 && (
+              <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                {pendingVendors.length} pending
+              </Badge>
+            )}
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => { signOut(); navigate('/'); }}>
+            <LogOut className="w-4 h-4 mr-1" /> Logout
+          </Button>
+        </div>
+      </header>
+
+      <div className="container py-6">
+        {/* Tabs */}
+        <div className="flex gap-1.5 mb-6 overflow-x-auto pb-2 scrollbar-none">
+          {tabs.map(tab => (
+            <Button
+              key={tab.key}
+              variant={activeTab === tab.key ? 'default' : 'outline'}
+              size="sm"
+              className="flex items-center gap-1.5 shrink-0"
+              onClick={() => setActiveTab(tab.key)}
+            >
+              {tab.icon} {tab.label}
+            </Button>
+          ))}
+        </div>
+
         {hasAdminDataError && (
           <div className="mb-6 rounded-lg border border-destructive/30 bg-destructive/5 p-4 flex items-center gap-3">
             <AlertCircle className="w-5 h-5 text-destructive shrink-0" />
@@ -240,85 +260,55 @@ export default function AdminDashboard() {
 
         {/* Overview */}
         {activeTab === 'overview' && (
-          <div className="space-y-5">
-            <WelcomeBanner
-              title="Marketplace at a glance"
-              text="Track sales, review new suppliers and keep the marketplace healthy from one place."
-            >
-              <Button size="sm" variant="secondary" onClick={() => setActiveTab('suppliers')}>
-                Review suppliers{pendingVendors.length > 0 ? ` (${pendingVendors.length})` : ''}
-              </Button>
-              <Button size="sm" variant="secondary" onClick={() => setActiveTab('flyers')}>Manage flyers</Button>
-            </WelcomeBanner>
-
-            <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-              <StatCard icon={<Wallet />} label="Total revenue" value={formatNaira(totalRevenue)} loading={paymentsLoading} />
-              <StatCard icon={<DollarSign />} tone="accent" label="Commission (5%)" value={formatNaira(platformCommission)} loading={paymentsLoading} />
-              <StatCard icon={<ShoppingCart />} tone="sky" label="Orders" value={String(orders?.length || 0)} loading={ordersLoading} />
-              <StatCard icon={<Package />} label="Products" value={String(products?.length || 0)} loading={productsLoading} />
-              <StatCard icon={<Store />} tone="accent" label="Suppliers" value={String(vendors?.length || 0)} loading={vendorsLoading} />
-              <StatCard icon={<Users />} tone="sky" label="Users" value={String(profiles?.length || 0)} loading={profilesLoading} />
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              <StatCard icon={<DollarSign className="w-5 h-5 text-primary" />} label="Total Revenue" value={formatNaira(totalRevenue)} loading={paymentsLoading} />
+              <StatCard icon={<DollarSign className="w-5 h-5 text-accent" />} label="Commission (5%)" value={formatNaira(platformCommission)} loading={paymentsLoading} />
+              <StatCard icon={<ShoppingCart className="w-5 h-5 text-primary" />} label="Total Orders" value={String(orders?.length || 0)} loading={ordersLoading} />
+              <StatCard icon={<Package className="w-5 h-5 text-accent" />} label="Products" value={String(products?.length || 0)} loading={productsLoading} />
+              <StatCard icon={<Store className="w-5 h-5 text-primary" />} label="Suppliers" value={String(vendors?.length || 0)} loading={vendorsLoading} />
+              <StatCard icon={<Users className="w-5 h-5 text-accent" />} label="Users" value={String(profiles?.length || 0)} loading={profilesLoading} />
             </div>
 
+            {/* Quick alerts */}
             {pendingVendors.length > 0 && (
-              <div className="flex flex-col gap-3 rounded-xl border border-destructive/20 bg-destructive/5 p-4 sm:flex-row sm:items-center">
-                <div className="flex min-w-0 flex-1 items-start gap-3">
-                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
-                  <div>
-                    <p className="text-sm font-medium">{pendingVendors.length} supplier(s) awaiting verification</p>
-                    <p className="text-xs text-muted-foreground">Review uploaded documents and approve or reject suppliers.</p>
-                  </div>
+              <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4 flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 text-destructive shrink-0" />
+                <div>
+                  <p className="font-medium text-sm">{pendingVendors.length} supplier(s) awaiting verification</p>
+                  <p className="text-xs text-muted-foreground">Review uploaded documents and approve or reject suppliers.</p>
                 </div>
-                <Button size="sm" variant="outline" className="shrink-0" onClick={() => setActiveTab('suppliers')}>Review</Button>
+                <Button size="sm" variant="outline" className="shrink-0 ml-auto" onClick={() => setActiveTab('suppliers')}>Review</Button>
               </div>
             )}
 
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-              <Panel title="Order status">
-                <dl className="space-y-2.5 text-sm">
-                  <div className="flex justify-between"><dt className="text-muted-foreground">Pending</dt><dd className="font-medium">{pendingOrders.length}</dd></div>
-                  <div className="flex justify-between"><dt className="text-muted-foreground">Paid</dt><dd className="font-medium">{paidOrders.length}</dd></div>
-                  <div className="flex justify-between"><dt className="text-muted-foreground">Total</dt><dd className="font-medium">{orders?.length || 0}</dd></div>
-                </dl>
-              </Panel>
-              <Panel title="Supplier status">
-                <dl className="space-y-2.5 text-sm">
-                  <div className="flex justify-between"><dt className="text-muted-foreground">Approved</dt><dd className="font-medium text-primary">{approvedVendors.length}</dd></div>
-                  <div className="flex justify-between"><dt className="text-muted-foreground">Pending</dt><dd className="font-medium text-destructive">{pendingVendors.length}</dd></div>
-                  <div className="flex justify-between"><dt className="text-muted-foreground">With Paystack</dt><dd className="font-medium">{vendors?.filter(v => v.paystack_subaccount_code).length || 0}</dd></div>
-                </dl>
-              </Panel>
-              <Panel title="Revenue">
-                <dl className="space-y-2.5 text-sm">
-                  <div className="flex justify-between"><dt className="text-muted-foreground">Gross revenue</dt><dd className="font-medium">{formatNaira(totalRevenue)}</dd></div>
-                  <div className="flex justify-between"><dt className="text-muted-foreground">Platform (5%)</dt><dd className="font-medium text-primary">{formatNaira(platformCommission)}</dd></div>
-                  <div className="flex justify-between"><dt className="text-muted-foreground">Supplier payouts</dt><dd className="font-medium">{formatNaira(supplierEarnings)}</dd></div>
-                </dl>
-              </Panel>
+            {/* Quick stats rows */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-card rounded-lg card-shadow p-4">
+                <h3 className="font-heading font-semibold text-sm mb-3">Order Status</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Pending</span><span className="font-medium">{pendingOrders.length}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Paid</span><span className="font-medium">{paidOrders.length}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Total</span><span className="font-medium">{orders?.length || 0}</span></div>
+                </div>
+              </div>
+              <div className="bg-card rounded-lg card-shadow p-4">
+                <h3 className="font-heading font-semibold text-sm mb-3">Supplier Status</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Approved</span><span className="font-medium text-primary">{approvedVendors.length}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Pending</span><span className="font-medium text-destructive">{pendingVendors.length}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">With Paystack</span><span className="font-medium">{vendors?.filter(v => v.paystack_subaccount_code).length || 0}</span></div>
+                </div>
+              </div>
+              <div className="bg-card rounded-lg card-shadow p-4">
+                <h3 className="font-heading font-semibold text-sm mb-3">Revenue</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Gross Revenue</span><span className="font-medium">{formatNaira(totalRevenue)}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Platform (5%)</span><span className="font-medium text-primary">{formatNaira(platformCommission)}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Supplier Payouts</span><span className="font-medium">{formatNaira(supplierEarnings)}</span></div>
+                </div>
+              </div>
             </div>
-
-            <Panel
-              title="Recent orders"
-              flush
-              action={<Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setActiveTab('orders')}>View all <ChevronRight className="ml-1 h-3.5 w-3.5" /></Button>}
-            >
-              {recentOrders.length === 0 ? (
-                <p className="p-6 text-center text-sm text-muted-foreground">No orders yet.</p>
-              ) : (
-                <ul className="divide-y divide-border">
-                  {recentOrders.map((o: any) => (
-                    <li key={o.id} className="flex items-center gap-3 px-4 py-3 text-sm">
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium">Order #{String(o.id).slice(0, 8)}</p>
-                        <p className="text-xs text-muted-foreground">{new Date(o.created_at).toLocaleDateString()}</p>
-                      </div>
-                      <StatusBadge status={o.status} />
-                      <span className="w-24 shrink-0 text-right font-semibold">{formatNaira(o.total)}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Panel>
           </div>
         )}
 
@@ -327,7 +317,7 @@ export default function AdminDashboard() {
           <div className="space-y-4">
             {/* Pending suppliers first */}
             {pendingVendors.length > 0 && (
-              <div className="bg-card rounded-xl border border-border overflow-hidden">
+              <div className="bg-card rounded-lg card-shadow overflow-hidden">
                 <div className="p-4 border-b border-border bg-destructive/5">
                   <h2 className="font-heading font-bold flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 text-destructive" /> Pending Verification ({pendingVendors.length})
@@ -339,7 +329,7 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            <div className="bg-card rounded-xl border border-border overflow-hidden">
+            <div className="bg-card rounded-lg card-shadow overflow-hidden">
               <div className="p-4 border-b border-border">
                 <h2 className="font-heading font-bold">All Suppliers ({vendors?.length || 0})</h2>
               </div>
@@ -354,7 +344,7 @@ export default function AdminDashboard() {
 
         {/* Orders */}
         {activeTab === 'orders' && (
-          <div className="bg-card rounded-xl border border-border overflow-hidden">
+          <div className="bg-card rounded-lg card-shadow overflow-hidden">
             <div className="p-4 border-b border-border">
               <h2 className="font-heading font-bold">All Orders ({orders?.length || 0})</h2>
             </div>
@@ -415,7 +405,7 @@ export default function AdminDashboard() {
               <StatCard icon={<CreditCard className="w-5 h-5 text-accent" />} label="Successful" value={String(successfulPayments.length)} loading={paymentsLoading} />
               <StatCard icon={<AlertCircle className="w-5 h-5 text-destructive" />} label="Pending" value={String(payments?.filter(p => p.status === 'pending').length || 0)} loading={paymentsLoading} />
             </div>
-            <div className="bg-card rounded-xl border border-border overflow-hidden">
+            <div className="bg-card rounded-lg card-shadow overflow-hidden">
               <div className="p-4 border-b border-border">
                 <h2 className="font-heading font-bold">All Transactions ({payments?.length || 0})</h2>
               </div>
@@ -458,7 +448,7 @@ export default function AdminDashboard() {
               <h2 className="font-heading font-bold">All Products ({products?.length || 0})</h2>
               <Button size="sm" onClick={() => setActiveTab('add-product')}><Plus className="w-4 h-4 mr-1" /> Add Product</Button>
             </div>
-            <div className="bg-card rounded-xl border border-border overflow-hidden">
+            <div className="bg-card rounded-lg card-shadow overflow-hidden">
               {productsLoading ? <TableSkeleton /> : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -503,8 +493,6 @@ export default function AdminDashboard() {
         )}
 
         {/* Categories */}
-        {activeTab === 'flyers' && <FlyersTab />}
-
         {activeTab === 'categories' && (
           <CategoriesTab categories={categories || []} loading={categoriesLoading} onRefresh={() => queryClient.invalidateQueries({ queryKey: ['categories'] })} />
         )}
@@ -512,7 +500,7 @@ export default function AdminDashboard() {
         {/* Users */}
         {/* Moderation */}
         {activeTab === 'moderation' && (
-          <div className="bg-card rounded-xl border border-border overflow-hidden">
+          <div className="bg-card rounded-lg card-shadow overflow-hidden">
             <div className="p-4 border-b border-border">
               <h2 className="font-heading font-bold">Pending Reports ({pendingReports?.length || 0})</h2>
               <p className="text-xs text-muted-foreground mt-1">Videos and comments flagged by buyers, waiting for review.</p>
@@ -593,7 +581,7 @@ export default function AdminDashboard() {
         )}
 
         {activeTab === 'users' && (
-          <div className="bg-card rounded-xl border border-border overflow-hidden">
+          <div className="bg-card rounded-lg card-shadow overflow-hidden">
             <div className="p-4 border-b border-border">
               <h2 className="font-heading font-bold">All Users ({profiles?.length || 0})</h2>
             </div>
@@ -636,7 +624,7 @@ export default function AdminDashboard() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="bg-card rounded-xl border border-border overflow-hidden">
+              <div className="bg-card rounded-lg card-shadow overflow-hidden">
                 <div className="p-4 border-b border-border">
                   <h2 className="font-heading font-bold">Orders per Day (Last 7)</h2>
                 </div>
@@ -664,7 +652,7 @@ export default function AdminDashboard() {
                 )}
               </div>
 
-              <div className="bg-card rounded-xl border border-border overflow-hidden">
+              <div className="bg-card rounded-lg card-shadow overflow-hidden">
                 <div className="p-4 border-b border-border">
                   <h2 className="font-heading font-bold">Popular Products</h2>
                 </div>
@@ -699,7 +687,7 @@ export default function AdminDashboard() {
         {activeTab === 'settings' && (
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-card rounded-xl border border-border p-4">
+              <div className="bg-card rounded-lg card-shadow p-4">
                 <h3 className="font-heading font-semibold mb-3">Access & Security</h3>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between"><span className="text-muted-foreground">Authenticated admin</span><StatusBadge status={isAdmin ? 'approved' : 'pending'} /></div>
@@ -707,7 +695,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="bg-card rounded-xl border border-border p-4">
+              <div className="bg-card rounded-lg card-shadow p-4">
                 <h3 className="font-heading font-semibold mb-3">System Connectivity</h3>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between"><span className="text-muted-foreground">Suppliers with Paystack subaccount</span><span className="font-medium">{vendors?.filter(v => !!v.paystack_subaccount_code).length || 0}</span></div>
@@ -716,7 +704,7 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="bg-card rounded-xl border border-border p-4 flex items-center gap-3">
+            <div className="bg-card rounded-lg card-shadow p-4 flex items-center gap-3">
               <Button
                 variant="outline"
                 onClick={() => {
@@ -746,7 +734,7 @@ export default function AdminDashboard() {
               <StatCard icon={<DollarSign className="w-5 h-5 text-accent" />} label="Platform Commission (5%)" value={formatNaira(platformCommission)} loading={paymentsLoading} />
               <StatCard icon={<Store className="w-5 h-5 text-primary" />} label="Supplier Payouts" value={formatNaira(supplierEarnings)} loading={paymentsLoading} />
             </div>
-            <div className="bg-card rounded-xl border border-border overflow-hidden">
+            <div className="bg-card rounded-lg card-shadow overflow-hidden">
               <div className="p-4 border-b border-border">
                 <h2 className="font-heading font-bold">Supplier Earnings Breakdown</h2>
               </div>
@@ -785,11 +773,35 @@ export default function AdminDashboard() {
             setActiveTab('products');
           }} />
         )}
-    </DashboardShell>
+      </div>
+    </div>
   );
 }
 
 /* ── Helper Components ── */
+
+function StatCard({ icon, label, value, loading }: { icon: React.ReactNode; label: string; value: string; loading?: boolean }) {
+  if (loading) {
+    return (
+      <div className="bg-card p-4 rounded-lg card-shadow flex items-center gap-3">
+        <Skeleton className="w-10 h-10 rounded-full" />
+        <div className="space-y-1.5">
+          <Skeleton className="w-16 h-3" />
+          <Skeleton className="w-20 h-5" />
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="bg-card p-4 rounded-lg card-shadow flex items-center gap-3">
+      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">{icon}</div>
+      <div className="min-w-0">
+        <p className="text-xs text-muted-foreground truncate">{label}</p>
+        <p className="font-heading text-lg font-bold truncate">{value}</p>
+      </div>
+    </div>
+  );
+}
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
@@ -1029,7 +1041,7 @@ function CategoriesTab({ categories, loading, onRefresh }: { categories: any[]; 
         <Button onClick={addCategory} disabled={saving}>{saving ? 'Adding...' : 'Add Category'}</Button>
       </div>
 
-      <div className="bg-card rounded-xl border border-border overflow-hidden">
+      <div className="bg-card rounded-lg card-shadow overflow-hidden">
         <div className="p-4 border-b border-border">
           <h2 className="font-heading font-bold">All Categories ({categories.length})</h2>
         </div>

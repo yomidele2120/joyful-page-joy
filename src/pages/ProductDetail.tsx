@@ -288,7 +288,7 @@ export default function ProductDetail() {
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold">{vendor.store_name}</span>
                     <span className="mt-0.5 block text-xs text-muted-foreground">
-                      {vendor.is_approved ? 'Verified supplier' : 'IT Hub Africa seller'}
+                      {vendor.is_approved ? 'Verified supplier' : 'MarketHub seller'}
                       {vendor.location ? ` - ${vendor.location}` : ''}
                     </span>
                   </span>

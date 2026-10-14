@@ -12,12 +12,6 @@ import { getMoq } from '@/lib/pricing';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { FlyerBanner, FlyerCard, pickImages } from '@/components/flyers/Flyers';
-import { FLYERS } from '@/lib/flyers';
-import { useFlyers } from '@/hooks/useFlyers';
-import { ImageFlyerBanner, ImageFlyerFill } from '@/components/flyers/ImageFlyers';
-import { BrandFlyerBanner } from '@/components/flyers/BrandFlyerImage';
-import { BRAND_FLYERS } from '@/lib/brandFlyers';
 
 const FEED_PAGE = 20;
 
@@ -37,20 +31,6 @@ export default function Index() {
   const newest = (products ?? []).slice(0, 12);
   const feed = products ?? [];
 
-  // Product photos used as flyer artwork (real data only).
-  const photos = useMemo(
-    () => (products ?? []).map(p => p.image_url).filter((u): u is string => !!u),
-    [products],
-  );
-  const art = (offset: number, count = 3) => pickImages(photos, offset, count);
-
-  // Flyers the admin uploaded. Each spot below uses an uploaded one when there
-  // is one for it, and the built-in flyer otherwise.
-  const { ready: flyersReady, forPlacement } = useFlyers();
-  const rowBanners = forPlacement('row_banner');
-  const feedBanners = forPlacement('feed_banner');
-  const feedCards = forPlacement('feed_card');
-
   // Endless feed: reveal more cards as the sentinel scrolls into view.
   useEffect(() => {
     const node = sentinel.current;
@@ -64,7 +44,7 @@ export default function Index() {
 
   return (
     <Layout>
-      <HeroCarousel images={photos} />
+      <HeroCarousel />
       <TrustStrip />
 
       <div className="container max-w-[1440px] pb-6">
@@ -75,7 +55,7 @@ export default function Index() {
           {isVendor ? (
             <ActionTile to="/supplier-dashboard" icon={<Store />} title="Seller dashboard" text="Manage your store" />
           ) : (
-            <ActionTile to="/supplier-signup" icon={<Store />} title="Sell on IT Hub Africa" text="Open your store" />
+            <ActionTile to="/supplier-signup" icon={<Store />} title="Sell on MarketHub" text="Open your store" />
           )}
         </section>
 
@@ -84,11 +64,6 @@ export default function Index() {
             {suppliers.map(s => <ScrollItem key={s.id} wide><SupplierCard supplier={s} /></ScrollItem>)}
           </ScrollRow>
         )}
-
-        {/* Flyer: "Seamless payment" banner between the suppliers row and the product rows */}
-        {flyersReady && (rowBanners[0]
-          ? <ImageFlyerBanner className="mt-8 sm:mt-10" flyer={rowBanners[0]} />
-          : <BrandFlyerBanner className="mt-8 sm:mt-10" flyer={BRAND_FLYERS.seamlessPurple} />)}
 
         {!!lowMoq?.length && (products ?? []).some(p => getMoq(p) > 5) && (
           <ScrollRow eyebrow="Start small" title="Low MOQ" linkTo="/products">
@@ -102,11 +77,6 @@ export default function Index() {
           </ScrollRow>
         )}
 
-        {/* Flyer: wide banner after the featured row */}
-        {flyersReady && (rowBanners[1]
-          ? <ImageFlyerBanner className="mt-8 sm:mt-10" flyer={rowBanners[1]} />
-          : <FlyerBanner className="mt-8 sm:mt-10" flyer={FLYERS.lowMoq} images={art(FLYERS.lowMoq.offset)} />)}
-
         {!!deals.length && (
           <ScrollRow eyebrow="Price drops" title="Best deals" linkTo="/products">
             {deals.map(p => <ScrollItem key={p.id}><ProductCard {...p} /></ScrollItem>)}
@@ -119,11 +89,6 @@ export default function Index() {
           </ScrollRow>
         )}
 
-        {/* Flyer: wide banner before the endless feed */}
-        {flyersReady && (rowBanners[2]
-          ? <ImageFlyerBanner className="mt-8 sm:mt-10" flyer={rowBanners[2]} />
-          : <BrandFlyerBanner className="mt-8 sm:mt-10" flyer={BRAND_FLYERS.seamlessOlive} />)}
-
         <section className="mt-9 sm:mt-12">
           <h2 className="mb-3 font-heading text-xl font-bold sm:text-2xl">You may like</h2>
           {isLoading ? (
@@ -132,34 +97,8 @@ export default function Index() {
             </div>
           ) : feed.length ? (
             <>
-              <div className="grid grid-flow-dense grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 sm:gap-3">
-                {feed.slice(0, visible).flatMap((product, i) => {
-                  const cells: React.ReactNode[] = [<ProductCard key={product.id} {...product} />];
-                  // Flyers inside the feed: a card-sized one after the 6th product of
-                  // every 20, a full-width banner after the 14th. grid-flow-dense lets
-                  // later products fill any gap a full-width banner leaves.
-                  const slot = (i + 1) % 20;
-                  const round = Math.floor(i / 20);
-                  if (slot === 6 && flyersReady) {
-                    if (feedCards.length) {
-                      const u = feedCards[round % feedCards.length];
-                      cells.push(<div key={`fc-${i}`} className="min-h-[260px]"><ImageFlyerFill flyer={u} /></div>);
-                    } else {
-                      const f = [FLYERS.suppliers, FLYERS.rfq, FLYERS.sell][round % 3];
-                      cells.push(<FlyerCard key={`fc-${i}`} flyer={f} images={art(f.offset + round * 2, 2)} />);
-                    }
-                  }
-                  if (slot === 14 && flyersReady) {
-                    if (feedBanners.length) {
-                      const u = feedBanners[round % feedBanners.length];
-                      cells.push(<ImageFlyerBanner key={`fb-${i}`} className="col-span-full" flyer={u} />);
-                    } else {
-                      const f = [FLYERS.deals, FLYERS.bulk, FLYERS.watch][round % 3];
-                      cells.push(<FlyerBanner key={`fb-${i}`} className="col-span-full" flyer={f} images={art(f.offset + round * 2)} />);
-                    }
-                  }
-                  return cells;
-                })}
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 sm:gap-3">
+                {feed.slice(0, visible).map(product => <ProductCard key={product.id} {...product} />)}
               </div>
               <div ref={sentinel} className="h-10" aria-hidden="true" />
               {visible < feed.length && (
