@@ -4,7 +4,7 @@ import {
   ShoppingCart, Search, User, Menu, Heart, LogOut, Store, Clapperboard, Bell, MessageSquare,
   FileText, ClipboardList, ChevronDown, LayoutGrid, Inbox, Package,
 } from 'lucide-react';
-import logo from '@/assets/logo.jpeg';
+import { BrandLogo } from '@/components/BrandLogo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from '@/components/ui/sheet';
@@ -20,6 +20,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useNotifications, useUnreadNotificationCount, useMarkNotificationsRead } from '@/hooks/useNotifications';
 import { formatDistanceToNow } from 'date-fns';
+import HeaderTicker from '@/components/flyers/HeaderTicker';
+import HeaderFlyerStrip from '@/components/flyers/HeaderFlyerStrip';
 
 type SearchScope = 'products' | 'suppliers';
 
@@ -58,13 +60,15 @@ export default function Navbar() {
   const topCategories = (categories ?? []).slice(0, 7);
 
   return (
+    <>
+    <HeaderFlyerStrip />
     <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-md border-b border-border">
       {/* Utility bar */}
       <div className="bg-primary text-primary-foreground text-xs py-1">
         <div className="container flex items-center justify-between">
-          <span className="truncate">Source in bulk from verified Nigerian suppliers</span>
+          <HeaderTicker />
           <div className="flex items-center gap-4 shrink-0">
-            <Link to="/rfq/new" className="hidden sm:inline hover:underline">Request a quote</Link>
+            <Link to="/rfq/new" className="hidden lg:inline hover:underline">Request a quote</Link>
             {isVendor ? (
               <Link to="/supplier-dashboard" className="flex items-center gap-1 hover:underline">
                 <Store className="w-3 h-3" /> Seller Dashboard
@@ -81,7 +85,7 @@ export default function Navbar() {
       {/* Row 1: logo, search, actions */}
       <div className="container flex items-center justify-between h-14 gap-3">
         <Link to="/" className="flex items-center shrink-0">
-          <img src={logo} alt="MarketHub Africa" className="h-8 md:h-9 w-auto object-contain dark:invert" />
+          <BrandLogo className="h-9 md:h-10" />
         </Link>
 
         {/* Desktop search with scope switch */}
@@ -150,7 +154,7 @@ export default function Navbar() {
             <SheetContent side="left" className="w-[85vw] sm:w-80 p-0 flex flex-col" onOpenAutoFocus={(e) => e.preventDefault()}>
               <SheetHeader className="p-4 border-b border-border text-left">
                 <SheetTitle className="flex items-center gap-2">
-                  <img src={logo} alt="MarketHub Africa" className="h-7 w-auto object-contain dark:invert" />
+                  <BrandLogo className="h-9" />
                 </SheetTitle>
               </SheetHeader>
 
@@ -243,6 +247,7 @@ export default function Navbar() {
         </div>
       </nav>
     </header>
+    </>
   );
 }
 

@@ -1,42 +1,59 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import Layout from '@/components/layout/Layout';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Store, Upload } from 'lucide-react';
+import { Upload } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import {
+  AuthShell, AuthFooterLink, Field, PasswordField, SelectField, PhoneField, ChoiceGroup,
+  CheckboxRow, SubmitButton, SecondaryButton, LegalText, COUNTRIES,
+} from '@/components/auth/AuthShell';
+
+const BUSINESS_TYPES: Record<string, string> = {
+  starter: 'Starter business',
+  registered: 'Registered business',
+};
+
+interface Form {
+  country: string; businessName: string; firstName: string; lastName: string; email: string;
+  phone: string; whatsappNumber: string; password: string; businessType: string; marketing: boolean;
+  companyAddress: string; productCategories: string; storeDescription: string;
+  bankName: string; bankAccountNumber: string; bankAccountName: string;
+}
+
+const STEP_TITLES = ['Create your account', 'Tell buyers about your business', 'Where should we pay you?'];
 
 export default function SupplierSignup() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
-  const [form, setForm] = useState({
-    fullName: '', email: '', password: '', confirmPassword: '',
-    phone: '', whatsappNumber: '', companyName: '', companyAddress: '',
-    storeDescription: '', productCategories: '',
+  const [form, setForm] = useState<Form>({
+    country: 'Nigeria', businessName: '', firstName: '', lastName: '', email: '',
+    phone: '', whatsappNumber: '', password: '', businessType: '', marketing: false,
+    companyAddress: '', productCategories: '', storeDescription: '',
     bankName: '', bankAccountNumber: '', bankAccountName: '',
   });
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [docFile, setDocFile] = useState<File | null>(null);
 
-  const update = (key: string, value: string) => setForm(p => ({ ...p, [key]: value }));
+  const set = <K extends keyof Form>(key: K, value: Form[K]) => setForm(p => ({ ...p, [key]: value }));
+
+  const step1Ready =
+    !!form.businessName.trim() && !!form.firstName.trim() && !!form.lastName.trim() && !!form.email.trim() &&
+    !!form.phone && !!form.whatsappNumber && form.password.length >= 6 && !!form.businessType;
+  const step2Ready = !!form.companyAddress.trim();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (form.password !== form.confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
-    }
+    if (step < 3) return;
     setLoading(true);
     try {
+      const fullName = `${form.firstName.trim()} ${form.lastName.trim()}`;
+
       // 1. Create auth user (email verification disabled globally)
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: form.email,
+        email: form.email.trim(),
         password: form.password,
-        options: { data: { full_name: form.fullName } },
+        options: { data: { full_name: fullName, country: form.country, marketing_opt_in: form.marketing } },
       });
       if (authError) throw authError;
       if (!authData.user) throw new Error('Signup failed');
@@ -71,13 +88,14 @@ export default function SupplierSignup() {
       const categories = form.productCategories.split(',').map(c => c.trim()).filter(Boolean);
       const { error: vendorError } = await supabase.from('vendors').insert({
         user_id: userId,
-        store_name: form.companyName,
+        store_name: form.businessName.trim(),
         store_description: form.storeDescription || null,
         phone: form.phone,
         whatsapp_number: form.whatsappNumber,
-        company_name: form.companyName,
+        company_name: form.businessName.trim(),
         address: form.companyAddress,
         logo_url: logoUrl,
+        business_type: BUSINESS_TYPES[form.businessType],
         product_categories: categories.length ? categories : null,
         bank_name: form.bankName || null,
         bank_account_number: form.bankAccountNumber || null,
@@ -104,131 +122,113 @@ export default function SupplierSignup() {
   };
 
   return (
-    <Layout>
-      <div className="container max-w-2xl py-12">
-        <div className="bg-card p-8 rounded-lg card-shadow">
-          <div className="flex items-center gap-2 mb-6">
-            <Store className="w-6 h-6 text-primary" />
-            <h1 className="font-heading text-2xl font-bold">Become a Supplier</h1>
-          </div>
+    <AuthShell
+      title={STEP_TITLES[step - 1]}
+      footer={<AuthFooterLink text="Already have a supplier account?" to="/suppliers-login" label="Sign in" />}
+    >
+      <div className="mb-6 -mt-2">
+        <div className="flex gap-1.5" aria-hidden="true">
+          {[1, 2, 3].map(s => (
+            <div key={s} className={`h-1 flex-1 rounded-full ${s <= step ? 'bg-primary' : 'bg-slate-200'}`} />
+          ))}
+        </div>
+        <p className="mt-2 text-center text-sm text-slate-500">Step {step} of 3</p>
+      </div>
 
-          {/* Progress */}
-          <div className="flex items-center gap-2 mb-8">
-            {[1, 2, 3].map(s => (
-              <div key={s} className={`flex-1 h-1.5 rounded-full ${s <= step ? 'bg-primary' : 'bg-secondary'}`} />
-            ))}
-          </div>
+      <form onSubmit={handleSubmit}>
+        {step === 1 && (
+          <>
+            <SelectField label="Country" value={form.country} onChange={v => set('country', v)} options={COUNTRIES} />
+            <Field label="Business name" value={form.businessName} onChange={e => set('businessName', e.target.value)} autoComplete="organization" required />
+            <Field label="First name" value={form.firstName} onChange={e => set('firstName', e.target.value)} autoComplete="given-name" required />
+            <Field label="Last name" value={form.lastName} onChange={e => set('lastName', e.target.value)} autoComplete="family-name" required />
+            <Field label="Email address" type="email" value={form.email} onChange={e => set('email', e.target.value)} autoComplete="email" required />
+            <PhoneField value={form.phone} onChange={v => set('phone', v)} required />
+            <PhoneField label="WhatsApp number" value={form.whatsappNumber} onChange={v => set('whatsappNumber', v)} required />
+            <PasswordField value={form.password} onChange={e => set('password', e.target.value)} autoComplete="new-password" minLength={6} required />
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {step === 1 && (
-              <SignupStep1 form={form} update={update} onNext={() => {
-                if (!form.fullName || !form.email || !form.password || !form.phone || !form.whatsappNumber) {
-                  toast.error('Please fill all required fields'); return;
-                }
-                if (form.password !== form.confirmPassword) {
-                  toast.error('Passwords do not match'); return;
-                }
+            <ChoiceGroup
+              legend="What type of business do you own?"
+              name="businessType"
+              value={form.businessType}
+              onChange={v => set('businessType', v)}
+              options={[
+                { value: 'starter', label: 'Starter business', hint: 'I’m testing my ideas with real customers, and preparing to register my company' },
+                { value: 'registered', label: 'Registered business', hint: 'My business has the approval, documentation, and licences required to operate legally' },
+              ]}
+            />
+
+            <p className="-mt-2 mb-2 text-sm font-semibold text-slate-600">Email marketing (optional)</p>
+            <CheckboxRow checked={form.marketing} onChange={v => set('marketing', v)}>
+              I consent to IT Hub Africa sending me marketing emails (seller tips, new features, etc.)
+            </CheckboxRow>
+
+            <SubmitButton
+              type="button"
+              disabled={!step1Ready}
+              onClick={() => {
+                if (form.password.length < 6) { toast.error('Password must be at least 6 characters'); return; }
                 setStep(2);
-              }} />
-            )}
-            {step === 2 && (
-              <SignupStep2 form={form} update={update} logoFile={logoFile} setLogoFile={setLogoFile}
-                docFile={docFile} setDocFile={setDocFile}
-                onBack={() => setStep(1)} onNext={() => {
-                  if (!form.companyName || !form.companyAddress) {
-                    toast.error('Please fill required fields'); return;
-                  }
-                  setStep(3);
-                }} />
-            )}
-            {step === 3 && (
-              <SignupStep3 form={form} update={update} loading={loading}
-                onBack={() => setStep(2)} />
-            )}
-          </form>
+              }}
+            >
+              Continue
+            </SubmitButton>
+            <LegalText />
+          </>
+        )}
 
-          <div className="mt-6 pt-4 border-t border-border text-center">
-            <Link to="/suppliers-login" className="text-sm text-primary hover:underline">
-              Already have a supplier account? Sign In
-            </Link>
-          </div>
-        </div>
-      </div>
-    </Layout>
+        {step === 2 && (
+          <>
+            <Field label="Business address" value={form.companyAddress} onChange={e => set('companyAddress', e.target.value)} autoComplete="street-address" required />
+            <Field label="Product categories (optional)" value={form.productCategories} onChange={e => set('productCategories', e.target.value)} placeholder="Fashion, Electronics, Home & Kitchen" />
+            <div className="mb-5">
+              <label htmlFor="storeDescription" className="mb-2 block text-sm font-semibold text-slate-600">Store description (optional)</label>
+              <textarea
+                id="storeDescription"
+                rows={3}
+                value={form.storeDescription}
+                onChange={e => set('storeDescription', e.target.value)}
+                placeholder="Tell buyers what you sell and where you ship from"
+                className="block w-full rounded-md border border-slate-200 bg-white px-3 py-2.5 text-[15px] text-slate-800 placeholder:text-slate-400 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+            <UploadRow label="Business logo (optional)" cta="Choose a logo" file={logoFile} accept="image/*" onFile={setLogoFile} />
+            <UploadRow label="Verification document (optional)" cta="Choose a document" file={docFile} accept=".pdf,.jpg,.jpeg,.png" onFile={setDocFile} />
+            <div className="flex gap-3">
+              <SecondaryButton onClick={() => setStep(1)}>Back</SecondaryButton>
+              <SubmitButton type="button" disabled={!step2Ready} onClick={() => setStep(3)}>Continue</SubmitButton>
+            </div>
+          </>
+        )}
+
+        {step === 3 && (
+          <>
+            <p className="-mt-3 mb-5 text-sm text-slate-500">Optional now. You can add or change these in your dashboard before your first payout.</p>
+            <Field label="Bank name" value={form.bankName} onChange={e => set('bankName', e.target.value)} />
+            <Field label="Account number" inputMode="numeric" value={form.bankAccountNumber} onChange={e => set('bankAccountNumber', e.target.value)} />
+            <Field label="Account name" value={form.bankAccountName} onChange={e => set('bankAccountName', e.target.value)} />
+            <div className="flex gap-3">
+              <SecondaryButton onClick={() => setStep(2)}>Back</SecondaryButton>
+              <SubmitButton loading={loading}>Create my account</SubmitButton>
+            </div>
+          </>
+        )}
+      </form>
+    </AuthShell>
   );
 }
 
-function SignupStep1({ form, update, onNext }: { form: any; update: (k: string, v: string) => void; onNext: () => void }) {
+function UploadRow({
+  label, cta, file, accept, onFile,
+}: { label: string; cta: string; file: File | null; accept: string; onFile: (f: File | null) => void }) {
   return (
-    <>
-      <h2 className="font-heading font-semibold text-lg mb-2">Account Details</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div><Label>Full Name *</Label><Input value={form.fullName} onChange={e => update('fullName', e.target.value)} required /></div>
-        <div><Label>Email *</Label><Input type="email" value={form.email} onChange={e => update('email', e.target.value)} required /></div>
-        <div><Label>Password *</Label><Input type="password" value={form.password} onChange={e => update('password', e.target.value)} required minLength={6} /></div>
-        <div><Label>Confirm Password *</Label><Input type="password" value={form.confirmPassword} onChange={e => update('confirmPassword', e.target.value)} required minLength={6} /></div>
-        <div><Label>Phone Number *</Label><Input value={form.phone} onChange={e => update('phone', e.target.value)} required placeholder="+234..." /></div>
-        <div><Label>WhatsApp Number *</Label><Input value={form.whatsappNumber} onChange={e => update('whatsappNumber', e.target.value)} required placeholder="+234..." /></div>
-      </div>
-      <Button type="button" onClick={onNext} className="w-full">Next: Company Details</Button>
-    </>
-  );
-}
-
-function SignupStep2({ form, update, logoFile, setLogoFile, docFile, setDocFile, onBack, onNext }: any) {
-  return (
-    <>
-      <h2 className="font-heading font-semibold text-lg mb-2">Company Details</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div><Label>Company Name *</Label><Input value={form.companyName} onChange={e => update('companyName', e.target.value)} required /></div>
-        <div><Label>Company Address *</Label><Input value={form.companyAddress} onChange={e => update('companyAddress', e.target.value)} required /></div>
-        <div className="col-span-full"><Label>Product Categories</Label><Input value={form.productCategories} onChange={e => update('productCategories', e.target.value)} placeholder="Fashion, Electronics, Home & Kitchen (comma separated)" /></div>
-        <div className="col-span-full"><Label>Store Description</Label><Textarea value={form.storeDescription} onChange={e => update('storeDescription', e.target.value)} placeholder="Tell buyers about your business..." /></div>
-        <div>
-          <Label>Company Logo</Label>
-          <div className="mt-1">
-            <label className="flex items-center gap-2 px-4 py-2 rounded-md border border-border cursor-pointer hover:bg-secondary transition-colors text-sm">
-              <Upload className="w-4 h-4" />
-              {logoFile ? logoFile.name : 'Upload Logo'}
-              <input type="file" accept="image/*" className="hidden" onChange={e => setLogoFile(e.target.files?.[0] || null)} />
-            </label>
-          </div>
-        </div>
-        <div>
-          <Label>Verification Document</Label>
-          <div className="mt-1">
-            <label className="flex items-center gap-2 px-4 py-2 rounded-md border border-border cursor-pointer hover:bg-secondary transition-colors text-sm">
-              <Upload className="w-4 h-4" />
-              {docFile ? docFile.name : 'Upload Document'}
-              <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={e => setDocFile(e.target.files?.[0] || null)} />
-            </label>
-          </div>
-        </div>
-      </div>
-      <div className="flex gap-2">
-        <Button type="button" variant="outline" onClick={onBack}>Back</Button>
-        <Button type="button" className="flex-1" onClick={onNext}>Next: Bank Details</Button>
-      </div>
-    </>
-  );
-}
-
-function SignupStep3({ form, update, loading, onBack }: any) {
-  return (
-    <>
-      <h2 className="font-heading font-semibold text-lg mb-2">Bank Details</h2>
-      <p className="text-sm text-muted-foreground mb-4">For receiving payments from sales</p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div><Label>Bank Name</Label><Input value={form.bankName} onChange={e => update('bankName', e.target.value)} /></div>
-        <div><Label>Account Number</Label><Input value={form.bankAccountNumber} onChange={e => update('bankAccountNumber', e.target.value)} /></div>
-        <div className="col-span-full"><Label>Account Name</Label><Input value={form.bankAccountName} onChange={e => update('bankAccountName', e.target.value)} /></div>
-      </div>
-      <div className="flex gap-2">
-        <Button type="button" variant="outline" onClick={onBack}>Back</Button>
-        <Button type="submit" className="flex-1" disabled={loading}>
-          {loading ? 'Creating Account...' : 'Create Supplier Account'}
-        </Button>
-      </div>
-    </>
+    <div className="mb-5">
+      <span className="mb-2 block text-sm font-semibold text-slate-600">{label}</span>
+      <label className="flex h-11 cursor-pointer items-center gap-2 rounded-md border border-dashed border-slate-300 px-3 text-[15px] text-slate-600 hover:bg-slate-50 focus-within:ring-2 focus-within:ring-primary/30">
+        <Upload className="h-4 w-4 shrink-0" />
+        <span className="truncate">{file ? file.name : cta}</span>
+        <input type="file" accept={accept} className="sr-only" onChange={e => onFile(e.target.files?.[0] || null)} />
+      </label>
+    </div>
   );
 }
