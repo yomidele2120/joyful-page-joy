@@ -15,6 +15,10 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { formatMoq, getMoq, priceRange } from '@/lib/pricing';
+import { FlyerBanner, FlyerCard, pickImages } from '@/components/flyers/Flyers';
+import { FLYERS } from '@/lib/flyers';
+import { useFlyers } from '@/hooks/useFlyers';
+import { ImageFlyerBanner, ImageFlyerFill } from '@/components/flyers/ImageFlyers';
 
 const PAGE_SIZE = 24;
 
@@ -75,6 +79,10 @@ export default function Products() {
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const current = Math.min(page, pageCount);
   const pageItems = filtered.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
+  const { ready: flyersReady, forPlacement } = useFlyers();
+  const feedBanners = forPlacement('feed_banner');
+  const feedCards = forPlacement('feed_card');
+  const photos = useMemo(() => (products ?? []).map(p => p.image_url).filter((u): u is string => !!u), [products]);
   const activeFilterCount =
     (filters.category !== 'all' ? 1 : 0) + (filters.minPrice || filters.maxPrice ? 1 : 0) + (filters.maxMoq ? 1 : 0) +
     (filters.verifiedOnly ? 1 : 0) + (filters.inStockOnly ? 1 : 0);
@@ -186,8 +194,23 @@ export default function Products() {
                   </div>
                 ) : pageItems.length ? (
                   view === 'grid' ? (
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4 sm:gap-3">
-                      {pageItems.map(product => <ProductCard key={product.id} {...product} />)}
+                    <div className="grid grid-flow-dense grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4 sm:gap-3">
+                      {pageItems.flatMap((product, i) => {
+                        const cells: React.ReactNode[] = [<ProductCard key={product.id} {...product} />];
+                        // Flyers inside the listing: one card-sized after the 6th product,
+                        // one full-width banner after the 12th.
+                        if (i === 5 && flyersReady) {
+                          cells.push(feedCards.length
+                            ? <div key="fc" className="min-h-[260px]"><ImageFlyerFill flyer={feedCards[(current - 1) % feedCards.length]} /></div>
+                            : <FlyerCard key="fc" flyer={FLYERS.rfq} images={pickImages(photos, current * 3, 2)} />);
+                        }
+                        if (i === 11 && flyersReady) {
+                          cells.push(feedBanners.length
+                            ? <ImageFlyerBanner key="fb" className="col-span-full" flyer={feedBanners[(current - 1) % feedBanners.length]} />
+                            : <FlyerBanner key="fb" className="col-span-full" flyer={FLYERS.sell} images={pickImages(photos, current * 3 + 4, 3)} />);
+                        }
+                        return cells;
+                      })}
                     </div>
                   ) : (
                     <div className="space-y-3">

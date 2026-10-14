@@ -16,9 +16,10 @@ import { useCategories } from '@/hooks/useProducts';
 import {
   Package, ShoppingCart, Users, DollarSign, Plus, LogOut, ArrowLeft,
   Trash2, Store, CheckCircle, XCircle, Eye, BarChart3, CreditCard,
-  FileText, AlertCircle, TrendingUp, Layers, FolderPlus, Pencil, Flag
+  FileText, AlertCircle, TrendingUp, Layers, FolderPlus, Pencil, Flag, Image as ImageIcon
 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import FlyersTab from '@/components/admin/FlyersTab';
 import { usePendingReports, useResolveReport, useDeactivatePost, useDeleteComment } from '@/hooks/useReports';
 
 export default function AdminDashboard() {
@@ -193,6 +194,7 @@ export default function AdminDashboard() {
     { key: 'categories', label: 'Categories', icon: <Layers className="w-4 h-4" /> },
     { key: 'users', label: 'Users', icon: <Users className="w-4 h-4" /> },
     { key: 'analytics', label: 'Analytics', icon: <BarChart3 className="w-4 h-4" /> },
+    { key: 'flyers', label: 'Flyers', icon: <ImageIcon className="w-4 h-4" /> },
     { key: 'settings', label: 'Settings', icon: <Pencil className="w-4 h-4" /> },
     { key: 'earnings', label: 'Earnings', icon: <TrendingUp className="w-4 h-4" /> },
   ];
@@ -493,6 +495,8 @@ export default function AdminDashboard() {
         )}
 
         {/* Categories */}
+        {activeTab === 'flyers' && <FlyersTab />}
+
         {activeTab === 'categories' && (
           <CategoriesTab categories={categories || []} loading={categoriesLoading} onRefresh={() => queryClient.invalidateQueries({ queryKey: ['categories'] })} />
         )}

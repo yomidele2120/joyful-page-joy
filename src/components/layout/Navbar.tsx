@@ -20,6 +20,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useNotifications, useUnreadNotificationCount, useMarkNotificationsRead } from '@/hooks/useNotifications';
 import { formatDistanceToNow } from 'date-fns';
+import HeaderTicker from '@/components/flyers/HeaderTicker';
+import HeaderFlyerStrip from '@/components/flyers/HeaderFlyerStrip';
 
 type SearchScope = 'products' | 'suppliers';
 
@@ -58,13 +60,15 @@ export default function Navbar() {
   const topCategories = (categories ?? []).slice(0, 7);
 
   return (
+    <>
+    <HeaderFlyerStrip />
     <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-md border-b border-border">
       {/* Utility bar */}
       <div className="bg-primary text-primary-foreground text-xs py-1">
         <div className="container flex items-center justify-between">
-          <span className="truncate">Source in bulk from verified Nigerian suppliers</span>
+          <HeaderTicker />
           <div className="flex items-center gap-4 shrink-0">
-            <Link to="/rfq/new" className="hidden sm:inline hover:underline">Request a quote</Link>
+            <Link to="/rfq/new" className="hidden lg:inline hover:underline">Request a quote</Link>
             {isVendor ? (
               <Link to="/supplier-dashboard" className="flex items-center gap-1 hover:underline">
                 <Store className="w-3 h-3" /> Seller Dashboard
@@ -243,6 +247,7 @@ export default function Navbar() {
         </div>
       </nav>
     </header>
+    </>
   );
 }
 
