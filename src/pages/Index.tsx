@@ -12,10 +12,12 @@ import { getMoq } from '@/lib/pricing';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { FlyerBanner, FlyerCard, FlyerPair, pickImages } from '@/components/flyers/Flyers';
+import { FlyerBanner, FlyerCard, pickImages } from '@/components/flyers/Flyers';
 import { FLYERS } from '@/lib/flyers';
 import { useFlyers } from '@/hooks/useFlyers';
 import { ImageFlyerBanner, ImageFlyerFill } from '@/components/flyers/ImageFlyers';
+import { BrandFlyerBanner } from '@/components/flyers/BrandFlyerImage';
+import { BRAND_FLYERS } from '@/lib/brandFlyers';
 
 const FEED_PAGE = 20;
 
@@ -73,7 +75,7 @@ export default function Index() {
           {isVendor ? (
             <ActionTile to="/supplier-dashboard" icon={<Store />} title="Seller dashboard" text="Manage your store" />
           ) : (
-            <ActionTile to="/supplier-signup" icon={<Store />} title="Sell on MarketHub" text="Open your store" />
+            <ActionTile to="/supplier-signup" icon={<Store />} title="Sell on IT Hub Africa" text="Open your store" />
           )}
         </section>
 
@@ -83,16 +85,10 @@ export default function Index() {
           </ScrollRow>
         )}
 
-        {/* Flyer: two banners between the suppliers row and the product rows */}
+        {/* Flyer: "Seamless payment" banner between the suppliers row and the product rows */}
         {flyersReady && (rowBanners[0]
           ? <ImageFlyerBanner className="mt-8 sm:mt-10" flyer={rowBanners[0]} />
-          : (
-            <FlyerPair
-              className="mt-8 sm:mt-10"
-              a={FLYERS.rfq} imagesA={art(FLYERS.rfq.offset, 2)}
-              b={FLYERS.suppliers} imagesB={art(FLYERS.suppliers.offset, 2)}
-            />
-          ))}
+          : <BrandFlyerBanner className="mt-8 sm:mt-10" flyer={BRAND_FLYERS.seamlessPurple} />)}
 
         {!!lowMoq?.length && (products ?? []).some(p => getMoq(p) > 5) && (
           <ScrollRow eyebrow="Start small" title="Low MOQ" linkTo="/products">
@@ -126,7 +122,7 @@ export default function Index() {
         {/* Flyer: wide banner before the endless feed */}
         {flyersReady && (rowBanners[2]
           ? <ImageFlyerBanner className="mt-8 sm:mt-10" flyer={rowBanners[2]} />
-          : <FlyerBanner className="mt-8 sm:mt-10" flyer={FLYERS.watch} images={art(FLYERS.watch.offset)} />)}
+          : <BrandFlyerBanner className="mt-8 sm:mt-10" flyer={BRAND_FLYERS.seamlessOlive} />)}
 
         <section className="mt-9 sm:mt-12">
           <h2 className="mb-3 font-heading text-xl font-bold sm:text-2xl">You may like</h2>

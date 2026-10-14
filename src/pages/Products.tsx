@@ -15,10 +15,12 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { formatMoq, getMoq, priceRange } from '@/lib/pricing';
-import { FlyerBanner, FlyerCard, pickImages } from '@/components/flyers/Flyers';
+import { FlyerCard, pickImages } from '@/components/flyers/Flyers';
 import { FLYERS } from '@/lib/flyers';
 import { useFlyers } from '@/hooks/useFlyers';
 import { ImageFlyerBanner, ImageFlyerFill } from '@/components/flyers/ImageFlyers';
+import { BrandFlyerBanner } from '@/components/flyers/BrandFlyerImage';
+import { BRAND_FLYERS } from '@/lib/brandFlyers';
 
 const PAGE_SIZE = 24;
 
@@ -116,7 +118,7 @@ export default function Products() {
     <Layout>
       <div className="container max-w-[1440px] py-5 sm:py-8">
         <div className="mb-4 border-b border-border pb-4">
-          <p className="text-xs font-semibold uppercase text-primary">MarketHub marketplace</p>
+          <p className="text-xs font-semibold uppercase text-primary">IT Hub Africa marketplace</p>
           <h1 className="mt-1 font-heading text-2xl font-bold sm:text-3xl">
             {search ? `Results for "${search}"` : tab === 'suppliers' ? 'Suppliers' : 'Products'}
           </h1>
@@ -207,7 +209,7 @@ export default function Products() {
                         if (i === 11 && flyersReady) {
                           cells.push(feedBanners.length
                             ? <ImageFlyerBanner key="fb" className="col-span-full" flyer={feedBanners[(current - 1) % feedBanners.length]} />
-                            : <FlyerBanner key="fb" className="col-span-full" flyer={FLYERS.sell} images={pickImages(photos, current * 3 + 4, 3)} />);
+                            : <BrandFlyerBanner key="fb" className="col-span-full" flyer={current % 2 ? BRAND_FLYERS.seamlessOlive : BRAND_FLYERS.seamlessPurple} />);
                         }
                         return cells;
                       })}
@@ -226,7 +228,7 @@ export default function Products() {
                             {product.description && <p className="mt-1.5 hidden line-clamp-2 text-xs text-muted-foreground sm:block">{product.description}</p>}
                             <p className="mt-1.5 flex items-center gap-1 text-xs text-muted-foreground">
                               {product.vendors?.is_approved && <BadgeCheck className="h-3.5 w-3.5 text-primary" aria-label="Verified supplier" />}
-                              <span className="truncate">{product.vendors?.store_name || product.brand || 'MarketHub seller'}</span>
+                              <span className="truncate">{product.vendors?.store_name || product.brand || 'IT Hub Africa seller'}</span>
                             </p>
                             <div className="mt-2.5 flex flex-wrap gap-2">
                               <Button size="sm" className="gap-1.5" onClick={() => openInquiry(product)}><Send className="h-3.5 w-3.5" /> Send inquiry</Button>

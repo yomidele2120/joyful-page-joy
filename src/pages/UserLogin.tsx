@@ -120,7 +120,7 @@ export default function UserLogin() {
             />
             <p className="-mt-2 mb-2 text-sm font-semibold text-slate-600">Email marketing (optional)</p>
             <CheckboxRow checked={form.marketing} onChange={v => set('marketing', v)}>
-              I consent to MarketHub sending me marketing emails (special offers, new products, etc.)
+              I consent to IT Hub Africa sending me marketing emails (special offers, new products, etc.)
             </CheckboxRow>
           </>
         )}
@@ -133,8 +133,8 @@ export default function UserLogin() {
       </form>
 
       <div className="mt-6 border-t border-slate-200 pt-5 text-center text-[15px] text-slate-600">
-        Selling on MarketHub?{' '}
-        <Link to={isLogin ? '/suppliers-login' : '/supplier-signup'} className="font-semibold text-emerald-700 hover:underline">
+        Selling on IT Hub Africa?{' '}
+        <Link to={isLogin ? '/suppliers-login' : '/supplier-signup'} className="font-semibold text-primary hover:underline">
           {isLogin ? 'Sign in as a supplier' : 'Create a supplier account'}
         </Link>
       </div>

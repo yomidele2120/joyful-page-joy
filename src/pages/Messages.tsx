@@ -51,7 +51,7 @@ function useConversationUnread(conversationIds: string[], userId: string | undef
 }
 
 const displayName = (c: Conversation) =>
-  c.other_vendor?.store_name || c.other_profile?.full_name || 'MarketHub user';
+  c.other_vendor?.store_name || c.other_profile?.full_name || 'IT Hub Africa user';
 
 export default function Messages() {
   const { user, loading: authLoading } = useAuth();

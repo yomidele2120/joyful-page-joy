@@ -129,7 +129,7 @@ export default function SupplierSignup() {
       <div className="mb-6 -mt-2">
         <div className="flex gap-1.5" aria-hidden="true">
           {[1, 2, 3].map(s => (
-            <div key={s} className={`h-1 flex-1 rounded-full ${s <= step ? 'bg-emerald-600' : 'bg-slate-200'}`} />
+            <div key={s} className={`h-1 flex-1 rounded-full ${s <= step ? 'bg-primary' : 'bg-slate-200'}`} />
           ))}
         </div>
         <p className="mt-2 text-center text-sm text-slate-500">Step {step} of 3</p>
@@ -160,7 +160,7 @@ export default function SupplierSignup() {
 
             <p className="-mt-2 mb-2 text-sm font-semibold text-slate-600">Email marketing (optional)</p>
             <CheckboxRow checked={form.marketing} onChange={v => set('marketing', v)}>
-              I consent to MarketHub sending me marketing emails (seller tips, new features, etc.)
+              I consent to IT Hub Africa sending me marketing emails (seller tips, new features, etc.)
             </CheckboxRow>
 
             <SubmitButton
@@ -189,7 +189,7 @@ export default function SupplierSignup() {
                 value={form.storeDescription}
                 onChange={e => set('storeDescription', e.target.value)}
                 placeholder="Tell buyers what you sell and where you ship from"
-                className="block w-full rounded-md border border-slate-200 bg-white px-3 py-2.5 text-[15px] text-slate-800 placeholder:text-slate-400 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
+                className="block w-full rounded-md border border-slate-200 bg-white px-3 py-2.5 text-[15px] text-slate-800 placeholder:text-slate-400 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <UploadRow label="Business logo (optional)" cta="Choose a logo" file={logoFile} accept="image/*" onFile={setLogoFile} />
@@ -224,7 +224,7 @@ function UploadRow({
   return (
     <div className="mb-5">
       <span className="mb-2 block text-sm font-semibold text-slate-600">{label}</span>
-      <label className="flex h-11 cursor-pointer items-center gap-2 rounded-md border border-dashed border-slate-300 px-3 text-[15px] text-slate-600 hover:bg-slate-50 focus-within:ring-2 focus-within:ring-emerald-600/30">
+      <label className="flex h-11 cursor-pointer items-center gap-2 rounded-md border border-dashed border-slate-300 px-3 text-[15px] text-slate-600 hover:bg-slate-50 focus-within:ring-2 focus-within:ring-primary/30">
         <Upload className="h-4 w-4 shrink-0" />
         <span className="truncate">{file ? file.name : cta}</span>
         <input type="file" accept={accept} className="sr-only" onChange={e => onFile(e.target.files?.[0] || null)} />

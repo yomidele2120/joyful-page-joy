@@ -6,9 +6,13 @@ import { useFlyers } from '@/hooks/useFlyers';
 import { FLYERS } from '@/lib/flyers';
 import { CtaPill, FlyerArt, FlyerTile, TONES, pickImages } from '@/components/flyers/Flyers';
 import { ImageFlyerFill } from '@/components/flyers/ImageFlyers';
+import { BrandFlyerFill } from '@/components/flyers/BrandFlyerImage';
+import { BRAND_FLYERS } from '@/lib/brandFlyers';
 
 // Hero = category list | auto-playing flyer slider | two flyer tiles (desktop).
 // On phones the slider comes first and the two tiles sit right under it.
+//
+// With no uploaded slides, the IT Hub Africa "Elevate your life" flyer leads the slider.
 //
 // Flyers the admin uploaded ("Hero slider" / "Hero side tile") take over these
 // spots. With none uploaded, the built-in flyers below are shown, using real
@@ -30,7 +34,7 @@ export default function HeroCarousel({ images }: { images: string[] }) {
   const useUploaded = uploadedSlides.length > 0;
 
   const picks = (featured ?? []).filter(p => !!p.image_url).slice(0, 4);
-  const total = !ready ? 0 : useUploaded ? uploadedSlides.length : SLIDE_FLYERS.length + (picks.length >= 2 ? 1 : 0);
+  const total = !ready ? 0 : useUploaded ? uploadedSlides.length : 1 + SLIDE_FLYERS.length + (picks.length >= 2 ? 1 : 0);
 
   const go = useCallback((next: number) => total > 0 && setIndex(((next % total) + total) % total), [total]);
 
@@ -81,14 +85,20 @@ export default function HeroCarousel({ images }: { images: string[] }) {
                 </div>
               ))}
 
+              {!useUploaded && (
+                <div className="h-full w-full shrink-0" aria-hidden={index !== 0}>
+                  <BrandFlyerFill flyer={BRAND_FLYERS.elevate} tabIndex={index === 0 ? 0 : -1} imgClassName="object-[65%_center] sm:object-center" />
+                </div>
+              )}
+
               {!useUploaded && SLIDE_FLYERS.map((flyer, i) => {
                 const art = pickImages(images, flyer.offset, 3);
                 return (
-                  <div key={flyer.id} className={`flex h-full w-full shrink-0 items-center justify-between gap-2 px-5 sm:px-12 ${TONES[flyer.tone].surface}`} aria-hidden={index !== i}>
+                  <div key={flyer.id} className={`flex h-full w-full shrink-0 items-center justify-between gap-2 px-5 sm:px-12 ${TONES[flyer.tone].surface}`} aria-hidden={index !== i + 1}>
                     <div className="max-w-[58%] sm:max-w-md">
                       <h2 className="font-heading text-xl font-bold leading-tight sm:text-3xl lg:text-4xl">{flyer.title}</h2>
                       <p className={`mt-2 hidden text-sm sm:block lg:text-base ${TONES[flyer.tone].muted}`}>{flyer.text}</p>
-                      <Link to={flyer.href} tabIndex={index === i ? 0 : -1} className="mt-4 inline-block rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white sm:mt-5">
+                      <Link to={flyer.href} tabIndex={index === i + 1 ? 0 : -1} className="mt-4 inline-block rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white sm:mt-5">
                         <CtaPill flyer={flyer} />
                       </Link>
                     </div>
@@ -99,16 +109,16 @@ export default function HeroCarousel({ images }: { images: string[] }) {
               })}
 
               {!useUploaded && picks.length >= 2 && (
-                <div className="flex h-full w-full shrink-0 items-center gap-4 bg-secondary px-4 sm:px-12" aria-hidden={index !== SLIDE_FLYERS.length}>
+                <div className="flex h-full w-full shrink-0 items-center gap-4 bg-secondary px-4 sm:px-12" aria-hidden={index !== SLIDE_FLYERS.length + 1}>
                   <div className="hidden max-w-[240px] sm:block">
                     <h2 className="font-heading text-2xl font-bold leading-tight lg:text-3xl">Featured by our suppliers</h2>
-                    <Link to="/products" tabIndex={index === SLIDE_FLYERS.length ? 0 : -1} className="mt-5 inline-flex items-center gap-2 rounded-full border border-foreground px-5 py-2 text-sm font-semibold">
+                    <Link to="/products" tabIndex={index === SLIDE_FLYERS.length + 1 ? 0 : -1} className="mt-5 inline-flex items-center gap-2 rounded-full border border-foreground px-5 py-2 text-sm font-semibold">
                       Source now <ArrowRight className="h-4 w-4" />
                     </Link>
                   </div>
                   <div className="grid flex-1 grid-cols-4 gap-2 sm:ml-auto sm:max-w-[460px]">
                     {picks.map(p => (
-                      <Link key={p.id} to={`/product/${p.slug}`} tabIndex={index === SLIDE_FLYERS.length ? 0 : -1} className="aspect-square overflow-hidden rounded-lg bg-white">
+                      <Link key={p.id} to={`/product/${p.slug}`} tabIndex={index === SLIDE_FLYERS.length + 1 ? 0 : -1} className="aspect-square overflow-hidden rounded-lg bg-white">
                         <img src={p.image_url!} alt={p.name} className="h-full w-full object-contain p-1" loading="lazy" />
                       </Link>
                     ))}

@@ -4,7 +4,7 @@ import {
   ShoppingCart, Search, User, Menu, Heart, LogOut, Store, Clapperboard, Bell, MessageSquare,
   FileText, ClipboardList, ChevronDown, LayoutGrid, Inbox, Package,
 } from 'lucide-react';
-import logo from '@/assets/logo.jpeg';
+import { BrandLogo } from '@/components/BrandLogo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from '@/components/ui/sheet';
@@ -85,7 +85,7 @@ export default function Navbar() {
       {/* Row 1: logo, search, actions */}
       <div className="container flex items-center justify-between h-14 gap-3">
         <Link to="/" className="flex items-center shrink-0">
-          <img src={logo} alt="MarketHub Africa" className="h-8 md:h-9 w-auto object-contain dark:invert" />
+          <BrandLogo className="h-9 md:h-10" />
         </Link>
 
         {/* Desktop search with scope switch */}
@@ -154,7 +154,7 @@ export default function Navbar() {
             <SheetContent side="left" className="w-[85vw] sm:w-80 p-0 flex flex-col" onOpenAutoFocus={(e) => e.preventDefault()}>
               <SheetHeader className="p-4 border-b border-border text-left">
                 <SheetTitle className="flex items-center gap-2">
-                  <img src={logo} alt="MarketHub Africa" className="h-7 w-auto object-contain dark:invert" />
+                  <BrandLogo className="h-9" />
                 </SheetTitle>
               </SheetHeader>
 

@@ -310,14 +310,14 @@ export default function MediaPicker({
             <div className="h-full flex flex-col items-center justify-center gap-3 text-center px-8 text-muted-foreground">
               <Lock className="w-8 h-8" />
               <p className="text-sm">
-                Market Hub needs access to your photos and videos so you can post them to your shop.
+                IT Hub Africa needs access to your photos and videos so you can post them to your shop.
               </p>
               <div className="flex gap-2">
                 <Button size="sm" onClick={addMore}>Allow access</Button>
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => toast.info('Open your phone Settings › Apps › Market Hub › Permissions to allow photos and videos.')}
+                  onClick={() => toast.info('Open your phone Settings › Apps › IT Hub Africa › Permissions to allow photos and videos.')}
                 >
                   Open settings
                 </Button>

@@ -62,7 +62,7 @@ export default function SupplierLogin() {
 
       <div className="mt-6 border-t border-slate-200 pt-5 text-center text-[15px] text-slate-600">
         Buying instead?{' '}
-        <Link to="/users-login" className="font-semibold text-emerald-700 hover:underline">Sign in as a buyer</Link>
+        <Link to="/users-login" className="font-semibold text-primary hover:underline">Sign in as a buyer</Link>
       </div>
     </AuthShell>
   );

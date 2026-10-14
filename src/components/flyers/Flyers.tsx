@@ -13,10 +13,10 @@ import type { Flyer, FlyerIconName, FlyerTone } from '@/lib/flyers';
 // ---------------------------------------------------------------------------
 
 export const TONES: Record<FlyerTone, { surface: string; muted: string; button: string; tile: string }> = {
-  green:  { surface: 'bg-[hsl(145_72%_28%)] text-white',            muted: 'text-white/80',            button: 'bg-white text-[hsl(220_30%_10%)]',            tile: 'bg-[hsl(145_72%_22%)]' },
+  green:  { surface: 'bg-[hsl(208_77%_20%)] text-white',            muted: 'text-white/80',            button: 'bg-white text-[hsl(220_30%_10%)]',            tile: 'bg-[hsl(208_77%_14%)]' },
   ink:    { surface: 'bg-[hsl(220_30%_12%)] text-white ring-1 ring-white/10', muted: 'text-white/70',  button: 'bg-white text-[hsl(220_30%_10%)]',            tile: 'bg-[hsl(220_25%_20%)]' },
   orange: { surface: 'bg-[hsl(28_96%_56%)] text-[hsl(220_30%_10%)]', muted: 'text-[hsl(220_30%_10%)]/80', button: 'bg-[hsl(220_30%_10%)] text-white',          tile: 'bg-[hsl(28_96%_46%)]' },
-  mint:   { surface: 'bg-[hsl(145_45%_91%)] text-[hsl(145_60%_14%)]', muted: 'text-[hsl(145_60%_14%)]/75', button: 'bg-[hsl(145_72%_28%)] text-white',          tile: 'bg-[hsl(145_40%_82%)]' },
+  mint:   { surface: 'bg-[hsl(208_45%_91%)] text-[hsl(208_60%_14%)]', muted: 'text-[hsl(208_60%_14%)]/75', button: 'bg-[hsl(208_77%_20%)] text-white',          tile: 'bg-[hsl(208_40%_82%)]' },
 };
 
 const ICONS: Record<FlyerIconName, React.ComponentType<{ className?: string }>> = {

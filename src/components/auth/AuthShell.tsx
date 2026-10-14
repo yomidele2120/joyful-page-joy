@@ -1,29 +1,36 @@
 import { forwardRef, useId, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Eye, EyeOff, ChevronDown } from 'lucide-react';
-import logo from '@/assets/logo.jpeg';
+import { BrandLogoPill, WelcomeLogo } from '@/components/BrandLogo';
 
 // Shared look for every sign-in / sign-up page (buyer + supplier):
-// dark navy page, centred white card, bold small labels, tall inputs and a
-// full-width green button. The card stays white in both themes on purpose,
+// dark navy page, centred white card with the Welcome logo on top and the horizontal logo at the bottom, bold small labels, tall inputs and a
+// full-width navy button. The card stays white in both themes on purpose,
 // the way the reference design does.
 
 export function AuthShell({
   title, children, footer,
 }: { title: string; children: React.ReactNode; footer?: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0d2b4c] via-[#0a2240] to-[#06182d] px-4 pb-10 pt-8">
-      <div className="mx-auto w-full max-w-[480px]">
-        <Link to="/" aria-label="MarketHub Africa home" className="mx-auto mb-6 block w-fit rounded-md bg-white px-3 py-1.5">
-          <img src={logo} alt="MarketHub Africa" className="h-8 w-auto object-contain" />
-        </Link>
-
+    <div className="flex min-h-screen flex-col bg-gradient-to-b from-[#0d2b4c] via-[#0a2240] to-[#06182d] px-4 pb-8 pt-6 sm:pt-10">
+      <div className="mx-auto w-full max-w-[480px] flex-1">
         <div className="rounded-md bg-white p-6 text-slate-800 shadow-xl sm:p-8">
+          {/* "Welcome To IT Hub Africa" lock-up sits at the top of every sign-in and sign-up card */}
+          <Link to="/" aria-label="IT Hub Africa home" className="mb-5 block">
+            <WelcomeLogo className="h-16 sm:h-20" />
+          </Link>
           <h1 className="mb-7 text-center text-[15px] font-normal uppercase tracking-wide text-slate-600">{title}</h1>
           {children}
         </div>
 
         {footer && <div className="mt-6 text-center text-[15px] text-white/90">{footer}</div>}
+      </div>
+
+      {/* Horizontal logo closes every sign-in and sign-up page */}
+      <div className="mt-10 flex justify-center">
+        <Link to="/" aria-label="IT Hub Africa home">
+          <BrandLogoPill logoClassName="h-9" />
+        </Link>
       </div>
     </div>
   );
@@ -40,7 +47,7 @@ export function AuthFooterLink({ text, to, label }: { text: string; to: string; 
 
 const inputBase =
   'block h-11 w-full rounded-md border border-slate-200 bg-white px-3 text-[15px] text-slate-800 placeholder:text-slate-400 ' +
-  'outline-none transition-colors focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20 disabled:opacity-60';
+  'outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-60';
 
 function FieldLabel({ htmlFor, children, aside }: { htmlFor: string; children: React.ReactNode; aside?: React.ReactNode }) {
   return (
@@ -174,7 +181,7 @@ export function ChoiceGroup({
               value={o.value}
               checked={value === o.value}
               onChange={() => onChange(o.value)}
-              className="mt-[3px] h-[18px] w-[18px] shrink-0 accent-emerald-600"
+              className="mt-[3px] h-[18px] w-[18px] shrink-0 accent-primary"
             />
             <span>
               <span className={inline ? 'text-[15px] text-slate-700' : 'text-[15px] font-semibold text-slate-700'}>{o.label}</span>
@@ -196,7 +203,7 @@ export function CheckboxRow({
         type="checkbox"
         checked={checked}
         onChange={e => onChange(e.target.checked)}
-        className="mt-1 h-4 w-4 shrink-0 accent-emerald-600"
+        className="mt-1 h-4 w-4 shrink-0 accent-primary"
       />
       <span className="text-[15px] leading-snug text-slate-600">{children}</span>
     </label>
@@ -212,8 +219,8 @@ export function SubmitButton({
       type={type}
       onClick={onClick}
       disabled={off}
-      className={`h-12 w-full rounded-md text-base font-semibold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 ${
-        off ? 'cursor-not-allowed bg-emerald-400/70' : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800'
+      className={`h-12 w-full rounded-md text-base font-semibold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
+        off ? 'cursor-not-allowed bg-primary/50' : 'bg-primary hover:bg-primary/90 active:bg-primary/80'
       }`}
     >
       {loading ? 'Please wait...' : children}
@@ -226,7 +233,7 @@ export function SecondaryButton({ children, onClick }: { children: React.ReactNo
     <button
       type="button"
       onClick={onClick}
-      className="h-12 shrink-0 rounded-md border border-slate-300 bg-white px-5 text-base font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+      className="h-12 shrink-0 rounded-md border border-slate-300 bg-white px-5 text-base font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
     >
       {children}
     </button>
