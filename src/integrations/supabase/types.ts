@@ -243,107 +243,6 @@ export type Database = {
           },
         ]
       }
-      rfq_quotes: {
-        Row: {
-          created_at: string
-          id: string
-          lead_time: string | null
-          message: string | null
-          moq: number | null
-          rfq_id: string
-          unit_price: number
-          vendor_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          lead_time?: string | null
-          message?: string | null
-          moq?: number | null
-          rfq_id: string
-          unit_price: number
-          vendor_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          lead_time?: string | null
-          message?: string | null
-          moq?: number | null
-          rfq_id?: string
-          unit_price?: number
-          vendor_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "rfq_quotes_rfq_id_fkey"
-            columns: ["rfq_id"]
-            isOneToOne: false
-            referencedRelation: "rfqs"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "rfq_quotes_vendor_id_fkey"
-            columns: ["vendor_id"]
-            isOneToOne: false
-            referencedRelation: "vendors"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      rfqs: {
-        Row: {
-          buyer_id: string
-          category_id: string | null
-          created_at: string
-          description: string
-          destination: string | null
-          expires_at: string
-          id: string
-          quantity: number
-          status: string
-          target_price: number | null
-          title: string
-          unit: string
-        }
-        Insert: {
-          buyer_id: string
-          category_id?: string | null
-          created_at?: string
-          description: string
-          destination?: string | null
-          expires_at?: string
-          id?: string
-          quantity: number
-          status?: string
-          target_price?: number | null
-          title: string
-          unit?: string
-        }
-        Update: {
-          buyer_id?: string
-          category_id?: string | null
-          created_at?: string
-          description?: string
-          destination?: string | null
-          expires_at?: string
-          id?: string
-          quantity?: number
-          status?: string
-          target_price?: number | null
-          title?: string
-          unit?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "rfqs_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "categories"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       messages: {
         Row: {
           content: string
@@ -353,8 +252,8 @@ export type Database = {
           is_read: boolean | null
           media_type: string | null
           media_url: string | null
-          sender_id: string
           product_id: string | null
+          sender_id: string
         }
         Insert: {
           content: string
@@ -364,8 +263,8 @@ export type Database = {
           is_read?: boolean | null
           media_type?: string | null
           media_url?: string | null
-          sender_id: string
           product_id?: string | null
+          sender_id: string
         }
         Update: {
           content?: string
@@ -375,8 +274,8 @@ export type Database = {
           is_read?: boolean | null
           media_type?: string | null
           media_url?: string | null
-          sender_id?: string
           product_id?: string | null
+          sender_id?: string
         }
         Relationships: [
           {
@@ -401,36 +300,36 @@ export type Database = {
           created_at: string
           id: string
           is_read: boolean
+          link: string | null
           message: string
           post_id: string | null
           recipient_id: string
           type: string
           vendor_id: string | null
-          link: string | null
         }
         Insert: {
           actor_id?: string | null
           created_at?: string
           id?: string
           is_read?: boolean
+          link?: string | null
           message: string
           post_id?: string | null
           recipient_id: string
           type: string
           vendor_id?: string | null
-          link?: string | null
         }
         Update: {
           actor_id?: string | null
           created_at?: string
           id?: string
           is_read?: boolean
+          link?: string | null
           message?: string
           post_id?: string | null
           recipient_id?: string
           type?: string
           vendor_id?: string | null
-          link?: string | null
         }
         Relationships: [
           {
@@ -732,17 +631,17 @@ export type Database = {
           images: string[] | null
           is_active: boolean | null
           is_featured: boolean | null
+          moq: number
           name: string
           price: number
+          price_tiers: Json
           sku: string | null
           slug: string
+          specs: Json
           stock_quantity: number
+          unit: string
           updated_at: string
           vendor_id: string | null
-          moq: number
-          price_tiers: Json
-          specs: Json
-          unit: string
           video_url: string | null
         }
         Insert: {
@@ -757,17 +656,17 @@ export type Database = {
           images?: string[] | null
           is_active?: boolean | null
           is_featured?: boolean | null
+          moq?: number
           name: string
           price: number
+          price_tiers?: Json
           sku?: string | null
           slug: string
+          specs?: Json
           stock_quantity?: number
+          unit?: string
           updated_at?: string
           vendor_id?: string | null
-          moq?: number
-          price_tiers?: Json
-          specs?: Json
-          unit?: string
           video_url?: string | null
         }
         Update: {
@@ -782,17 +681,17 @@ export type Database = {
           images?: string[] | null
           is_active?: boolean | null
           is_featured?: boolean | null
+          moq?: number
           name?: string
           price?: number
+          price_tiers?: Json
           sku?: string | null
           slug?: string
+          specs?: Json
           stock_quantity?: number
+          unit?: string
           updated_at?: string
           vendor_id?: string | null
-          moq?: number
-          price_tiers?: Json
-          specs?: Json
-          unit?: string
           video_url?: string | null
         }
         Relationships: [
@@ -848,6 +747,51 @@ export type Database = {
           state?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      promotions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          ends_at: string | null
+          id: string
+          image_url: string
+          is_active: boolean
+          link_url: string | null
+          mobile_image_url: string | null
+          placement: string
+          sort_order: number
+          starts_at: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string | null
+          id?: string
+          image_url: string
+          is_active?: boolean
+          link_url?: string | null
+          mobile_image_url?: string | null
+          placement?: string
+          sort_order?: number
+          starts_at?: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string | null
+          id?: string
+          image_url?: string
+          is_active?: boolean
+          link_url?: string | null
+          mobile_image_url?: string | null
+          placement?: string
+          sort_order?: number
+          starts_at?: string
+          title?: string
         }
         Relationships: []
       }
@@ -931,6 +875,107 @@ export type Database = {
           },
         ]
       }
+      rfq_quotes: {
+        Row: {
+          created_at: string
+          id: string
+          lead_time: string | null
+          message: string | null
+          moq: number | null
+          rfq_id: string
+          unit_price: number
+          vendor_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lead_time?: string | null
+          message?: string | null
+          moq?: number | null
+          rfq_id: string
+          unit_price: number
+          vendor_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lead_time?: string | null
+          message?: string | null
+          moq?: number | null
+          rfq_id?: string
+          unit_price?: number
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfq_quotes_rfq_id_fkey"
+            columns: ["rfq_id"]
+            isOneToOne: false
+            referencedRelation: "rfqs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfq_quotes_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfqs: {
+        Row: {
+          buyer_id: string
+          category_id: string | null
+          created_at: string
+          description: string
+          destination: string | null
+          expires_at: string
+          id: string
+          quantity: number
+          status: string
+          target_price: number | null
+          title: string
+          unit: string
+        }
+        Insert: {
+          buyer_id: string
+          category_id?: string | null
+          created_at?: string
+          description: string
+          destination?: string | null
+          expires_at?: string
+          id?: string
+          quantity: number
+          status?: string
+          target_price?: number | null
+          title: string
+          unit?: string
+        }
+        Update: {
+          buyer_id?: string
+          category_id?: string | null
+          created_at?: string
+          description?: string
+          destination?: string | null
+          expires_at?: string
+          id?: string
+          quantity?: number
+          status?: string
+          target_price?: number | null
+          title?: string
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfqs_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -949,16 +994,62 @@ export type Database = {
         }
         Relationships: []
       }
+      vendor_reviews: {
+        Row: {
+          buyer_id: string
+          comment: string | null
+          created_at: string
+          id: string
+          rating: number
+          reviewer_name: string
+          updated_at: string
+          vendor_id: string
+          verified_purchase: boolean
+        }
+        Insert: {
+          buyer_id: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rating: number
+          reviewer_name?: string
+          updated_at?: string
+          vendor_id: string
+          verified_purchase?: boolean
+        }
+        Update: {
+          buyer_id?: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rating?: number
+          reviewer_name?: string
+          updated_at?: string
+          vendor_id?: string
+          verified_purchase?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_reviews_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vendors: {
         Row: {
           address: string | null
           bank_account_name: string | null
           bank_account_number: string | null
           bank_name: string | null
+          business_type: string | null
           company_name: string | null
           created_at: string
           id: string
           is_approved: boolean | null
+          location: string | null
           logo_url: string | null
           paystack_subaccount_code: string | null
           phone: string | null
@@ -969,8 +1060,6 @@ export type Database = {
           user_id: string
           verification_document_url: string | null
           whatsapp_number: string | null
-          business_type: string | null
-          location: string | null
           year_established: number | null
         }
         Insert: {
@@ -978,10 +1067,12 @@ export type Database = {
           bank_account_name?: string | null
           bank_account_number?: string | null
           bank_name?: string | null
+          business_type?: string | null
           company_name?: string | null
           created_at?: string
           id?: string
           is_approved?: boolean | null
+          location?: string | null
           logo_url?: string | null
           paystack_subaccount_code?: string | null
           phone?: string | null
@@ -992,8 +1083,6 @@ export type Database = {
           user_id: string
           verification_document_url?: string | null
           whatsapp_number?: string | null
-          business_type?: string | null
-          location?: string | null
           year_established?: number | null
         }
         Update: {
@@ -1001,10 +1090,12 @@ export type Database = {
           bank_account_name?: string | null
           bank_account_number?: string | null
           bank_name?: string | null
+          business_type?: string | null
           company_name?: string | null
           created_at?: string
           id?: string
           is_approved?: boolean | null
+          location?: string | null
           logo_url?: string | null
           paystack_subaccount_code?: string | null
           phone?: string | null
@@ -1015,8 +1106,6 @@ export type Database = {
           user_id?: string
           verification_document_url?: string | null
           whatsapp_number?: string | null
-          business_type?: string | null
-          location?: string | null
           year_established?: number | null
         }
         Relationships: []
@@ -1052,7 +1141,22 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      vendor_rating_stats: {
+        Row: {
+          average_rating: number | null
+          review_count: number | null
+          vendor_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_reviews_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       create_order: {
@@ -1065,10 +1169,6 @@ export type Database = {
           _state: string
         }
         Returns: Json
-      }
-      tier_price: {
-        Args: { _product_id: string; _qty: number }
-        Returns: number
       }
       get_ranked_feed: {
         Args: { page_limit: number; page_offset: number }
@@ -1114,6 +1214,10 @@ export type Database = {
         Args: { post_id_input: string }
         Returns: undefined
       }
+      tier_price: {
+        Args: { _product_id: string; _qty: number }
+        Returns: number
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user" | "vendor"
@@ -1132,12 +1236,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1161,11 +1265,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1186,11 +1290,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1211,11 +1315,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1228,11 +1332,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
