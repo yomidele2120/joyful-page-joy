@@ -58,7 +58,7 @@ export default function HeroCarousel({ images }: { images: string[] }) {
       <div className="grid gap-3 lg:grid-cols-[210px_minmax(0,1fr)_250px]">
         {/* Category list (desktop) */}
         <aside className="hidden lg:block">
-          <nav aria-label="Categories" className="h-[320px] overflow-y-auto border border-border bg-card py-2">
+          <nav aria-label="Categories" className="h-[380px] overflow-y-auto border border-border bg-card py-2">
             <p className="px-4 pb-1 pt-1 font-heading text-sm font-semibold">Categories</p>
             {(categories ?? []).map(cat => (
               <Link key={cat.id} to={`/category/${cat.slug}`} className="block px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-primary">
@@ -71,7 +71,7 @@ export default function HeroCarousel({ images }: { images: string[] }) {
 
         {/* Flyer slider */}
         <div
-          className="relative aspect-[2/1] w-full overflow-hidden sm:aspect-auto sm:h-[260px] lg:h-[320px]"
+          className="relative aspect-[2/1] w-full overflow-hidden sm:aspect-auto sm:h-[260px] lg:h-[380px]"
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
           onFocus={() => setPaused(true)}
@@ -86,13 +86,13 @@ export default function HeroCarousel({ images }: { images: string[] }) {
             <div className="flex h-full transition-transform duration-500 ease-out motion-reduce:transition-none" style={{ transform: `translateX(-${index * 100}%)` }}>
               {uploadedSlides.map((flyer, i) => (
                 <div key={flyer.id} className="h-full w-full shrink-0" aria-hidden={index !== i}>
-                  <ImageFlyerFill flyer={flyer} fit="contain" tabIndex={index === i ? 0 : -1} />
+                  <ImageFlyerFill flyer={flyer} tabIndex={index === i ? 0 : -1} />
                 </div>
               ))}
 
               {showBuiltIn && HERO_IMAGE_SLIDES.map((flyer, i) => (
                 <div key={flyer.id} className="h-full w-full shrink-0" aria-hidden={index !== U + i}>
-                  <BrandFlyerFill flyer={flyer} tabIndex={index === U + i ? 0 : -1} fit="contain" />
+                  <BrandFlyerFill flyer={flyer} tabIndex={index === U + i ? 0 : -1} imgClassName={flyer.focus} />
                 </div>
               ))}
 
@@ -160,7 +160,7 @@ export default function HeroCarousel({ images }: { images: string[] }) {
         </div>
 
         {/* Side flyers: right column on desktop, a 2-up row under the slider on phones */}
-        <div className="grid grid-cols-2 gap-3 lg:h-[320px] lg:grid-cols-1 lg:grid-rows-2">
+        <div className="grid grid-cols-2 gap-3 lg:h-[380px] lg:grid-cols-1 lg:grid-rows-2">
           {!ready
             ? SIDE_DEFAULTS.map(f => <div key={f.id} className="min-h-[120px] animate-pulse bg-secondary" />)
             : SIDE_DEFAULTS.map((fallback, i) => {

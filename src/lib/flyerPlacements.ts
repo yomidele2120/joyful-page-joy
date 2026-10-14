@@ -16,7 +16,7 @@ export const PLACEMENTS: PlacementInfo[] = [
   {
     value: 'hero_slide', label: 'Hero slider',
     where: 'Big sliding banner at the top of the homepage',
-    desktop: '1200 x 400 px', mobile: '800 x 400 px', limit: 'All of them slide in turn',
+    desktop: '1200 x 480 px', mobile: '800 x 400 px', limit: 'All of them slide in turn; the image is scaled to fill the slide',
   },
   {
     value: 'hero_side', label: 'Hero side tile',

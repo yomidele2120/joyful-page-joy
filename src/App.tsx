@@ -37,7 +37,10 @@ import RfqNew from "./pages/RfqNew";
 import Rfqs from "./pages/Rfqs";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+// Keep fetched data for a minute so moving between pages doesn't refetch everything.
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { staleTime: 60_000, refetchOnWindowFocus: false, retry: 1 } },
+});
 
 // Old /chat?vendor=... links now open the unified inbox.
 function ChatRedirect() {

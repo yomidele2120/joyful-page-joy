@@ -14,10 +14,12 @@ export interface BrandFlyer {
   src: string;
   alt: string;
   href: string;
+  /** Optional object-position classes, e.g. to keep the subject visible when cropped. */
+  focus?: string;
 }
 
 export const BRAND_FLYERS = {
-  elevate: { id: 'elevate', src: elevate, alt: 'Elevate your life at I.T Hub Africa, up to 30% off', href: '/products' },
+  elevate: { id: 'elevate', src: elevate, alt: 'Elevate your life at I.T Hub Africa, up to 30% off', href: '/products', focus: 'object-[65%_center] sm:object-center' },
   seamlessPurple: { id: 'seamless-purple', src: seamlessPurple, alt: 'Seamless payment: fast, safe and trusted', href: '/products' },
   seamlessOlive: { id: 'seamless-olive', src: seamlessOlive, alt: 'Seamless payment: fast, safe and trusted', href: '/products' },
   techFlatlay: { id: 'tech-flatlay', src: techFlatlay, alt: 'Tech gadgets and electronics from verified suppliers at I.T Hub Africa', href: '/products' },

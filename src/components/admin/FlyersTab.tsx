@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ArrowDown, ArrowUp, ImagePlus, Pencil, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { compressImage } from '@/lib/mediaProcessing';
 import type { Tables } from '@/integrations/supabase/types';
 import { PLACEMENTS, placementInfo, type FlyerPlacement } from '@/lib/flyerPlacements';
 import { Button } from '@/components/ui/button';
@@ -54,9 +55,11 @@ function pathFromUrl(url: string | null) {
 }
 
 async function uploadImage(file: File): Promise<string> {
-  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
+  // Shrink big images (PNG/JPG/WebP) so banners load fast; GIFs are left as they are.
+  const blob = await compressImage(file, 1920, 0.85);
+  const ext = blob.type === 'image/jpeg' ? 'jpg' : (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
   const path = `${crypto.randomUUID()}.${ext}`;
-  const { error } = await supabase.storage.from(BUCKET).upload(path, file, { contentType: file.type, cacheControl: '31536000' });
+  const { error } = await supabase.storage.from(BUCKET).upload(path, blob, { contentType: blob.type || file.type, cacheControl: '31536000' });
   if (error) throw error;
   return supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
 }

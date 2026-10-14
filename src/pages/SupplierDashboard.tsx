@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { compressImage } from '@/lib/mediaProcessing';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -340,16 +341,18 @@ function SupplierAddProduct({ vendorId, categories, onSuccess }: { vendorId: str
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    let imageUrl = form.image_url;
-    if (imageFile) {
-      const ext = imageFile.name.split('.').pop();
-      const path = `${vendorId}/products/${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from('vendor-assets').upload(path, imageFile);
-      if (!error) {
-        const { data } = supabase.storage.from('vendor-assets').getPublicUrl(path);
-        imageUrl = data.publicUrl;
-      }
-    }
+    // Phone photos are several MB. Shrink them first (1200 px is plenty for a
+    // product card) and upload them all at the same time instead of one by one.
+    const uploadPhoto = async (file: File, name: string): Promise<string | null> => {
+      const blob = await compressImage(file, 1200, 0.82);
+      const ext = blob.type === 'image/jpeg' ? 'jpg' : (file.name.split('.').pop() || 'jpg').toLowerCase();
+      const path = `${vendorId}/products/${name}.${ext}`;
+      const { error } = await supabase.storage.from('vendor-assets').upload(path, blob, { contentType: blob.type || file.type, cacheControl: '31536000' });
+      return error ? null : supabase.storage.from('vendor-assets').getPublicUrl(path).data.publicUrl;
+    };
+    const stamp = Date.now();
+    const mainUpload = imageFile ? uploadPhoto(imageFile, `${stamp}`) : Promise.resolve(null);
+    const extraUploads = Promise.all(extraImages.map((file, i) => uploadPhoto(file, `${stamp}-${i + 1}`)));
     // B2B fields: MOQ, quantity price breaks and specifications
     const moq = Math.max(1, Math.floor(Number(form.moq)) || 1);
     const priceTiers = tiers
@@ -368,13 +371,9 @@ function SupplierAddProduct({ vendorId, categories, onSuccess }: { vendorId: str
     const specsObject: Record<string, string> = {};
     specs.forEach(sp => { if (sp.key.trim() && sp.value.trim()) specsObject[sp.key.trim()] = sp.value.trim(); });
 
-    const extraUrls: string[] = [];
-    for (const file of extraImages) {
-      const ext = file.name.split('.').pop();
-      const path = `${vendorId}/products/${Date.now()}-${extraUrls.length}.${ext}`;
-      const { error: uploadError } = await supabase.storage.from('vendor-assets').upload(path, file);
-      if (!uploadError) extraUrls.push(supabase.storage.from('vendor-assets').getPublicUrl(path).data.publicUrl);
-    }
+    const [mainUrl, extraResults] = await Promise.all([mainUpload, extraUploads]);
+    const imageUrl = mainUrl ?? form.image_url;
+    const extraUrls = extraResults.filter((u): u is string => !!u);
 
     const slug = form.name.toLowerCase().replace(/[^\w ]+/g, '').replace(/ +/g, '-') + '-' + Date.now();
     const { error } = await supabase.from('products').insert({

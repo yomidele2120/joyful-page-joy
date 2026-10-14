@@ -36,13 +36,13 @@ export function fileKey(file: File) {
   return `${file.name}:${file.size}:${file.lastModified}`;
 }
 
-export async function compressImage(file: File): Promise<Blob> {
+export async function compressImage(file: File, maxDimension: number = MAX_DIMENSION, quality: number = JPEG_QUALITY): Promise<Blob> {
   // GIFs / SVGs would lose animation or fidelity — leave them untouched.
   if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return file;
 
   try {
     const bitmap = await createImageBitmap(file);
-    const scale = Math.min(1, MAX_DIMENSION / Math.max(bitmap.width, bitmap.height));
+    const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
     const width = Math.round(bitmap.width * scale);
     const height = Math.round(bitmap.height * scale);
 
@@ -55,7 +55,7 @@ export async function compressImage(file: File): Promise<Blob> {
     bitmap.close?.();
 
     const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob(resolve, 'image/jpeg', JPEG_QUALITY)
+      canvas.toBlob(resolve, 'image/jpeg', quality)
     );
     // Never upload something bigger than the original.
     if (!blob || blob.size >= file.size) return file;
