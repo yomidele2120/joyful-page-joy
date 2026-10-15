@@ -81,8 +81,10 @@ export default function Checkout() {
       });
 
       if (paymentError || paymentData?.error) {
-        const msg = await functionErrorMessage(paymentError, paymentData);
-        console.error('initialize-payment failed:', msg, paymentError);
+        const base = await functionErrorMessage(paymentError, paymentData);
+        const total = Number(order.total);
+        const msg = `${base} [order total: N${total.toLocaleString('en-NG')} = ${Math.round(total * 100)} kobo; public key: ${(PAYSTACK_PUBLIC_KEY || 'MISSING').slice(0, 8)}...]`;
+        console.error('initialize-payment failed:', msg, { created, paymentError, paymentData });
         throw new Error(msg);
       }
 

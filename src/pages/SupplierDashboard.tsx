@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,6 +9,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { functionErrorMessage } from '@/lib/functionError';
+import { BANKS, BANK_PLACEHOLDER, isValidAccountNumber } from '@/lib/banks';
 import { formatNaira } from '@/lib/format';
 import { useCategories } from '@/hooks/useProducts';
 import { Package, ShoppingCart, DollarSign, Plus, LogOut, ArrowLeft, Trash2, Store, Upload, MessageCircle, AlertCircle, Clock, CheckCircle, CreditCard, LayoutDashboard, Film, Settings, ExternalLink } from 'lucide-react';
@@ -56,6 +58,19 @@ export default function SupplierDashboard() {
   }, [user, loading, navigate]);
 
   const isApproved = vendor?.is_approved === true;
+
+  // Automatic Paystack setup: once approved and bank details exist, create the
+  // subaccount without anyone clicking anything (covers a failed first attempt).
+  const autoTried = useRef(false);
+  useEffect(() => {
+    if (!vendor || !isApproved || vendor.paystack_subaccount_code || autoTried.current) return;
+    if (!vendor.bank_name || !vendor.bank_account_number || !vendor.bank_account_name) return;
+    autoTried.current = true;
+    supabase.functions.invoke('create-subaccount', { body: { vendor_id: vendor.id } }).then(async ({ data, error }) => {
+      if (error || data?.error) console.error('Auto subaccount setup failed:', await functionErrorMessage(error, data));
+      else queryClient.invalidateQueries({ queryKey: ['vendor-profile'] });
+    });
+  }, [vendor, isApproved, queryClient]);
   const hasPaystack = !!vendor?.paystack_subaccount_code;
 
   const { data: products } = useQuery({
@@ -182,8 +197,10 @@ export default function SupplierDashboard() {
           <div className="bg-accent/10 border border-accent/30 rounded-lg p-4 mb-6 flex items-center gap-3">
             <CreditCard className="w-5 h-5 text-accent shrink-0" />
             <div>
-              <p className="font-medium text-sm">Paystack subaccount setup pending</p>
-              <p className="text-xs text-muted-foreground">Your payment account is being configured. You'll receive payments once setup is complete.</p>
+              <p className="font-medium text-sm">{vendor.bank_name ? 'Payment account being set up' : 'Add your bank details to get paid'}</p>
+              <p className="text-xs text-muted-foreground">{vendor.bank_name
+                ? 'Your payment account is being configured automatically. Refresh in a moment; if it stays pending, check your bank details in Shop settings.'
+                : 'Go to Shop settings and add your bank details. Your payment account is created automatically as soon as you save them.'}</p>
             </div>
           </div>
         )}
@@ -523,6 +540,7 @@ function ShopSettings({ vendor, onUpdate }: { vendor: any; onUpdate: () => void 
   };
 
   return (
+    <div className="space-y-6">
     <div className="bg-card p-6 rounded-lg card-shadow max-w-2xl space-y-4">
       <h2 className="font-heading text-xl font-bold">Shop Settings</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -536,6 +554,70 @@ function ShopSettings({ vendor, onUpdate }: { vendor: any; onUpdate: () => void 
         <div className="col-span-full"><Label>Description</Label><Textarea value={form.store_description} onChange={e => setForm(p => ({ ...p, store_description: e.target.value }))} /></div>
       </div>
       <Button onClick={handleSave} disabled={loading}>{loading ? 'Saving...' : 'Save Settings'}</Button>
+    </div>
+    <BankDetails vendor={vendor} onUpdate={onUpdate} />
+    </div>
+  );
+}
+
+// Bank details for payouts. Saving them automatically creates (or updates) the
+// Paystack subaccount once the supplier is approved.
+function BankDetails({ vendor, onUpdate }: { vendor: any; onUpdate: () => void }) {
+  const [bankName, setBankName] = useState<string>(vendor.bank_name || '');
+  const [accountNumber, setAccountNumber] = useState<string>(vendor.bank_account_number || '');
+  const [accountName, setAccountName] = useState<string>(vendor.bank_account_name || '');
+  const [saving, setSaving] = useState(false);
+
+  const valid = !!bankName && isValidAccountNumber(accountNumber) && !!accountName.trim();
+  const changed =
+    bankName !== (vendor.bank_name || '') ||
+    accountNumber !== (vendor.bank_account_number || '') ||
+    accountName !== (vendor.bank_account_name || '');
+
+  const handleSave = async () => {
+    if (!valid) { toast.error('Choose your bank and enter your 10-digit account number and account name'); return; }
+    setSaving(true);
+    const { error } = await supabase.from('vendor_private').upsert({
+      vendor_id: vendor.id,
+      user_id: vendor.user_id,
+      bank_name: bankName,
+      bank_account_number: accountNumber.trim(),
+      bank_account_name: accountName.trim(),
+    }, { onConflict: 'vendor_id' });
+    if (error) { setSaving(false); toast.error(error.message); return; }
+
+    if (vendor.is_approved) {
+      const { data, error: fnError } = await supabase.functions.invoke('create-subaccount', {
+        body: { vendor_id: vendor.id, refresh: !!vendor.paystack_subaccount_code },
+      });
+      if (fnError || data?.error) {
+        toast.error(`Bank details saved, but payment setup failed: ${await functionErrorMessage(fnError, data)}`);
+      } else {
+        toast.success('Bank details saved and your payment account is ready.');
+      }
+    } else {
+      toast.success('Bank details saved. Your payment account is created automatically once you are approved.');
+    }
+    setSaving(false);
+    onUpdate();
+  };
+
+  return (
+    <div className="bg-card p-6 rounded-lg card-shadow max-w-2xl space-y-4">
+      <h2 className="font-heading text-xl font-bold">Bank details for payouts</h2>
+      <p className="text-sm text-muted-foreground">Used to set up your payment account automatically. Only you and the admin can see these.</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="col-span-full">
+          <Label>Bank</Label>
+          <Select value={bankName || undefined} onValueChange={setBankName}>
+            <SelectTrigger><SelectValue placeholder={BANK_PLACEHOLDER} /></SelectTrigger>
+            <SelectContent>{BANKS.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+        <div><Label>Account number (10 digits)</Label><Input inputMode="numeric" maxLength={10} value={accountNumber} onChange={e => setAccountNumber(e.target.value.replace(/\D/g, ''))} /></div>
+        <div><Label>Account name</Label><Input value={accountName} onChange={e => setAccountName(e.target.value)} /></div>
+      </div>
+      <Button onClick={handleSave} disabled={saving || !valid || !changed}>{saving ? 'Saving...' : 'Save bank details'}</Button>
     </div>
   );
 }

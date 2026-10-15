@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { functionErrorMessage } from '@/lib/functionError';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -168,9 +169,14 @@ export default function AdminDashboard() {
       const { data, error: fnError } = await supabase.functions.invoke('create-subaccount', {
         body: { vendor_id: vendorId },
       });
-      if (fnError) {
-        console.error('Subaccount creation error:', fnError);
-        toast.success('Supplier approved! Paystack subaccount may need manual setup.');
+      if (fnError || data?.error) {
+        const reason = await functionErrorMessage(fnError, data);
+        console.error('Subaccount creation error:', reason, fnError);
+        if (/bank details incomplete/i.test(reason)) {
+          toast.info('Supplier approved. Their Paystack subaccount will be created automatically as soon as they add their bank details.', { duration: 10000 });
+        } else {
+          toast.warning(`Supplier approved, but the Paystack subaccount was not created: ${reason}. It will be retried automatically when they open their dashboard.`, { duration: 12000 });
+        }
       } else {
         toast.success(`Supplier approved! Subaccount: ${data?.subaccount_code || 'created'}`);
       }

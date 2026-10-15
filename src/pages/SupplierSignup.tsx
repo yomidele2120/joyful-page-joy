@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { BANKS, BANK_PLACEHOLDER, isValidAccountNumber } from '@/lib/banks';
 import { Upload } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -41,10 +42,14 @@ export default function SupplierSignup() {
     !!form.businessName.trim() && !!form.firstName.trim() && !!form.lastName.trim() && !!form.email.trim() &&
     !!form.phone && !!form.whatsappNumber && form.password.length >= 8 && !!form.businessType;
   const step2Ready = !!form.companyAddress.trim();
+  const bankReady =
+    !!form.bankName && form.bankName !== BANK_PLACEHOLDER &&
+    isValidAccountNumber(form.bankAccountNumber) && !!form.bankAccountName.trim();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (step < 3) return;
+    if (!bankReady) { toast.error('Please choose your bank and enter your 10-digit account number and account name'); return; }
     if (logoFile && logoFile.size > 10 * 1024 * 1024) { toast.error('The logo must be smaller than 10MB'); return; }
     if (docFile && docFile.size > 10 * 1024 * 1024) { toast.error('The verification document must be smaller than 10MB'); return; }
     setLoading(true);
@@ -216,13 +221,13 @@ export default function SupplierSignup() {
 
         {step === 3 && (
           <>
-            <p className="-mt-3 mb-5 text-sm text-slate-500">Optional now. You can add or change these in your dashboard before your first payout.</p>
-            <Field label="Bank name" value={form.bankName} onChange={e => set('bankName', e.target.value)} />
-            <Field label="Account number" inputMode="numeric" value={form.bankAccountNumber} onChange={e => set('bankAccountNumber', e.target.value)} />
+            <p className="-mt-3 mb-5 text-sm text-slate-500">Required. Your payment account is set up automatically from these details once an admin approves you. You can change them later in your dashboard.</p>
+            <SelectField label="Bank name" value={form.bankName || BANK_PLACEHOLDER} onChange={v => set('bankName', v === BANK_PLACEHOLDER ? '' : v)} options={[BANK_PLACEHOLDER, ...BANKS]} />
+            <Field label="Account number (10 digits)" inputMode="numeric" maxLength={10} value={form.bankAccountNumber} onChange={e => set('bankAccountNumber', e.target.value.replace(/\D/g, ''))} />
             <Field label="Account name" value={form.bankAccountName} onChange={e => set('bankAccountName', e.target.value)} />
             <div className="flex gap-3">
               <SecondaryButton onClick={() => setStep(2)}>Back</SecondaryButton>
-              <SubmitButton loading={loading}>Create my account</SubmitButton>
+              <SubmitButton loading={loading} disabled={!bankReady}>Create my account</SubmitButton>
             </div>
           </>
         )}
