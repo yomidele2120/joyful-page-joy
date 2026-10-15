@@ -18,11 +18,12 @@ import {
   Package, ShoppingCart, Users, DollarSign, Plus, LogOut, ArrowLeft,
   Trash2, Store, CheckCircle, XCircle, Eye, BarChart3, CreditCard,
   FileText, AlertCircle, TrendingUp, Layers, FolderPlus, Pencil, Flag, Image as ImageIcon,
-  LayoutDashboard, Megaphone, Settings, Wallet, ChevronRight
+  LayoutDashboard, Megaphone, Settings, Wallet, ChevronRight, Landmark
 } from 'lucide-react';
 import DashboardShell, { Panel, StatCard, WelcomeBanner, useTabParam, type DashNavItem } from '@/components/dashboard/DashboardShell';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import FlyersTab from '@/components/admin/FlyersTab';
+import FinanceTab from '@/components/admin/FinanceTab';
 import { usePendingReports, useResolveReport, useDeactivatePost, useDeleteComment } from '@/hooks/useReports';
 
 export default function AdminDashboard() {
@@ -216,6 +217,7 @@ export default function AdminDashboard() {
     { key: 'flyers', label: 'Flyers', icon: Megaphone, group: 'Marketplace' },
     { key: 'orders', label: 'Orders', icon: ShoppingCart, group: 'Sales' },
     { key: 'payments', label: 'Payments', icon: CreditCard, group: 'Sales' },
+    { key: 'finance', label: 'Finance', icon: Landmark, group: 'Sales' },
     { key: 'users', label: 'Users', icon: Users, group: 'Community' },
     { key: 'moderation', label: 'Moderation', icon: Flag, badge: pendingReports?.length ?? 0, group: 'Community' },
     { key: 'settings', label: 'Settings', icon: Settings, group: 'System' },
@@ -524,6 +526,8 @@ export default function AdminDashboard() {
 
         {/* Categories */}
         {activeTab === 'flyers' && <FlyersTab />}
+
+        {activeTab === 'finance' && <FinanceTab />}
 
         {activeTab === 'categories' && (
           <CategoriesTab categories={categories || []} loading={categoriesLoading} onRefresh={() => queryClient.invalidateQueries({ queryKey: ['categories'] })} />

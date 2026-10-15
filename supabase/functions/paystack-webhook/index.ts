@@ -69,13 +69,33 @@ serve(async (req) => {
             .update({ status: 'success', payment_method: channel, metadata: event.data })
             .eq('paystack_reference', reference);
           await supabase.from('orders')
-            .update({ status: 'paid' })
+            .update({ status: 'paid', payment_method: 'card' })
             .eq('id', order.id);
+          // Money has reached you: supplier earnings on this order can start their hold period.
+          await supabase.from('orders')
+            .update({ settled_at: new Date().toISOString() })
+            .eq('id', order.id)
+            .is('settled_at', null);
         } else {
           await supabase.from('payments')
             .update({ status: 'failed', metadata: event.data })
             .eq('paystack_reference', reference);
         }
+      }
+    }
+
+    // Supplier payouts: the transfer reference we send to Paystack is the payout id.
+    if (['transfer.success', 'transfer.failed', 'transfer.reversed'].includes(event.event)) {
+      const ref = String(event.data?.reference ?? '');
+      if (/^[0-9a-f-]{36}$/i.test(ref)) {
+        const outcome = event.event === 'transfer.success' ? 'success'
+          : event.event === 'transfer.reversed' ? 'reversed' : 'failed';
+        await supabase.rpc('finish_payout', {
+          _payout_id: ref,
+          _outcome: outcome,
+          _transfer_code: event.data?.transfer_code ?? null,
+          _reason: outcome === 'success' ? null : (event.data?.reason ?? event.event),
+        });
       }
     }
 

@@ -4,6 +4,12 @@
 export async function functionErrorMessage(error: unknown, data?: any): Promise<string> {
   if (data?.error) return String(data.error);
   const e = error as any;
+  // Network-level failure: the request never got a response (function not deployed
+  // on this project, wrong project URL, or the browser blocked it with CORS).
+  if (e?.name === 'FunctionsFetchError') {
+    const host = String(import.meta.env.VITE_SUPABASE_URL || '').replace(/^https?:\/\//, '');
+    return `Could not reach the edge function on ${host || 'your Supabase project'}. It is probably not deployed there, or deployed with JWT verification on`;
+  }
   try {
     const res: Response | undefined = e?.context;
     if (res && typeof res.text === 'function') {

@@ -1,4 +1,4 @@
-project_id = "dvjxavjuwwcpcpcrlsjf"
+project_id = "cgyzhkeliomwxwrpmnlh"
 
 [functions.initialize-payment]
 verify_jwt = false
@@ -13,4 +13,10 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.create-stream-upload]
+verify_jwt = false
+
+[functions.create-recipient]
+verify_jwt = false
+
+[functions.run-payouts]
 verify_jwt = false

@@ -89,8 +89,13 @@ serve(async (req) => {
       .eq('paystack_reference', reference);
 
     await adminClient.from('orders')
-      .update({ status: 'paid' })
+      .update({ status: 'paid', payment_method: 'card' })
       .eq('id', orderId);
+    // Money has reached you: supplier earnings on this order can start their hold period.
+    await adminClient.from('orders')
+      .update({ settled_at: new Date().toISOString() })
+      .eq('id', orderId)
+      .is('settled_at', null);
 
     return new Response(JSON.stringify({
       success: true,
