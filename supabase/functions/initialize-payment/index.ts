@@ -51,9 +51,10 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'This order is not awaiting payment' }), { status: 400, headers: corsHeaders });
     }
     const amount = Number(order.total);
-    if (!(amount > 0)) {
-      return new Response(JSON.stringify({ error: 'Invalid order total' }), { status: 400, headers: corsHeaders });
+    if (!Number.isFinite(amount) || !(amount > 0)) {
+      return new Response(JSON.stringify({ error: `Invalid order total (${order.total})` }), { status: 400, headers: corsHeaders });
     }
+    const amountKobo = Math.round(amount * 100);
 
     const PAYSTACK_SECRET_KEY = Deno.env.get('PAYSTACK_SECRET_KEY');
     if (!PAYSTACK_SECRET_KEY) {
@@ -63,7 +64,7 @@ serve(async (req) => {
     // Build Paystack payload
     const paystackPayload: any = {
       email,
-      amount: Math.round(amount * 100), // Paystack expects kobo
+      amount: amountKobo, // Paystack expects kobo, as a whole number
       currency: 'NGN',
       reference: `itha_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       callback_url: req.headers.get('origin') || '',
@@ -91,7 +92,10 @@ serve(async (req) => {
     const paystackData = await paystackRes.json();
 
     if (!paystackData.status) {
-      return new Response(JSON.stringify({ error: paystackData.message }), { status: 400, headers: corsHeaders });
+      console.error('Paystack rejected initialize:', JSON.stringify(paystackData), 'amountKobo:', amountKobo);
+      return new Response(JSON.stringify({
+        error: `${paystackData.message} (order total N${amount.toLocaleString('en-NG')} = ${amountKobo} kobo)`,
+      }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     // Create the payment record with the service role: payment rows are only ever
