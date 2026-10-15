@@ -13,7 +13,7 @@ declare global {
   interface Window { grecaptcha?: GRecaptcha }
 }
 
-const SITE_KEY = '6LcvuO8tAAAAAHD-8p_cLpedms6Nw2BzdZCbNWGe';
+const SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY as string | undefined;
 
 let loader: Promise<void> | null = null;
 function loadScript(): Promise<void> {
