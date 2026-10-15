@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { functionErrorMessage } from '@/lib/functionError';
 import Layout from '@/components/layout/Layout';
 import { useCart, unitPrice } from '@/contexts/CartContext';
 import { useAuth } from '@/hooks/useAuth';
@@ -74,8 +75,11 @@ export default function Checkout() {
         },
       });
 
-      if (paymentError) throw paymentError;
-      if (paymentData?.error) throw new Error(paymentData.error);
+      if (paymentError || paymentData?.error) {
+        const msg = await functionErrorMessage(paymentError, paymentData);
+        console.error('initialize-payment failed:', msg, paymentError);
+        throw new Error(msg);
+      }
 
       // Load Paystack inline
       const handler = (window as any).PaystackPop.setup({
@@ -90,13 +94,17 @@ export default function Checkout() {
               body: { reference: response.reference },
             });
 
-            if (verifyError) throw verifyError;
+            if (verifyError || verifyData?.error) {
+              const msg = await functionErrorMessage(verifyError, verifyData);
+              console.error('verify-payment failed:', msg, verifyError);
+              throw new Error(msg);
+            }
 
             clearCart();
             toast.success('Payment successful! Your order has been placed.');
             navigate('/');
           } catch (err: any) {
-            toast.error('Payment verification failed. Please contact support.');
+            toast.error(`Payment verification failed: ${err?.message ?? 'unknown error'}. Please contact support.`);
           }
         },
         onClose: () => {
