@@ -1,8 +1,8 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 
 // Google reCAPTCHA v2 ("I'm not a robot") loaded on demand, no extra npm package.
-// Set VITE_RECAPTCHA_SITE_KEY in .env. The matching SECRET key lives only in the
-// Supabase edge function secrets (RECAPTCHA_SECRET_KEY).
+// The matching secret key lives only in the secure-auth function secret
+// (RECAPTCHA_SECRET_KEY); it is never exposed to the browser.
 
 type GRecaptcha = {
   ready: (cb: () => void) => void;
