@@ -11,8 +11,21 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
+
+// The browser's pre-flight asks for the exact headers it will send. Newer
+// supabase-js versions add headers over time, so echo them back instead of
+// keeping a fixed list that silently breaks on the next SDK update.
+const preflight = (req: Request) =>
+  new Response(null, {
+    headers: {
+      ...corsHeaders,
+      'Access-Control-Allow-Headers':
+        req.headers.get('Access-Control-Request-Headers') ?? corsHeaders['Access-Control-Allow-Headers'],
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    },
+  });
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -36,7 +49,7 @@ async function verifyRecaptcha(token: string, ip: string | null): Promise<boolea
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  if (req.method === 'OPTIONS') return preflight(req);
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
   try {
