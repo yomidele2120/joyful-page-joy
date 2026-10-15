@@ -11,7 +11,8 @@ import { toast } from 'sonner';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 
-const PAYSTACK_PUBLIC_KEY = 'pk_live_14c84e1b048ede3b5a8d074ecc566bab9bfc9bad';
+// Set VITE_PAYSTACK_PUBLIC_KEY in Vercel (Settings > Environment Variables) and redeploy.
+const PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY as string | undefined;
 const VAT_RATE = 0.075;
 
 export default function Checkout() {
@@ -48,6 +49,10 @@ export default function Checkout() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!PAYSTACK_PUBLIC_KEY) {
+      toast.error('Payments are not set up yet: VITE_PAYSTACK_PUBLIC_KEY is missing.');
+      return;
+    }
     setLoading(true);
 
     try {
@@ -88,6 +93,7 @@ export default function Checkout() {
         amount: Math.round(Number(paymentData.amount) * 100),
         currency: 'NGN',
         ref: paymentData.reference,
+        access_code: paymentData.access_code,
         callback: async (response: any) => {
           try {
             const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-payment', {
