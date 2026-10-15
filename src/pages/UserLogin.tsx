@@ -1,8 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { Recaptcha, type RecaptchaHandle } from '@/components/auth/Recaptcha';
 import {
   AuthShell, AuthFooterLink, Field, PasswordField, SelectField, PhoneField, ChoiceGroup,
   CheckboxRow, SubmitButton, LegalText, COUNTRIES,
@@ -12,10 +11,7 @@ import {
 export default function UserLogin() {
   const [params, setParams] = useSearchParams();
   const isLogin = params.get('mode') !== 'signup';
-  const [captcha, setCaptcha] = useState<string | null>(null);
-  const captchaRef = useRef<RecaptchaHandle>(null);
   const setMode = (mode: 'login' | 'signup') => {
-    setCaptcha(null);
     setParams(mode === 'signup' ? { mode } : {}, { replace: true });
   };
 
@@ -45,11 +41,10 @@ export default function UserLogin() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!captcha) { toast.error('Please tick the reCAPTCHA box first'); return; }
     setLoading(true);
     try {
       if (isLogin) {
-        const { error } = await signIn(form.email.trim(), form.password, captcha);
+        const { error } = await signIn(form.email.trim(), form.password);
         if (error) throw error;
         toast.success('Welcome back!');
       } else {
@@ -61,7 +56,7 @@ export default function UserLogin() {
           buyer_type: form.buyerType,
           buys_to_resell: form.resells === 'yes',
           marketing_opt_in: form.marketing,
-        }, captcha);
+        });
         if (error) throw error;
         // The new account is already signed in (the redirect effect above takes over).
         toast.success('Account created successfully!');
@@ -70,7 +65,6 @@ export default function UserLogin() {
       toast.error(err.message || 'Authentication failed');
     } finally {
       setLoading(false);
-      captchaRef.current?.reset(); // a token can only be used once
     }
   };
 
@@ -132,9 +126,7 @@ export default function UserLogin() {
           </>
         )}
 
-        <Recaptcha key={isLogin ? 'login' : 'signup'} ref={captchaRef} onToken={setCaptcha} />
-
-        <SubmitButton loading={loading} disabled={(isLogin ? !canSignIn : !canSignUp) || !captcha}>
+        <SubmitButton loading={loading} disabled={(isLogin ? !canSignIn : !canSignUp)}>
           {isLogin ? 'Sign in' : 'Create my account'}
         </SubmitButton>
 

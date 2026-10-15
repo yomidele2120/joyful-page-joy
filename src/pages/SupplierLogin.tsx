@@ -1,26 +1,22 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { AuthShell, AuthFooterLink, Field, PasswordField, SubmitButton } from '@/components/auth/AuthShell';
-import { Recaptcha, type RecaptchaHandle } from '@/components/auth/Recaptcha';
 
 export default function SupplierLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [captcha, setCaptcha] = useState<string | null>(null);
-  const captchaRef = useRef<RecaptchaHandle>(null);
   const { signIn } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!captcha) { toast.error('Please tick the reCAPTCHA box first'); return; }
     setLoading(true);
     try {
-      const { error } = await signIn(email.trim(), password, captcha);
+      const { error } = await signIn(email.trim(), password);
       if (error) throw error;
 
       // Check if user is a vendor
@@ -50,7 +46,6 @@ export default function SupplierLogin() {
       toast.error(err.message || 'Authentication failed');
     } finally {
       setLoading(false);
-      captchaRef.current?.reset(); // a token can only be used once
     }
   };
 
@@ -62,8 +57,7 @@ export default function SupplierLogin() {
       <form onSubmit={handleSubmit}>
         <Field label="Email address" type="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" required />
         <PasswordField value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" minLength={6} required />
-        <Recaptcha ref={captchaRef} onToken={setCaptcha} />
-        <SubmitButton loading={loading} disabled={!email.trim() || password.length < 6 || !captcha}>Sign in</SubmitButton>
+        <SubmitButton loading={loading} disabled={!email.trim() || password.length < 6}>Sign in</SubmitButton>
       </form>
 
       <div className="mt-6 border-t border-slate-200 pt-5 text-center text-[15px] text-slate-600">

@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
-import { secureAuth } from '@/lib/secureAuth';
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -79,19 +78,21 @@ export function useAuth() {
     };
   }, [checkRoles]);
 
-  // Sign in / sign up go through the secure-auth edge function, which checks the
-  // Google reCAPTCHA token on the server before touching Supabase Auth.
-  const signIn = async (email: string, password: string, captchaToken: string) => {
-    const { error, user: signedIn } = await secureAuth({ action: 'signin', email, password, captchaToken });
-    const roles = !error && signedIn ? await checkRoles(signedIn.id) : [];
+  const signIn = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const roles = !error && data.user ? await checkRoles(data.user.id) : [];
     return { error, roles };
   };
 
   const signUp = async (
     email: string, password: string, fullName: string,
-    extra: Record<string, string | boolean>, captchaToken: string,
+    extra: Record<string, string | boolean>,
   ) => {
-    const { error } = await secureAuth({ action: 'signup', email, password, fullName, metadata: extra, captchaToken });
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: fullName, ...extra } },
+    });
     return { error };
   };
 

@@ -1,3 +1,6 @@
+> NOTE: reCAPTCHA and the `secure-auth` function were removed. Sign in/up now call Supabase Auth directly.
+> In Supabase > Authentication: turn "Allow new users to sign up" back ON and "Confirm email" OFF.
+
 # Security hardening: what changed and what you must do
 
 ## Do these in order

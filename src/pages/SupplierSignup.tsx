@@ -1,10 +1,8 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Upload } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { secureAuth } from '@/lib/secureAuth';
-import { Recaptcha, type RecaptchaHandle } from '@/components/auth/Recaptcha';
 import {
   AuthShell, AuthFooterLink, Field, PasswordField, SelectField, PhoneField, ChoiceGroup,
   CheckboxRow, SubmitButton, SecondaryButton, LegalText, COUNTRIES,
@@ -28,8 +26,6 @@ export default function SupplierSignup() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
-  const [captcha, setCaptcha] = useState<string | null>(null);
-  const captchaRef = useRef<RecaptchaHandle>(null);
   const [form, setForm] = useState<Form>({
     country: 'Nigeria', businessName: '', firstName: '', lastName: '', email: '',
     phone: '', whatsappNumber: '', password: '', businessType: '', marketing: false,
@@ -49,25 +45,25 @@ export default function SupplierSignup() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (step < 3) return;
-    if (!captcha) { toast.error('Please tick the reCAPTCHA box first'); return; }
     if (logoFile && logoFile.size > 10 * 1024 * 1024) { toast.error('The logo must be smaller than 10MB'); return; }
     if (docFile && docFile.size > 10 * 1024 * 1024) { toast.error('The verification document must be smaller than 10MB'); return; }
     setLoading(true);
     try {
       const fullName = `${form.firstName.trim()} ${form.lastName.trim()}`;
 
-      // 1. Create the auth user through the secure-auth function (it checks the
-      //    reCAPTCHA token on the server and signs the new user in).
-      const { error: authError, user: newUser } = await secureAuth({
-        action: 'signup',
+      // 1. Create the auth user (email confirmation must be OFF in Supabase so
+      //    the new user is signed in straight away).
+      const { data: signUpData, error: authError } = await supabase.auth.signUp({
         email: form.email.trim(),
         password: form.password,
-        fullName,
-        metadata: { country: form.country, marketing_opt_in: form.marketing },
-        captchaToken: captcha,
+        options: { data: { full_name: fullName, country: form.country, marketing_opt_in: form.marketing } },
       });
       if (authError) throw authError;
+      const newUser = signUpData.user;
       if (!newUser) throw new Error('Signup failed');
+      if (!signUpData.session) {
+        throw new Error('Account created, but email confirmation is still on. Turn it off in Supabase > Authentication > Providers > Email.');
+      }
 
       const userId = newUser.id;
 
@@ -135,7 +131,6 @@ export default function SupplierSignup() {
       toast.error(err.message || 'Signup failed');
     } finally {
       setLoading(false);
-      captchaRef.current?.reset(); // a token can only be used once
     }
   };
 
@@ -225,10 +220,9 @@ export default function SupplierSignup() {
             <Field label="Bank name" value={form.bankName} onChange={e => set('bankName', e.target.value)} />
             <Field label="Account number" inputMode="numeric" value={form.bankAccountNumber} onChange={e => set('bankAccountNumber', e.target.value)} />
             <Field label="Account name" value={form.bankAccountName} onChange={e => set('bankAccountName', e.target.value)} />
-            <Recaptcha ref={captchaRef} onToken={setCaptcha} />
             <div className="flex gap-3">
               <SecondaryButton onClick={() => setStep(2)}>Back</SecondaryButton>
-              <SubmitButton loading={loading} disabled={!captcha}>Create my account</SubmitButton>
+              <SubmitButton loading={loading}>Create my account</SubmitButton>
             </div>
           </>
         )}
