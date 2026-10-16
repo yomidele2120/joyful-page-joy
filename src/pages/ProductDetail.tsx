@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import ProductCard from '@/components/ProductCard';
@@ -11,11 +13,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   ShoppingCart, ShieldCheck, MessageCircle, Store, MessageSquare, ChevronRight, PackageCheck,
-  Minus, Plus, Send, Play, ClipboardList, BadgeCheck, CreditCard,
+  Minus, Plus, Send, Play, ClipboardList, BadgeCheck, CreditCard, Wallet,
 } from 'lucide-react';
 import { formatNaira } from '@/lib/format';
 import { formatQtyRange, getMoq, parseSpecs, pluralUnit, tierRows, unitPriceFor } from '@/lib/pricing';
 import { toast } from 'sonner';
+
+const KLUMP_PUBLIC_KEY = import.meta.env.VITE_KLUMP_PUBLIC_KEY as string | undefined;
 
 export default function ProductDetail() {
   const { slug } = useParams<{ slug: string }>();
@@ -29,6 +33,15 @@ export default function ProductDetail() {
   const [showVideo, setShowVideo] = useState(false);
   const [qty, setQty] = useState<number | null>(null);
   const [inquiryOpen, setInquiryOpen] = useState(false);
+  const { data: finance } = useQuery({
+    queryKey: ['public-finance-settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_public_finance_settings');
+      if (error) throw error;
+      return data as unknown as { bnpl_enabled: boolean; bnpl_min_order: number; bnpl_max_order: number };
+    },
+    staleTime: 60_000,
+  });
 
   const handleInAppChat = (vendorUserId: string, productId: string) => {
     if (!user) {
@@ -101,6 +114,17 @@ export default function ProductDetail() {
     if (!validateQuantity()) return;
     addItem(cartPayload, quantity);
     navigate('/checkout');
+  };
+
+  // Pay later: shown for products the supplier marked eligible, when it is switched on and Klump is set up.
+  const payLaterOffered = !!product.bnpl_eligible && !!finance?.bnpl_enabled && !!KLUMP_PUBLIC_KEY;
+  const payLaterTotal = Math.round(unitNow * quantity * 1.075); // includes 7.5% VAT, same as checkout
+  const payLaterFits = !!finance && payLaterTotal >= Number(finance.bnpl_min_order) && payLaterTotal <= Number(finance.bnpl_max_order);
+
+  const handlePayLater = () => {
+    if (!validateQuantity()) return;
+    addItem(cartPayload, quantity);
+    navigate('/checkout?pay=later');
   };
 
   const inquiryTarget: InquiryDialogTarget | null = vendor
@@ -267,6 +291,18 @@ export default function ProductDetail() {
                 </>
               )}
             </div>
+            {payLaterOffered && (
+              <div className="mt-2">
+                <Button size="lg" variant="secondary" className="h-12 w-full font-semibold" disabled={!canBuy || !payLaterFits} onClick={handlePayLater}>
+                  <Wallet className="mr-2 h-4 w-4" /> Buy now, pay later with Klump
+                </Button>
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  {payLaterFits
+                    ? 'Spread the cost in instalments. Klump checks your eligibility and shows your plan before you confirm.'
+                    : `Pay later is available for orders from ${formatNaira(Number(finance?.bnpl_min_order ?? 0))} to ${formatNaira(Number(finance?.bnpl_max_order ?? 0))}.`}
+                </p>
+              </div>
+            )}
             {vendor && (
               <button type="button" onClick={handleAddToBasket} className="mt-3 inline-flex items-center gap-1.5 text-sm text-primary hover:underline">
                 <ClipboardList className="h-4 w-4" />
@@ -276,7 +312,7 @@ export default function ProductDetail() {
 
             <div className="mt-5 grid grid-cols-3 gap-2 border-y border-border py-4">
               <DetailFact icon={<PackageCheck />} label="Availability" value={outOfStock ? 'Sold out' : 'In stock'} />
-              <DetailFact icon={<CreditCard />} label="Payment" value="Paystack" />
+              <DetailFact icon={<CreditCard />} label="Payment" value={payLaterOffered ? 'Paystack / Pay later' : 'Paystack'} />
               <DetailFact icon={<ShieldCheck />} label="Supplier" value={vendor?.is_approved ? 'Verified' : 'Marketplace'} />
             </div>
 

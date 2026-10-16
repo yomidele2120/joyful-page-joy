@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { formatNaira } from '@/lib/format';
 import { toast } from 'sonner';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 
 // Set VITE_PAYSTACK_PUBLIC_KEY in Vercel (Settings > Environment Variables) and redeploy.
@@ -46,7 +46,9 @@ export default function Checkout() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '', phone: '', address: '', city: '', state: '' });
-  const [method, setMethod] = useState<PayMethod>('card');
+  const [searchParams] = useSearchParams();
+  const wantsLater = searchParams.get('pay') === 'later';
+  const [method, setMethod] = useState<PayMethod>(wantsLater ? 'bnpl' : 'card');
   const klumpDone = useRef(false);
 
   // Pay later is offered only when it is switched on, the Klump key is set, every item in the
@@ -261,6 +263,11 @@ export default function Checkout() {
           <div><Label>Address</Label><Input value={formData.address} onChange={e => setFormData(p => ({ ...p, address: e.target.value }))} required /></div>
           <div><Label>City</Label><Input value={formData.city} onChange={e => setFormData(p => ({ ...p, city: e.target.value }))} required /></div>
 
+          {wantsLater && finance && eligibility && !bnplAvailable && (
+            <p className="rounded-md border border-border bg-muted p-3 text-sm text-muted-foreground">
+              Pay later is not available for this order. Every item in your cart must allow it, and the total must be between {formatNaira(Number(finance.bnpl_min_order))} and {formatNaira(Number(finance.bnpl_max_order))}. You can still pay by card.
+            </p>
+          )}
           {bnplAvailable && (
             <div className="space-y-2 pt-2">
               <h3 className="font-heading font-bold">Payment method</h3>
