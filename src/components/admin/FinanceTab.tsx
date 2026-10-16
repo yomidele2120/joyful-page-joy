@@ -34,6 +34,11 @@ interface Settings {
   bnpl_enabled: boolean; bnpl_fee_percent: number; bnpl_fee_bearer: 'platform' | 'supplier' | 'customer';
   bnpl_min_order: number; bnpl_max_order: number; bnpl_max_outstanding_per_customer: number; bnpl_down_payment_percent: number;
 }
+interface BnplRow {
+  id: string; order_id: string; amount: number; status: 'initiated' | 'successful' | 'abandoned' | 'failed';
+  provider_reference: string | null; is_live: boolean | null; fee_charged: number | null;
+  settled_at: string | null; created_at: string; orders?: { email: string | null; status: string } | null;
+}
 interface RunResult { vendor: string; status: string; amount?: number; reason?: string }
 
 async function callFunction(name: string, body: Record<string, unknown>) {
@@ -65,6 +70,7 @@ export default function FinanceTab() {
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ['finance-payables'] });
     qc.invalidateQueries({ queryKey: ['finance-payouts'] });
+    qc.invalidateQueries({ queryKey: ['finance-bnpl'] });
   };
 
   // ---- data --------------------------------------------------------------------------
@@ -85,6 +91,15 @@ export default function FinanceTab() {
       const { data, error } = await db.from('payouts').select('*, vendors(store_name)').order('created_at', { ascending: false }).limit(100);
       if (error) throw error;
       return (data ?? []).map((p: any) => ({ ...p, amount: +p.amount })) as PayoutRow[];
+    },
+  });
+
+  const { data: bnplTx, isLoading: bnplLoading } = useQuery({
+    queryKey: ['finance-bnpl'],
+    queryFn: async () => {
+      const { data, error } = await db.from('bnpl_transactions').select('*, orders(email, status)').order('created_at', { ascending: false }).limit(100);
+      if (error) throw error;
+      return (data ?? []).map((r: any) => ({ ...r, amount: +r.amount, fee_charged: r.fee_charged === null ? null : +r.fee_charged })) as BnplRow[];
     },
   });
 
@@ -141,6 +156,18 @@ export default function FinanceTab() {
     }
   });
 
+  const markSettled = (orderId: string) => {
+    const fee = window.prompt('Optional: the fee Klump actually charged on this order (₦). Leave empty to skip.', '');
+    if (fee === null) return;
+    const feeValue = fee.trim() === '' ? null : Number(fee);
+    if (feeValue !== null && (!Number.isFinite(feeValue) || feeValue < 0)) { toast.error('Enter a valid amount'); return; }
+    return run(`settle-${orderId}`, async () => {
+      const { error } = await db.rpc('mark_bnpl_settled', { _order_id: orderId, _fee_charged: feeValue });
+      if (error) throw error;
+      toast.success('Marked as settled. The supplier funds can now be released after the hold period.');
+    });
+  };
+
   const checkPayout = (id: string) => run(`check-${id}`, async () => {
     const out = await callFunction('run-payouts', { action: 'verify', payout_id: id });
     toast.info(`Paystack says: ${out.paystack_status}`);
@@ -181,6 +208,7 @@ export default function FinanceTab() {
         <TabsList>
           <TabsTrigger value="payables">Payables</TabsTrigger>
           <TabsTrigger value="payouts">Payouts</TabsTrigger>
+          <TabsTrigger value="bnpl">Pay later</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
@@ -304,6 +332,45 @@ export default function FinanceTab() {
           </Panel>
         </TabsContent>
 
+        {/* ---------------- Pay later ---------------- */}
+        <TabsContent value="bnpl" className="space-y-3">
+          <Panel title="Pay later (Klump) payments" flush>
+            {bnplLoading ? (
+              <div className="space-y-2 p-4">{[1, 2, 3].map(i => <Skeleton key={i} className="h-10 w-full" />)}</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="border-b border-border">
+                    <tr><th className={TH}>Date</th><th className={TH}>Order</th><th className={TH}>Customer</th><th className={TH}>Amount</th><th className={TH}>Klump status</th><th className={TH}>Mode</th><th className={TH}>Money received</th><th className={TH}></th></tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {(bnplTx ?? []).map(r => (
+                      <tr key={r.id}>
+                        <td className={TD}>{new Date(r.created_at).toLocaleString('en-NG')}</td>
+                        <td className={TD}>#{r.order_id.slice(0, 8)}</td>
+                        <td className={TD}>{r.orders?.email ?? '-'}</td>
+                        <td className={`${TD} font-semibold`}>{formatNaira(r.amount)}</td>
+                        <td className={TD}><Badge variant={r.status === 'successful' ? 'default' : r.status === 'initiated' ? 'secondary' : 'outline'}>{r.status}</Badge></td>
+                        <td className={TD}>{r.is_live === null ? '-' : r.is_live ? 'Live' : 'Test'}</td>
+                        <td className={TD}>{r.settled_at ? <Badge>Settled</Badge> : r.status === 'successful' ? <Badge variant="secondary">Waiting for Klump</Badge> : '-'}</td>
+                        <td className={`${TD} text-right`}>
+                          {r.status === 'successful' && !r.settled_at && (
+                            <Button size="sm" variant="outline" disabled={busy === `settle-${r.order_id}`} onClick={() => markSettled(r.order_id)}>Mark settled</Button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    {!bnplTx?.length && <tr><td className="p-6 text-center text-sm text-muted-foreground" colSpan={8}>No Pay later payments yet.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Panel>
+          <p className="text-xs text-muted-foreground">
+            When Klump pays the money into your account, click "Mark settled". Suppliers are only paid after that, plus delivery and the hold period.
+          </p>
+        </TabsContent>
+
         {/* ---------------- Settings ---------------- */}
         <TabsContent value="settings" className="space-y-4">
           {settingsLoading || !form ? <Skeleton className="h-64 w-full" /> : (
@@ -321,7 +388,7 @@ export default function FinanceTab() {
 
               <Panel title="Buy now, pay later">
                 <p className="mb-4 rounded-md bg-muted p-3 text-xs text-muted-foreground">
-                  These are saved now and take effect once the BNPL provider is connected at checkout. The provider decides each customer's own approval and credit limit; the limits below can only be stricter.
+                  Pay later also needs the Klump keys to be set. Suppliers choose which of their products allow it (the "Allow Pay later" switch). Klump decides each customer's approval, credit limit and instalment plan; the limits below can only be stricter.
                 </p>
                 <div className="mb-4 flex items-center gap-3">
                   <Switch checked={form.bnpl_enabled} onCheckedChange={v => setForm(f => f ? { ...f, bnpl_enabled: v } : f)} />
@@ -338,7 +405,6 @@ export default function FinanceTab() {
                         <SelectItem value="customer">Customer</SelectItem>
                       </SelectContent>
                     </Select></div>
-                  <div className="space-y-1.5"><Label>Down payment (%)</Label>{num('bnpl_down_payment_percent')}</div>
                   <div className="space-y-1.5"><Label>Minimum order (₦)</Label>{num('bnpl_min_order')}</div>
                   <div className="space-y-1.5"><Label>Maximum order (₦)</Label>{num('bnpl_max_order')}</div>
                   <div className="space-y-1.5"><Label>Max outstanding per customer (₦)</Label>{num('bnpl_max_outstanding_per_customer')}</div>

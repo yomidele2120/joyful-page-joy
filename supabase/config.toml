@@ -20,3 +20,12 @@ verify_jwt = false
 
 [functions.run-payouts]
 verify_jwt = false
+
+[functions.klump-initialize]
+verify_jwt = false
+
+[functions.klump-verify]
+verify_jwt = false
+
+[functions.klump-webhook]
+verify_jwt = false

@@ -621,6 +621,7 @@ export type Database = {
       products: {
         Row: {
           badge: string | null
+          bnpl_eligible: boolean
           brand: string | null
           category_id: string | null
           compare_at_price: number | null
@@ -646,6 +647,7 @@ export type Database = {
         }
         Insert: {
           badge?: string | null
+          bnpl_eligible?: boolean
           brand?: string | null
           category_id?: string | null
           compare_at_price?: number | null
@@ -671,6 +673,7 @@ export type Database = {
         }
         Update: {
           badge?: string | null
+          bnpl_eligible?: boolean
           brand?: string | null
           category_id?: string | null
           compare_at_price?: number | null
@@ -1194,9 +1197,14 @@ export type Database = {
           _city: string
           _email: string
           _items: Json
+          _payment_method?: string
           _phone: string
           _state: string
         }
+        Returns: Json
+      }
+      get_public_finance_settings: {
+        Args: Record<PropertyKey, never>
         Returns: Json
       }
       get_ranked_feed: {

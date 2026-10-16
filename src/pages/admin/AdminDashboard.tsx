@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from 'sonner';
@@ -491,6 +492,7 @@ export default function AdminDashboard() {
                         <th className="text-left p-3 font-heading">Category</th>
                         <th className="text-left p-3 font-heading">Price</th>
                         <th className="text-left p-3 font-heading">Stock</th>
+                        <th className="text-left p-3 font-heading">Pay later</th>
                         <th className="text-left p-3 font-heading">Status</th>
                         <th className="text-left p-3 font-heading">Actions</th>
                       </tr>
@@ -508,6 +510,14 @@ export default function AdminDashboard() {
                           <td className="p-3 text-muted-foreground">{(p.categories as any)?.name || '-'}</td>
                           <td className="p-3 font-medium">{formatNaira(p.price)}</td>
                           <td className="p-3">{p.stock_quantity}</td>
+                          <td className="p-3">
+                            <Switch checked={!!(p as any).bnpl_eligible} aria-label="Allow Pay later"
+                              onCheckedChange={async (v) => {
+                                const { error } = await supabase.from('products').update({ bnpl_eligible: v }).eq('id', p.id);
+                                if (error) toast.error(error.message);
+                                else { queryClient.invalidateQueries({ queryKey: ['admin-products'] }); toast.success(v ? 'Pay later enabled' : 'Pay later disabled'); }
+                              }} />
+                          </td>
                           <td className="p-3"><StatusBadge status={p.is_active ? 'active' : 'inactive'} /></td>
                           <td className="p-3">
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteProduct(p.id)}>
@@ -1105,7 +1115,7 @@ function CategoriesTab({ categories, loading, onRefresh }: { categories: any[]; 
 function AddProductForm({ categories, onSuccess }: { categories: any[]; onSuccess: () => void }) {
   const [form, setForm] = useState({
     name: '', price: '', compare_at_price: '', category_id: '', brand: '', stock_quantity: '10',
-    description: '', image_url: '', badge: '', sku: '',
+    description: '', image_url: '', badge: '', sku: '', bnpl_eligible: false,
   });
   const [loading, setLoading] = useState(false);
 
@@ -1123,6 +1133,7 @@ function AddProductForm({ categories, onSuccess }: { categories: any[]; onSucces
       description: form.description || null,
       image_url: form.image_url || null,
       badge: form.badge || null,
+      bnpl_eligible: form.bnpl_eligible,
       sku: form.sku || null,
     });
     setLoading(false);
@@ -1148,6 +1159,13 @@ function AddProductForm({ categories, onSuccess }: { categories: any[]; onSucces
         <div><Label>Stock</Label><Input type="number" value={form.stock_quantity} onChange={e => setForm(p => ({ ...p, stock_quantity: e.target.value }))} /></div>
         <div><Label>Image URL</Label><Input value={form.image_url} onChange={e => setForm(p => ({ ...p, image_url: e.target.value }))} /></div>
         <div><Label>Badge</Label><Input placeholder="New, Sale, etc." value={form.badge} onChange={e => setForm(p => ({ ...p, badge: e.target.value }))} /></div>
+      </div>
+      <div className="flex items-start gap-3 rounded-lg border border-border p-4">
+        <Switch id="admin-bnpl-eligible" checked={form.bnpl_eligible} onCheckedChange={v => setForm(p => ({ ...p, bnpl_eligible: v }))} />
+        <div>
+          <Label htmlFor="admin-bnpl-eligible" className="font-medium">Allow Pay later (buy now, pay later)</Label>
+          <p className="text-xs text-muted-foreground">Buyers can pay in instalments through Klump. Best for higher-priced items such as laptops and phones.</p>
+        </div>
       </div>
       <div><Label>Description</Label><Textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} /></div>
       <Button type="submit" disabled={loading}>{loading ? 'Adding...' : 'Add Product'}</Button>

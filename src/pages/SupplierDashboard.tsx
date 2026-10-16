@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { functionErrorMessage } from '@/lib/functionError';
@@ -260,6 +261,7 @@ export default function SupplierDashboard() {
                           <th className="text-left p-3 font-heading">Product</th>
                           <th className="text-left p-3 font-heading">Price</th>
                           <th className="text-left p-3 font-heading">Stock</th>
+                          <th className="text-left p-3 font-heading">Pay later</th>
                           <th className="text-left p-3 font-heading">Actions</th>
                         </tr>
                       </thead>
@@ -274,6 +276,14 @@ export default function SupplierDashboard() {
                             </td>
                             <td className="p-3">{formatNaira(p.price)}</td>
                             <td className="p-3">{p.stock_quantity}</td>
+                            <td className="p-3">
+                              <Switch checked={!!(p as any).bnpl_eligible} aria-label="Allow Pay later"
+                                onCheckedChange={async (v) => {
+                                  const { error } = await supabase.from('products').update({ bnpl_eligible: v }).eq('id', p.id);
+                                  if (error) toast.error(error.message);
+                                  else { queryClient.invalidateQueries({ queryKey: ['vendor-products'] }); toast.success(v ? 'Pay later enabled' : 'Pay later disabled'); }
+                                }} />
+                            </td>
                             <td className="p-3">
                               <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive"
                                 onClick={async () => {
@@ -361,7 +371,7 @@ export default function SupplierDashboard() {
 function SupplierAddProduct({ vendorId, categories, onSuccess }: { vendorId: string; categories: any[]; onSuccess: () => void }) {
   const [form, setForm] = useState({
     name: '', price: '', compare_at_price: '', category_id: '', brand: '', stock_quantity: '10',
-    description: '', image_url: '', badge: '', moq: '1', unit: 'Piece', video_url: '',
+    description: '', image_url: '', badge: '', moq: '1', unit: 'Piece', video_url: '', bnpl_eligible: false,
   });
   const [tiers, setTiers] = useState<{ min_qty: string; price: string }[]>([{ min_qty: '', price: '' }]);
   const [specs, setSpecs] = useState<{ key: string; value: string }[]>([{ key: '', value: '' }, { key: '', value: '' }]);
@@ -414,7 +424,7 @@ function SupplierAddProduct({ vendorId, categories, onSuccess }: { vendorId: str
       compare_at_price: form.compare_at_price ? Number(form.compare_at_price) : null,
       category_id: form.category_id || null, brand: form.brand || null,
       stock_quantity: Number(form.stock_quantity), description: form.description || null,
-      image_url: imageUrl || null, badge: form.badge || null,
+      image_url: imageUrl || null, badge: form.badge || null, bnpl_eligible: form.bnpl_eligible,
       vendor_id: vendorId, is_active: true,
     });
     setLoading(false);
@@ -457,6 +467,14 @@ function SupplierAddProduct({ vendorId, categories, onSuccess }: { vendorId: str
         <div>
           <Label>Unit</Label>
           <Input placeholder="Piece, Carton, Kg..." value={form.unit} onChange={e => setForm(p => ({ ...p, unit: e.target.value }))} />
+        </div>
+      </div>
+
+      <div className="flex items-start gap-3 rounded-lg border border-border p-4">
+        <Switch id="bnpl-eligible" checked={form.bnpl_eligible} onCheckedChange={v => setForm(p => ({ ...p, bnpl_eligible: v }))} />
+        <div>
+          <Label htmlFor="bnpl-eligible" className="font-medium">Allow Pay later (buy now, pay later)</Label>
+          <p className="text-xs text-muted-foreground">Buyers can pay in instalments through Klump, and you are paid in full after delivery like any other order. Best for higher-priced items such as laptops and phones.</p>
         </div>
       </div>
 
