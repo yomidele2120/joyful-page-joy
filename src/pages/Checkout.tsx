@@ -152,6 +152,9 @@ export default function Checkout() {
       new KlumpCheckout({
         publicKey: KLUMP_PUBLIC_KEY,
         data: init.data,
+        // Klump requires every callback to be provided, even the ones we do not need.
+        onLoad: () => { /* widget ready */ },
+        onOpen: () => { /* widget opened */ },
         onSuccess: async (response: unknown) => {
           klumpDone.current = true;
           try {
