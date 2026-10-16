@@ -340,6 +340,10 @@ export default function Checkout() {
             {loading ? 'Processing...' : usingBnpl ? `Continue with Pay later (${formatNaira(grandTotal)})` : `Pay ${formatNaira(grandTotal)} with Paystack`}
           </Button>
         </form>
+        {/* Klump's widget attaches itself to this placeholder (from Klump's docs). It stays hidden:
+            customers use our own "Continue with Pay later" button. */}
+        <div id="klump__checkout" aria-hidden="true"
+          style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', opacity: 0, pointerEvents: 'none' }} />
       </div>
     </Layout>
   );
