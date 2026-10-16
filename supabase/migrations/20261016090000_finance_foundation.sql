@@ -367,7 +367,7 @@ BEGIN
   IF NOT public.has_role(auth.uid(), 'admin') THEN RAISE EXCEPTION 'Not allowed'; END IF;
   RETURN QUERY
   SELECT v.id, v.store_name, COALESCE(v.is_approved, false), v.commission_percent,
-    COALESCE(sum(p.vendor_net) FILTER (WHERE p.payout_status = 'held'), 0),
+    COALESCE(sum(p.vendor_net) FILTER (WHERE p.payout_status = 'held' AND o.settled_at IS NOT NULL), 0),
     COALESCE(sum(p.vendor_net) FILTER (WHERE p.payout_status = 'available'), 0),
     COALESCE(sum(p.vendor_net) FILTER (WHERE p.payout_status = 'processing'), 0),
     COALESCE(sum(p.vendor_net) FILTER (WHERE p.payout_status = 'paid'), 0),
@@ -377,6 +377,7 @@ BEGIN
        AND vp.transfer_recipient_fingerprint = lower(trim(COALESCE(vp.bank_name,''))) || '|' || trim(COALESCE(vp.bank_account_number,'')))
   FROM public.vendors v
   LEFT JOIN public.order_item_payables p ON p.vendor_id = v.id
+  LEFT JOIN public.orders o ON o.id = p.order_id
   LEFT JOIN public.vendor_private vp ON vp.vendor_id = v.id
   GROUP BY v.id, v.store_name, v.is_approved, v.commission_percent,
            vp.bank_account_number, vp.bank_name, vp.transfer_recipient_code, vp.transfer_recipient_fingerprint

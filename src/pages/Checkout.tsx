@@ -23,20 +23,28 @@ interface PublicFinance {
   bnpl_fee_percent: number; bnpl_fee_bearer: 'platform' | 'supplier' | 'customer';
 }
 
-// Klump's checkout widget is loaded only when someone actually chooses Pay later.
+// Klump's script (js.useklump.com/klump.js) is also loaded with the page in index.html, as Klump's docs say.
+// This makes sure it is really there before we open the widget, and gives a clear message if it is blocked.
 function loadKlumpScript(): Promise<void> {
   return new Promise((resolve, reject) => {
-    if ((window as any).Klump) return resolve();
-    const existing = document.querySelector('script[data-klump]') as HTMLScriptElement | null;
-    const script = existing ?? document.createElement('script');
-    script.addEventListener('load', () => resolve());
-    script.addEventListener('error', () => reject(new Error('Could not load Pay later. Check your connection and try again.')));
-    if (!existing) {
+    const ready = () => !!(window as any).Klump;
+    if (ready()) return resolve();
+    if (!document.querySelector('script[src*="js.useklump.com"]')) {
+      const script = document.createElement('script');
       script.src = 'https://js.useklump.com/klump.js';
       script.async = true;
-      script.setAttribute('data-klump', '1');
       document.head.appendChild(script);
     }
+    const started = Date.now();
+    const timer = window.setInterval(() => {
+      if (ready()) { window.clearInterval(timer); resolve(); }
+      else if (Date.now() - started > 8000) {
+        window.clearInterval(timer);
+        console.error('Klump script did not define window.Klump. Globals containing "lump":',
+          Object.keys(window).filter(k => k.toLowerCase().includes('lump')));
+        reject(new Error('Pay later could not start because the Klump script did not load. Turn off any ad blocker, refresh the page and try again.'));
+      }
+    }, 100);
   });
 }
 
@@ -131,7 +139,7 @@ export default function Checkout() {
 
       await loadKlumpScript();
       const Klump = (window as any).Klump;
-      if (!Klump) throw new Error('Pay later could not start. Please try again.');
+      if (!Klump) throw new Error('Pay later could not start. Please refresh the page and try again.');
 
       // 3. Open Klump. When it reports success the server double-checks with Klump before the order counts as paid.
       new Klump({
