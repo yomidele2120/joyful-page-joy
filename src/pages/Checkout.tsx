@@ -17,6 +17,13 @@ const PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY as string |
 const KLUMP_PUBLIC_KEY = import.meta.env.VITE_KLUMP_PUBLIC_KEY as string | undefined;
 const VAT_RATE = 0.075;
 
+// klump.js may expose its checkout class as a plain global (not on window), so look for both.
+declare const Klump: any;
+function getKlump(): any {
+  try { if (typeof Klump !== 'undefined') return Klump; } catch { /* not defined */ }
+  return (window as any).Klump;
+}
+
 type PayMethod = 'card' | 'bnpl';
 interface PublicFinance {
   bnpl_enabled: boolean; bnpl_min_order: number; bnpl_max_order: number;
@@ -27,7 +34,7 @@ interface PublicFinance {
 // This makes sure it is really there before we open the widget, and gives a clear message if it is blocked.
 function loadKlumpScript(): Promise<void> {
   return new Promise((resolve, reject) => {
-    const ready = () => !!(window as any).Klump;
+    const ready = () => !!getKlump();
     if (ready()) return resolve();
     if (!document.querySelector('script[src*="js.useklump.com"]')) {
       const script = document.createElement('script');
@@ -40,7 +47,7 @@ function loadKlumpScript(): Promise<void> {
       if (ready()) { window.clearInterval(timer); resolve(); }
       else if (Date.now() - started > 8000) {
         window.clearInterval(timer);
-        console.error('Klump script did not define window.Klump. Globals containing "lump":',
+        console.error('Klump script did not define Klump. Globals containing "lump":',
           Object.keys(window).filter(k => k.toLowerCase().includes('lump')));
         reject(new Error('Pay later could not start because the Klump script did not load. Turn off any ad blocker, refresh the page and try again.'));
       }
@@ -138,11 +145,11 @@ export default function Checkout() {
       if (initError || init?.error) throw new Error(await functionErrorMessage(initError, init));
 
       await loadKlumpScript();
-      const Klump = (window as any).Klump;
-      if (!Klump) throw new Error('Pay later could not start. Please refresh the page and try again.');
+      const KlumpCheckout = getKlump();
+      if (!KlumpCheckout) throw new Error('Pay later could not start. Please refresh the page and try again.');
 
       // 3. Open Klump. When it reports success the server double-checks with Klump before the order counts as paid.
-      new Klump({
+      new KlumpCheckout({
         publicKey: KLUMP_PUBLIC_KEY,
         data: init.data,
         onSuccess: async (response: unknown) => {
