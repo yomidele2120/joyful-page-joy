@@ -2,8 +2,8 @@
 // The amount and the item list come from the database, never from the browser. Klump requires whole-naira
 // amounts and that the items add up to the amount exactly, so VAT (and the pay-later fee, when the customer
 // pays it) are sent as their own lines.
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+// npm: imports are bundled when the function is deployed, so a cold start does not have to download anything.
+import { createClient } from "npm:@supabase/supabase-js@2";
 import { klumpName, klumpPhone, klumpUrl } from "../_shared/klump.ts";
 
 const corsHeaders = {
@@ -13,32 +13,38 @@ const corsHeaders = {
 const reply = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
   try {
+    // The checkout page pings this function while the buyer fills in the form, so it is already running
+    // (no cold start) when they press the button.
+    const peek = await req.clone().json().catch(() => null);
+    if (peek?.warmup) return reply({ warm: true });
+
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) return reply({ error: 'Unauthorized' }, 401);
     const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
-    const { data: { user }, error: userError } = await db.auth.getUser(authHeader.replace('Bearer ', ''));
-    if (userError || !user) return reply({ error: 'Unauthorized' }, 401);
+    // getClaims checks the token locally; getUser made an extra network round trip to the auth server.
+    const { data: claimsData, error: claimsError } = await db.auth.getClaims(authHeader.replace('Bearer ', ''));
+    const userId = claimsData?.claims?.sub as string | undefined;
+    if (claimsError || !userId) return reply({ error: 'Unauthorized' }, 401);
 
     if (!Deno.env.get('KLUMP_SECRET_KEY')) return reply({ error: 'Pay later is not set up yet (KLUMP_SECRET_KEY is missing on the server).' }, 500);
 
-    const { order_id, customer_name, phone } = await req.json();
+    const { order_id, customer_name, phone } = peek ?? await req.json();
     if (!order_id) return reply({ error: 'order_id is required' }, 400);
 
-    const { data: order } = await db.from('orders')
-      .select('id, user_id, email, total, status, payment_method, bnpl_fee')
-      .eq('id', order_id).maybeSingle();
-    if (!order || order.user_id !== user.id) return reply({ error: 'Order not found' }, 404);
+    // The four lookups do not depend on each other, so run them together instead of one after another.
+    const [{ data: order }, { data: fs }, { data: lines }, { data: existing }] = await Promise.all([
+      db.from('orders').select('id, user_id, email, total, status, payment_method, bnpl_fee').eq('id', order_id).maybeSingle(),
+      db.from('finance_settings').select('bnpl_enabled, bnpl_fee_bearer').eq('id', true).maybeSingle(),
+      db.from('order_items').select('quantity, price, products(name, image_url, slug)').eq('order_id', order_id),
+      db.from('bnpl_transactions').select('status').eq('order_id', order_id).maybeSingle(),
+    ]);
+    if (!order || order.user_id !== userId) return reply({ error: 'Order not found' }, 404);
     if (order.payment_method !== 'bnpl') return reply({ error: 'This order was not created for Pay later' }, 400);
     if (order.status !== 'pending') return reply({ error: 'This order has already been paid or closed' }, 400);
-
-    const { data: fs } = await db.from('finance_settings').select('bnpl_enabled, bnpl_fee_bearer').eq('id', true).maybeSingle();
     if (!fs?.bnpl_enabled) return reply({ error: 'Pay later is not available right now' }, 400);
-
-    const { data: lines } = await db.from('order_items')
-      .select('quantity, price, products(name, image_url, slug)').eq('order_id', order_id);
     if (!lines?.length) return reply({ error: 'Order has no items' }, 400);
 
     const amount = Math.round(Number(order.total));
@@ -60,12 +66,11 @@ serve(async (req) => {
 
     // One Pay later transaction per order: reuse it if the buyer closes the widget and tries again.
     const reference = `order-${order_id}`;
-    const { data: existing } = await db.from('bnpl_transactions').select('status').eq('order_id', order_id).maybeSingle();
     if (existing?.status === 'successful') return reply({ error: 'This order is already paid' }, 400);
     if (existing) {
       await db.from('bnpl_transactions').update({ status: 'initiated', amount }).eq('order_id', order_id);
     } else {
-      const { error: insErr } = await db.from('bnpl_transactions').insert({ order_id, user_id: user.id, reference, amount, status: 'initiated' });
+      const { error: insErr } = await db.from('bnpl_transactions').insert({ order_id, user_id: userId, reference, amount, status: 'initiated' });
       if (insErr) return reply({ error: insErr.message }, 500);
     }
 

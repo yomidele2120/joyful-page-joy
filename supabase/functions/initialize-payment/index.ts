@@ -1,17 +1,24 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+// npm: imports are bundled when the function is deployed, so a cold start does not have to download anything.
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // The checkout page pings this function while the buyer fills in the form, so it is already
+    // running (no cold start) when they press the pay button.
+    const peek = await req.clone().json().catch(() => null);
+    if (peek?.warmup) {
+      return new Response(JSON.stringify({ warm: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });

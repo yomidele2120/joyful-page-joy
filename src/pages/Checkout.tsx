@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { functionErrorMessage } from '@/lib/functionError';
 import Layout from '@/components/layout/Layout';
@@ -22,6 +22,18 @@ declare const Klump: any;
 function getKlump(): any {
   try { if (typeof Klump !== 'undefined') return Klump; } catch { /* not defined */ }
   return (window as any).Klump;
+}
+
+// Dots that grow and shrink (. .. ... .. .) so the buyer can see the page is working.
+const DOT_STEPS = ['.', '..', '...', '..'];
+function AnimatedDots() {
+  const [step, setStep] = useState(0);
+  useEffect(() => {
+    const timer = window.setInterval(() => setStep(s => (s + 1) % DOT_STEPS.length), 350);
+    return () => window.clearInterval(timer);
+  }, []);
+  // Fixed width so the text next to it does not jump as the dots change.
+  return <span aria-hidden="true" className="inline-block w-[1.1em] text-left">{DOT_STEPS[step]}</span>;
 }
 
 type PayMethod = 'card' | 'bnpl';
@@ -57,7 +69,7 @@ function loadKlumpScript(): Promise<void> {
 
 export default function Checkout() {
   const { items, totalPrice, clearCart } = useCart();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '', phone: '', address: '', city: '', state: '' });
@@ -78,6 +90,16 @@ export default function Checkout() {
     },
     staleTime: 60_000,
   });
+  // Wake the payment functions up while the buyer fills in the form. Cloud functions that have been idle
+  // take a few seconds to start; doing it now means the pay button responds straight away.
+  const warmedUp = useRef(false);
+  useEffect(() => {
+    if (!user || warmedUp.current || !items.length) return;
+    warmedUp.current = true;
+    void supabase.functions.invoke('initialize-payment', { body: { warmup: true } }).catch(() => {});
+    void supabase.functions.invoke('klump-initialize', { body: { warmup: true } }).catch(() => {});
+  }, [user, items.length]);
+
   const itemIds = items.map(i => i.id);
   const { data: eligibility } = useQuery({
     queryKey: ['bnpl-eligibility', itemIds.join(',')],
@@ -109,6 +131,21 @@ export default function Checkout() {
         <div className="container py-16 text-center">
           <h1 className="font-heading text-2xl font-bold mb-4">Nothing to checkout</h1>
           <Link to="/products"><Button>Continue Shopping</Button></Link>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Wait for the saved sign-in to be restored, otherwise signed-in buyers briefly see "Please sign in".
+  if (authLoading && !user) {
+    return (
+      <Layout>
+        <div className="container max-w-2xl space-y-4 py-8">
+          <div className="h-9 w-40 animate-pulse bg-secondary" />
+          <div className="h-12 animate-pulse bg-secondary" />
+          <div className="h-12 animate-pulse bg-secondary" />
+          <div className="h-12 animate-pulse bg-secondary" />
+          <div className="h-48 animate-pulse bg-secondary" />
         </div>
       </Layout>
     );
@@ -342,8 +379,14 @@ export default function Checkout() {
           </div>
 
           <Button type="submit" size="lg" className="w-full font-heading font-semibold mt-4" disabled={loading}>
-            {loading ? 'Processing...' : usingBnpl ? `Continue with Pay later (${formatNaira(grandTotal)})` : `Pay ${formatNaira(grandTotal)} with Paystack`}
+            {loading ? <span className="inline-flex items-center">Preparing secure payment<AnimatedDots /></span> : usingBnpl ? `Continue with Pay later (${formatNaira(grandTotal)})` : `Pay ${formatNaira(grandTotal)} with Paystack`}
           </Button>
+          {loading && (
+            <p role="status" aria-live="polite" className="flex items-center justify-center gap-2 pt-1 text-center text-sm text-muted-foreground">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              <span>Preparing secure payment<AnimatedDots /> please don't close this page</span>
+            </p>
+          )}
         </form>
       </div>
     </Layout>
