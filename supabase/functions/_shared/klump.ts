@@ -99,3 +99,21 @@ export async function fetchVerify(candidate: string, secretKey: string): Promise
   try { json = await res.json(); } catch { /* not JSON */ }
   return { httpOk: res.ok, json };
 }
+
+// ---- Klump's widget THROWS on values it dislikes, so only pass what it accepts -------------------------
+/** Klump wants an 11-digit phone string (e.g. 08012345678). Returns undefined when it can't be made one. */
+export function klumpPhone(raw: unknown): string | undefined {
+  let d = String(raw ?? '').replace(/\D/g, '');
+  if (d.length === 13 && d.startsWith('234')) d = '0' + d.slice(3);
+  return d.length === 11 ? d : undefined;
+}
+/** Names must be at least 2 characters. */
+export function klumpName(raw: unknown): string | undefined {
+  const v = String(raw ?? '').trim();
+  return v.length >= 2 ? v : undefined;
+}
+/** Klump's own URL check (https?:// with no spaces). */
+export function klumpUrl(raw: unknown): string | undefined {
+  const v = String(raw ?? '').trim();
+  return /^https?:\/\/[^\s$.?#].[^\s]*$/.test(v) ? v : undefined;
+}

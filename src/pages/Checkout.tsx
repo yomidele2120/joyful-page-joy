@@ -157,6 +157,8 @@ export default function Checkout() {
         onOpen: () => { /* widget opened */ },
         onSuccess: async (response: unknown) => {
           klumpDone.current = true;
+          // Klump stores a redirect URL right after this callback returns; replace it so the page is not redirected.
+          window.setTimeout(() => { try { window.localStorage.setItem('klump_redirect_url', 'false'); } catch { /* ignore */ } }, 0);
           try {
             const { data: v, error: vErr } = await supabase.functions.invoke('klump-verify', {
               body: { order_id: order.order_id, klump_response: response },
@@ -177,6 +179,9 @@ export default function Checkout() {
           setLoading(false);
         },
         onClose: () => {
+          // Klump's script redirects the browser to a stored URL when its window closes after a payment.
+          // We confirm the payment ourselves, so switch that redirect off (it reads this value right after onClose).
+          try { window.localStorage.setItem('klump_redirect_url', 'false'); } catch { /* storage unavailable */ }
           if (!klumpDone.current) { toast.info('Pay later cancelled.'); setLoading(false); }
         },
       });
@@ -340,10 +345,6 @@ export default function Checkout() {
             {loading ? 'Processing...' : usingBnpl ? `Continue with Pay later (${formatNaira(grandTotal)})` : `Pay ${formatNaira(grandTotal)} with Paystack`}
           </Button>
         </form>
-        {/* Klump's widget attaches itself to this placeholder (from Klump's docs). It stays hidden:
-            customers use our own "Continue with Pay later" button. */}
-        <div id="klump__checkout" aria-hidden="true"
-          style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', opacity: 0, pointerEvents: 'none' }} />
       </div>
     </Layout>
   );

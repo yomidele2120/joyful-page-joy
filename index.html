@@ -30,6 +30,11 @@
 </head>
 
   <body>
+    <!-- Klump's official script looks up #klump__checkout once, when it loads, so the element must already
+         exist in the page. It is kept invisible: customers use our own "Continue with Pay later" button. -->
+    <div aria-hidden="true" style="position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none">
+      <div id="klump__checkout"></div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

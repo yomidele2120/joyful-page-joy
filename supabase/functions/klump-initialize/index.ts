@@ -4,6 +4,7 @@
 // pays it) are sent as their own lines.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { klumpName, klumpPhone, klumpUrl } from "../_shared/klump.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -45,8 +46,8 @@ serve(async (req) => {
     const items: Record<string, unknown>[] = lines.map((l: any) => {
       const p = l.products ?? {};
       const it: Record<string, unknown> = { name: String(p.name ?? 'Item').slice(0, 120), unit_price: Math.round(Number(l.price)), quantity: Number(l.quantity) };
-      if (typeof p.image_url === 'string' && p.image_url.startsWith('https://')) it.image_url = p.image_url;
-      if (site && p.slug) it.item_url = `${site}/product/${p.slug}`;
+      const img = klumpUrl(p.image_url); if (img) it.image_url = img;
+      const link = site && p.slug ? klumpUrl(`${site}/product/${p.slug}`) : undefined; if (link) it.item_url = link;
       return it;
     });
 
@@ -69,22 +70,16 @@ serve(async (req) => {
     }
 
     const nameParts = String(customer_name ?? '').trim().split(/\s+/);
-    return reply({
-      reference,
-      amount,
-      data: {
-        amount,
-        shipping_fee: 0,
-        currency: 'NGN',
-        merchant_reference: reference,
-        email: order.email,
-        phone: phone ? String(phone) : undefined,
-        first_name: nameParts[0] || undefined,
-        last_name: nameParts.slice(1).join(' ') || undefined,
-        meta_data: { customer: customer_name ?? '', email: order.email, order_id },
-        items,
-      },
-    });
+    const data: Record<string, unknown> = {
+      amount, shipping_fee: 0, currency: 'NGN', merchant_reference: reference,
+      meta_data: { customer: customer_name ?? '', email: order.email, order_id },
+      items,
+    };
+    if (order.email) data.email = order.email;
+    const ph = klumpPhone(phone); if (ph) data.phone = ph;
+    const fn = klumpName(nameParts[0]); if (fn) data.first_name = fn;
+    const ln = klumpName(nameParts.slice(1).join(' ')); if (ln) data.last_name = ln;
+    return reply({ reference, amount, data });
   } catch (e) {
     return reply({ error: e instanceof Error ? e.message : 'Internal server error' }, 500);
   }
