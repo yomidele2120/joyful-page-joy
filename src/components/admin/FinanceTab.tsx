@@ -30,7 +30,7 @@ interface PayoutRow {
   vendors?: { store_name: string } | null;
 }
 interface Settings {
-  default_commission_percent: number; payout_hold_days: number; min_payout_amount: number;
+  default_commission_percent: number; payout_hold_days: number; min_payout_amount: number; delivery_confirm_days: number;
   bnpl_enabled: boolean; bnpl_fee_percent: number; bnpl_fee_bearer: 'platform' | 'supplier' | 'customer';
   bnpl_min_order: number; bnpl_max_order: number; bnpl_max_outstanding_per_customer: number; bnpl_down_payment_percent: number;
 }
@@ -376,11 +376,13 @@ export default function FinanceTab() {
           {settingsLoading || !form ? <Skeleton className="h-64 w-full" /> : (
             <>
               <Panel title="Commission and payouts">
-                <div className="grid gap-4 sm:grid-cols-3">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   <div className="space-y-1.5"><Label>Default commission (%)</Label>{num('default_commission_percent')}
                     <p className="text-xs text-muted-foreground">Taken from each supplier sale. Override per supplier in Payables.</p></div>
                   <div className="space-y-1.5"><Label>Hold after delivery (days)</Label>{num('payout_hold_days')}
                     <p className="text-xs text-muted-foreground">Protects you against returns before suppliers are paid.</p></div>
+                  <div className="space-y-1.5"><Label>Auto-confirm delivery (days)</Label>{num('delivery_confirm_days')}
+                    <p className="text-xs text-muted-foreground">If the buyer never confirms, a shipped order counts as delivered after this long.</p></div>
                   <div className="space-y-1.5"><Label>Minimum payout (₦)</Label>{num('min_payout_amount')}
                     <p className="text-xs text-muted-foreground">Smaller balances roll over to the next payout.</p></div>
                 </div>

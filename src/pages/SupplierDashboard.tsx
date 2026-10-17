@@ -20,6 +20,7 @@ import { BrandFlyerBanner } from '@/components/flyers/BrandFlyerImage';
 import { BRAND_FLYERS } from '@/lib/brandFlyers';
 import { useUnreadCount } from '@/hooks/useChat';
 import VendorVideosTab from '@/components/dashboard/VendorVideosTab';
+import VendorOrdersTab, { type VendorOrder } from '@/components/dashboard/VendorOrdersTab';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 export default function SupplierDashboard() {
@@ -86,14 +87,10 @@ export default function SupplierDashboard() {
   const { data: orders } = useQuery({
     queryKey: ['vendor-orders', vendor?.id],
     queryFn: async () => {
-      const { data: vendorProductIds } = await supabase.from('products').select('id').eq('vendor_id', vendor!.id);
-      if (!vendorProductIds?.length) return [];
-      const ids = vendorProductIds.map(p => p.id);
-      const { data: orderItems } = await supabase.from('order_items').select('order_id, quantity, price, product_id').in('product_id', ids);
-      if (!orderItems?.length) return [];
-      const orderIds = [...new Set(orderItems.map(oi => oi.order_id))];
-      const { data: orderData } = await supabase.from('orders').select('*').in('id', orderIds).order('created_at', { ascending: false });
-      return orderData || [];
+      // Server function: only this supplier's own items, and the delivery address only once paid.
+      const { data, error } = await (supabase as any).rpc('vendor_order_list');
+      if (error) throw error;
+      return (data ?? []) as VendorOrder[];
     },
     enabled: !!vendor?.id && isApproved,
   });
@@ -103,7 +100,7 @@ export default function SupplierDashboard() {
   const stats = {
     products: products?.length || 0,
     orders: orders?.length || 0,
-    revenue: orders?.reduce((s, o) => s + Number(o.total), 0) || 0,
+    revenue: orders?.filter(o => o.ship_status && o.ship_status !== 'refunded').reduce((s, o) => s + Number(o.gross), 0) || 0,
   };
 
   if (loading || vendorLoading) {
@@ -309,34 +306,10 @@ export default function SupplierDashboard() {
             )}
 
             {activeTab === 'orders' && (
-              <div className="bg-card rounded-xl border border-border overflow-hidden">
-                {orders?.length ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-secondary">
-                        <tr>
-                          <th className="text-left p-3 font-heading">Order ID</th>
-                          <th className="text-left p-3 font-heading">Status</th>
-                          <th className="text-left p-3 font-heading">Total</th>
-                          <th className="text-left p-3 font-heading">Date</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {orders.map(o => (
-                          <tr key={o.id} className="border-t border-border">
-                            <td className="p-3 font-mono text-xs">{o.id.slice(0, 8)}...</td>
-                            <td className="p-3"><span className="px-2 py-0.5 rounded-full text-xs bg-secondary font-medium">{o.status}</span></td>
-                            <td className="p-3 font-medium">{formatNaira(Number(o.total))}</td>
-                            <td className="p-3 text-muted-foreground">{new Date(o.created_at).toLocaleDateString()}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <p className="p-8 text-center text-muted-foreground">No orders yet.</p>
-                )}
-              </div>
+              <VendorOrdersTab
+                orders={orders ?? []}
+                onChanged={() => queryClient.invalidateQueries({ queryKey: ['vendor-orders'] })}
+              />
             )}
 
             {activeTab === 'videos' && (

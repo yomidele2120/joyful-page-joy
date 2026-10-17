@@ -68,18 +68,47 @@ serve(async (req) => {
           await supabase.from('payments')
             .update({ status: 'success', payment_method: channel, metadata: event.data })
             .eq('paystack_reference', reference);
-          await supabase.from('orders')
-            .update({ status: 'paid', payment_method: 'card' })
-            .eq('id', order.id);
-          // Money has reached you: supplier earnings on this order can start their hold period.
-          await supabase.from('orders')
-            .update({ settled_at: new Date().toISOString() })
-            .eq('id', order.id)
-            .is('settled_at', null);
+          // Handles late payments safely: a paid order that already expired is revived if the
+          // stock is still there, or flagged "needs_refund" if it has been sold meanwhile.
+          const { data: paidResult } = await supabase.rpc('mark_order_paid', { _order_id: order.id, _method: 'card' });
+          if (paidResult !== 'needs_refund') {
+            // Money has reached you: supplier earnings on this order can start their hold period.
+            await supabase.from('orders')
+              .update({ settled_at: new Date().toISOString() })
+              .eq('id', order.id)
+              .is('settled_at', null);
+          }
         } else {
           await supabase.from('payments')
             .update({ status: 'failed', metadata: event.data })
             .eq('paystack_reference', reference);
+        }
+      }
+    }
+
+    // Refund results (the refund-order function starts them, Paystack reports back here).
+    if (event.event === 'refund.processed' || event.event === 'refund.failed') {
+      const d = event.data ?? {};
+      const finalStatus = event.event === 'refund.processed' ? 'processed' : 'failed';
+      const patch = {
+        status: finalStatus,
+        processed_at: finalStatus === 'processed' ? new Date().toISOString() : null,
+        failure_reason: finalStatus === 'failed' ? (d.status ?? 'Paystack could not complete the refund') : null,
+      };
+      const ids = [d.id, d.refund_reference].filter((v) => v !== undefined && v !== null).map(String);
+      let matched = false;
+      if (ids.length) {
+        const { data: hit } = await supabase.from('refunds')
+          .update(patch).in('paystack_refund_id', ids).eq('status', 'processing').select('id');
+        matched = !!hit?.length;
+      }
+      if (!matched && d.transaction_reference) {
+        // Fall back to the payment reference and amount.
+        const { data: pay } = await supabase.from('payments')
+          .select('order_id').eq('paystack_reference', d.transaction_reference).maybeSingle();
+        if (pay?.order_id && d.amount) {
+          await supabase.from('refunds').update(patch)
+            .eq('order_id', pay.order_id).eq('status', 'processing').eq('amount', Number(d.amount) / 100);
         }
       }
     }

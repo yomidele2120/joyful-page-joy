@@ -25,6 +25,7 @@ import DashboardShell, { Panel, StatCard, WelcomeBanner, useTabParam, type DashN
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import FlyersTab from '@/components/admin/FlyersTab';
 import FinanceTab from '@/components/admin/FinanceTab';
+import OrderOpsTab from '@/components/admin/OrderOpsTab';
 import { usePendingReports, useResolveReport, useDeactivatePost, useDeleteComment } from '@/hooks/useReports';
 
 export default function AdminDashboard() {
@@ -219,6 +220,7 @@ export default function AdminDashboard() {
     { key: 'orders', label: 'Orders', icon: ShoppingCart, group: 'Sales' },
     { key: 'payments', label: 'Payments', icon: CreditCard, group: 'Sales' },
     { key: 'finance', label: 'Finance', icon: Landmark, group: 'Sales' },
+    { key: 'disputes', label: 'Disputes & refunds', icon: AlertCircle, group: 'Sales' },
     { key: 'users', label: 'Users', icon: Users, group: 'Community' },
     { key: 'moderation', label: 'Moderation', icon: Flag, badge: pendingReports?.length ?? 0, group: 'Community' },
     { key: 'settings', label: 'Settings', icon: Settings, group: 'System' },
@@ -416,6 +418,7 @@ export default function AdminDashboard() {
                               <SelectItem value="shipped">Shipped</SelectItem>
                               <SelectItem value="delivered">Delivered</SelectItem>
                               <SelectItem value="cancelled">Cancelled</SelectItem>
+                              <SelectItem value="needs_refund">Needs refund</SelectItem>
                             </SelectContent>
                           </Select>
                         </td>
@@ -538,6 +541,7 @@ export default function AdminDashboard() {
         {activeTab === 'flyers' && <FlyersTab />}
 
         {activeTab === 'finance' && <FinanceTab />}
+        {activeTab === 'disputes' && <OrderOpsTab />}
 
         {activeTab === 'categories' && (
           <CategoriesTab categories={categories || []} loading={categoriesLoading} onRefresh={() => queryClient.invalidateQueries({ queryKey: ['categories'] })} />
