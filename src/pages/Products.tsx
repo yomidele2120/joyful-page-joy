@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { trackSearch } from '@/lib/tracking';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { BadgeCheck, LayoutGrid, List, MessageSquare, Search, Send, SlidersHorizontal, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -51,6 +52,7 @@ export default function Products() {
 
   // Keep the box in step with the header search (which changes the URL).
   useEffect(() => { setSearch(searchFromUrl); }, [searchFromUrl]);
+  useEffect(() => { if (searchFromUrl) trackSearch(searchFromUrl); }, [searchFromUrl]);
   useEffect(() => { setPage(1); }, [search, sortBy, filters, tab]);
 
   const { data: products, isLoading } = useProducts({ search: search || undefined });

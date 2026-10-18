@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useParams, Link, useNavigate } from 'react-router-dom';
@@ -18,6 +18,7 @@ import {
 import { formatNaira } from '@/lib/format';
 import { formatQtyRange, getMoq, parseSpecs, pluralUnit, tierRows, unitPriceFor } from '@/lib/pricing';
 import { toast } from 'sonner';
+import { trackViewContent } from '@/lib/tracking';
 
 const KLUMP_PUBLIC_KEY = import.meta.env.VITE_KLUMP_PUBLIC_KEY as string | undefined;
 
@@ -42,6 +43,12 @@ export default function ProductDetail() {
     },
     staleTime: 60_000,
   });
+
+  // Tell Meta which product was viewed (once per product, not on every re-render).
+  useEffect(() => {
+    if (product) trackViewContent({ id: product.id, name: product.name, price: Number(product.price) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product?.id]);
 
   const handleInAppChat = (vendorUserId: string, productId: string) => {
     if (!user) {

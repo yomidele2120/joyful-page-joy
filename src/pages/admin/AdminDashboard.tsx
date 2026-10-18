@@ -19,11 +19,12 @@ import {
   Package, ShoppingCart, Users, DollarSign, Plus, LogOut, ArrowLeft,
   Trash2, Store, CheckCircle, XCircle, Eye, BarChart3, CreditCard,
   FileText, AlertCircle, TrendingUp, Layers, FolderPlus, Pencil, Flag, Image as ImageIcon,
-  LayoutDashboard, Megaphone, Settings, Wallet, ChevronRight, Landmark, Percent
+  LayoutDashboard, Megaphone, Settings, Wallet, ChevronRight, Landmark, Percent, Activity
 } from 'lucide-react';
 import DashboardShell, { Panel, StatCard, WelcomeBanner, useTabParam, type DashNavItem } from '@/components/dashboard/DashboardShell';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import FlyersTab from '@/components/admin/FlyersTab';
+import TrafficTab from '@/components/admin/TrafficTab';
 import FinanceTab from '@/components/admin/FinanceTab';
 import OrderOpsTab from '@/components/admin/OrderOpsTab';
 import SupplierCommissionTab from '@/components/admin/SupplierCommissionTab';
@@ -212,6 +213,7 @@ export default function AdminDashboard() {
   const navItems: DashNavItem[] = [
     { key: 'overview', label: 'Overview', icon: LayoutDashboard, group: 'Dashboard' },
     { key: 'analytics', label: 'Analytics', icon: BarChart3, group: 'Dashboard' },
+    { key: 'traffic', label: 'Traffic', icon: Activity, group: 'Dashboard' },
     { key: 'earnings', label: 'Earnings', icon: TrendingUp, group: 'Dashboard' },
     { key: 'suppliers', label: 'Suppliers', icon: Store, badge: pendingVendors.length, group: 'Marketplace' },
     { key: 'products', label: 'Products', icon: Package, group: 'Marketplace' },
@@ -540,6 +542,7 @@ export default function AdminDashboard() {
         )}
 
         {/* Categories */}
+        {activeTab === 'traffic' && <TrafficTab />}
         {activeTab === 'flyers' && <FlyersTab />}
 
         {activeTab === 'finance' && <FinanceTab />}

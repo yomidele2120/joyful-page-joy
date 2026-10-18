@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { trackRegistration } from '@/lib/tracking';
 import SupplierTermsBox, { type CurrentTerms } from '@/components/suppliers/SupplierTermsBox';
 import { BANKS, BANK_PLACEHOLDER, isValidAccountNumber } from '@/lib/banks';
 import { Upload } from 'lucide-react';
@@ -133,6 +134,7 @@ export default function SupplierSignup() {
 
       // (The vendor role is now granted by register_supplier(), together with the agreement.)
 
+      trackRegistration('supplier');
       toast.success('Supplier account created! You can now sign in.');
       navigate('/suppliers-login');
     } catch (err: any) {

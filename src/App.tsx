@@ -9,6 +9,7 @@ import { CartProvider } from "@/contexts/CartContext";
 import { InquiryBasketProvider } from "@/contexts/InquiryBasketContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ScrollToTop from "@/components/ScrollToTop";
+import Tracker from "@/components/Tracker";
 import Index from "./pages/Index";
 
 // Lazy-loaded: the video feed pulls in its own components and isn't
@@ -59,6 +60,7 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <ScrollToTop />
+            <Tracker />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route

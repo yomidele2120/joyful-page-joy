@@ -1191,6 +1191,14 @@ export type Database = {
       }
     }
     Functions: {
+      analytics_summary: {
+        Args: { _days?: number }
+        Returns: Json
+      }
+      purge_analytics: {
+        Args: { _keep_days?: number }
+        Returns: number
+      }
       create_order: {
         Args: {
           _address: string

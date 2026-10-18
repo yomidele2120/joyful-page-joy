@@ -11,6 +11,7 @@ import { formatNaira } from '@/lib/format';
 import { toast } from 'sonner';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { trackInitiateCheckout, trackPurchase } from '@/lib/tracking';
 
 // Set VITE_PAYSTACK_PUBLIC_KEY in Vercel (Settings > Environment Variables) and redeploy.
 const PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY as string | undefined;
@@ -77,6 +78,18 @@ export default function Checkout() {
   const wantsLater = searchParams.get('pay') === 'later';
   const [method, setMethod] = useState<PayMethod>(wantsLater ? 'bnpl' : 'card');
   const klumpDone = useRef(false);
+
+  // Tell Meta a checkout started (once per visit to this page, when the cart has items).
+  const checkoutReported = useRef(false);
+  useEffect(() => {
+    if (checkoutReported.current || !items.length) return;
+    checkoutReported.current = true;
+    trackInitiateCheckout(
+      items.map(i => ({ id: i.id, quantity: i.quantity, unitPrice: unitPrice(i) })),
+      totalPrice,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items.length]);
 
   // Pay later is offered only when it is switched on, the Klump key is set, every item in the
   // cart was marked "Pay later" by its supplier, and the total is inside the admin's limits.
@@ -201,6 +214,8 @@ export default function Checkout() {
               body: { order_id: order.order_id, klump_response: response },
             });
             if (vErr || v?.error) throw new Error(await functionErrorMessage(vErr, v));
+            // Only a payment Klump has confirmed is reported as a purchase; one still pending is not reported.
+            if (!v?.pending) trackPurchase(order.order_id, items.map(i => ({ id: i.id, quantity: i.quantity, unitPrice: unitPrice(i) })), Number(order.total));
             clearCart();
             if (v?.pending) toast.info('Thanks! Klump is confirming your payment. Your order will update shortly.');
             else toast.success('Your Pay later order has been placed!');
@@ -290,6 +305,7 @@ export default function Checkout() {
               throw new Error(msg);
             }
 
+            trackPurchase(order.order_id, items.map(i => ({ id: i.id, quantity: i.quantity, unitPrice: unitPrice(i) })), Number(order.total));
             clearCart();
             toast.success('Payment successful! Your order has been placed.');
             navigate('/');
