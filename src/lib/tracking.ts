@@ -13,7 +13,7 @@ export function initTracking(): void {
 
 export function trackPageView(pathname: string) { own.trackPageView(pathname); meta.trackPageView(pathname); }
 export function trackViewContent(p: Parameters<typeof meta.trackViewContent>[0]) { own.trackViewContent(p); meta.trackViewContent(p); }
-export function trackSearch(term: string) { own.trackSearch(term); meta.trackSearch(term); }
+export function trackSearch(term: string, resultCount?: number) { own.trackSearch(term, resultCount); meta.trackSearch(term); }
 export function trackAddToCart(p: Parameters<typeof meta.trackAddToCart>[0]) { own.trackAddToCart(p); meta.trackAddToCart(p); }
 export function trackInitiateCheckout(lines: Parameters<typeof meta.trackInitiateCheckout>[0], value: number) { own.trackInitiateCheckout(lines, value); meta.trackInitiateCheckout(lines, value); }
 export function trackPurchase(orderId: string, lines: Parameters<typeof meta.trackPurchase>[1], value: number) { own.trackPurchase(orderId, lines, value); meta.trackPurchase(orderId, lines, value); }

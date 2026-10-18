@@ -71,6 +71,20 @@ describe('analytics', () => {
     delete (window.navigator as unknown as { doNotTrack?: string }).doNotTrack;
   });
 
+  it('records how many results a search found', async () => {
+    const a = await load();
+    a.initAnalytics();
+    a.trackSearch('iphone 16', 0);
+    a.trackSearch('laptop', 12);
+    a.trackSearch('tv');
+    vi.advanceTimersByTime(3100);
+    const searches = sent().filter(r => r.event === 'Search');
+    expect(searches).toHaveLength(3);
+    expect(searches[0]).toMatchObject({ search_term: 'iphone 16', value: 0 });
+    expect(searches[1]).toMatchObject({ search_term: 'laptop', value: 12 });
+    expect(searches[2]).not.toHaveProperty('value');
+  });
+
   it('batches events and sends them to the analytics table', async () => {
     const a = await load();
     a.initAnalytics();

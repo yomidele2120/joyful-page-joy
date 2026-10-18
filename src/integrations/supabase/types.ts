@@ -1191,6 +1191,22 @@ export type Database = {
       }
     }
     Functions: {
+      admin_overview: {
+        Args: { _days?: number }
+        Returns: Json
+      }
+      admin_supplier_scorecard: {
+        Args: { _days?: number; _ship_sla_hours?: number }
+        Returns: Json
+      }
+      admin_funnel_losses: {
+        Args: { _days?: number }
+        Returns: Json
+      }
+      admin_search_insights: {
+        Args: { _days?: number }
+        Returns: Json
+      }
       analytics_summary: {
         Args: { _days?: number }
         Returns: Json

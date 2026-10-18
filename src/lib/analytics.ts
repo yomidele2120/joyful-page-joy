@@ -189,9 +189,12 @@ export function trackViewContent(p: { id: string; name: string; price: number })
   record('ViewContent', { product_id: UUID.test(p.id) ? p.id : undefined, value: p.price });
 }
 
-export function trackSearch(term: string): void {
+// resultCount = how many products the search found. It lets the admin see searches that found nothing.
+export function trackSearch(term: string, resultCount?: number): void {
   const q = term.trim().slice(0, 100);
-  if (q) record('Search', { search_term: q });
+  if (!q) return;
+  const hasCount = typeof resultCount === 'number' && Number.isFinite(resultCount);
+  record('Search', { search_term: q, ...(hasCount ? { value: Math.max(0, Math.round(resultCount as number)) } : {}) });
 }
 
 export function trackAddToCart(p: { id: string; name: string; price: number; quantity: number }): void {

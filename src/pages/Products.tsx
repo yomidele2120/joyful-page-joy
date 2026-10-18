@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { trackSearch } from '@/lib/tracking';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { BadgeCheck, LayoutGrid, List, MessageSquare, Search, Send, SlidersHorizontal, X } from 'lucide-react';
@@ -52,10 +52,18 @@ export default function Products() {
 
   // Keep the box in step with the header search (which changes the URL).
   useEffect(() => { setSearch(searchFromUrl); }, [searchFromUrl]);
-  useEffect(() => { if (searchFromUrl) trackSearch(searchFromUrl); }, [searchFromUrl]);
   useEffect(() => { setPage(1); }, [search, sortBy, filters, tab]);
 
   const { data: products, isLoading } = useProducts({ search: search || undefined });
+
+  // Record each search once, with how many products it found, so the admin can see searches that came up empty.
+  const trackedSearch = useRef('');
+  useEffect(() => {
+    if (!searchFromUrl || isLoading || !products || search !== searchFromUrl) return;
+    if (trackedSearch.current === searchFromUrl) return;
+    trackedSearch.current = searchFromUrl;
+    trackSearch(searchFromUrl, products.length);
+  }, [searchFromUrl, search, isLoading, products]);
   const { data: categories } = useCategories();
   const { data: suppliers, isLoading: suppliersLoading } = useSuppliers({ search: search || undefined });
 
