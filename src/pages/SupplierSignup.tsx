@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import SupplierTermsBox, { type CurrentTerms } from '@/components/suppliers/SupplierTermsBox';
 import { BANKS, BANK_PLACEHOLDER, isValidAccountNumber } from '@/lib/banks';
 import { Upload } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,6 +28,8 @@ export default function SupplierSignup() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [terms, setTerms] = useState<CurrentTerms | null>(null);
   const [form, setForm] = useState<Form>({
     country: 'Nigeria', businessName: '', firstName: '', lastName: '', email: '',
     phone: '', whatsappNumber: '', password: '', businessType: '', marketing: false,
@@ -49,6 +52,7 @@ export default function SupplierSignup() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (step < 3) return;
+    if (!termsAccepted || !terms) { toast.error('Please read and accept the Supplier Terms and Commission Policy to register.'); return; }
     if (!bankReady) { toast.error('Please choose your bank and enter your 10-digit account number and account name'); return; }
     if (logoFile && logoFile.size > 10 * 1024 * 1024) { toast.error('The logo must be smaller than 10MB'); return; }
     if (docFile && docFile.size > 10 * 1024 * 1024) { toast.error('The verification document must be smaller than 10MB'); return; }
@@ -93,22 +97,26 @@ export default function SupplierSignup() {
         if (!uploadErr) docPath = path;
       }
 
-      // 4. Create vendor record
+      // 4. Create the supplier account on the server. register_supplier() refuses to run unless
+      //    the agreement is accepted, and it records the acceptance, the terms version and the date.
       const categories = form.productCategories.split(',').map(c => c.trim()).filter(Boolean);
-      const { data: vendorRow, error: vendorError } = await supabase.from('vendors').insert({
-        user_id: userId,
-        store_name: form.businessName.trim(),
-        store_description: form.storeDescription || null,
-        phone: form.phone,
-        whatsapp_number: form.whatsappNumber,
-        company_name: form.businessName.trim(),
-        address: form.companyAddress,
-        logo_url: logoUrl,
-        business_type: BUSINESS_TYPES[form.businessType],
-        product_categories: categories.length ? categories : null,
-        is_approved: false,
-      }).select('id').single();
+      const { data: newVendorId, error: vendorError } = await (supabase as any).rpc('register_supplier', {
+        _payload: {
+          store_name: form.businessName.trim(),
+          store_description: form.storeDescription || null,
+          phone: form.phone,
+          whatsapp_number: form.whatsappNumber,
+          company_name: form.businessName.trim(),
+          address: form.companyAddress,
+          logo_url: logoUrl,
+          business_type: BUSINESS_TYPES[form.businessType],
+          product_categories: categories,
+        },
+        _terms_version: terms.version,
+        _accepted: termsAccepted,
+      });
       if (vendorError) throw vendorError;
+      const vendorRow = { id: newVendorId as string };
 
       // 4b. Bank details and the verification document live in a private table
       if (form.bankName || form.bankAccountNumber || form.bankAccountName || docPath) {
@@ -123,12 +131,7 @@ export default function SupplierSignup() {
         if (privateError) console.error('Private vendor details:', privateError);
       }
 
-      // 5. Assign vendor role
-      const { error: roleError } = await supabase.from('user_roles').insert({
-        user_id: userId,
-        role: 'vendor',
-      });
-      if (roleError) console.error('Role assignment:', roleError);
+      // (The vendor role is now granted by register_supplier(), together with the agreement.)
 
       toast.success('Supplier account created! You can now sign in.');
       navigate('/suppliers-login');
@@ -225,9 +228,10 @@ export default function SupplierSignup() {
             <SelectField label="Bank name" value={form.bankName || BANK_PLACEHOLDER} onChange={v => set('bankName', v === BANK_PLACEHOLDER ? '' : v)} options={[BANK_PLACEHOLDER, ...BANKS]} />
             <Field label="Account number (10 digits)" inputMode="numeric" maxLength={10} value={form.bankAccountNumber} onChange={e => set('bankAccountNumber', e.target.value.replace(/\D/g, ''))} />
             <Field label="Account name" value={form.bankAccountName} onChange={e => set('bankAccountName', e.target.value)} />
+            <SupplierTermsBox onChange={(a, t) => { setTermsAccepted(a); setTerms(t); }} />
             <div className="flex gap-3">
               <SecondaryButton onClick={() => setStep(2)}>Back</SecondaryButton>
-              <SubmitButton loading={loading} disabled={!bankReady}>Create my account</SubmitButton>
+              <SubmitButton loading={loading} disabled={!bankReady || !termsAccepted}>Create my account</SubmitButton>
             </div>
           </>
         )}

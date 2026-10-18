@@ -21,6 +21,7 @@ import { BRAND_FLYERS } from '@/lib/brandFlyers';
 import { useUnreadCount } from '@/hooks/useChat';
 import VendorVideosTab from '@/components/dashboard/VendorVideosTab';
 import VendorOrdersTab, { type VendorOrder } from '@/components/dashboard/VendorOrdersTab';
+import SupplierAgreementPanel from '@/components/dashboard/SupplierAgreementPanel';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 export default function SupplierDashboard() {
@@ -150,6 +151,7 @@ export default function SupplierDashboard() {
 
   const notice = (
     <>
+        <SupplierAgreementPanel />
         {/* Pending Verification Banner */}
         {!isApproved && (
           <div className="bg-accent/10 border border-accent/30 rounded-lg p-6 mb-6">

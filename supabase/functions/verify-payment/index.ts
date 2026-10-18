@@ -85,8 +85,13 @@ serve(async (req) => {
         status: 'success',
         payment_method: verifyData.data.channel,
         metadata: verifyData.data,
+        paystack_fee: Number(verifyData.data.fees ?? 0) / 100,
       })
       .eq('paystack_reference', reference);
+    await adminClient.from('payments')
+      .update({ paid_at: new Date().toISOString() })
+      .eq('paystack_reference', reference)
+      .is('paid_at', null);
 
     const { data: paidResult } = await adminClient.rpc('mark_order_paid', { _order_id: orderId, _method: 'card' });
     if (paidResult !== 'needs_refund') {

@@ -48,7 +48,7 @@ serve(async (req) => {
     );
 
     if (event.event === 'charge.success') {
-      const { reference, channel, amount } = event.data;
+      const { reference, channel, amount, fees } = event.data;
 
       // Use our own payment record (created server-side) to find the order,
       // and only mark it paid when the amount collected covers the total.
@@ -66,8 +66,17 @@ serve(async (req) => {
         const expectedKobo = Math.round(Number(order?.total ?? 0) * 100);
         if (order && Number(amount) >= expectedKobo) {
           await supabase.from('payments')
-            .update({ status: 'success', payment_method: channel, metadata: event.data })
+            .update({
+              status: 'success', payment_method: channel, metadata: event.data,
+              // Paystack's processing fee (kobo) is kept apart from the order amounts.
+              paystack_fee: Number(fees ?? 0) / 100,
+            })
             .eq('paystack_reference', reference);
+          // First delivery sets the payment time; a duplicate webhook leaves it alone.
+          await supabase.from('payments')
+            .update({ paid_at: new Date().toISOString() })
+            .eq('paystack_reference', reference)
+            .is('paid_at', null);
           // Handles late payments safely: a paid order that already expired is revived if the
           // stock is still there, or flagged "needs_refund" if it has been sold meanwhile.
           const { data: paidResult } = await supabase.rpc('mark_order_paid', { _order_id: order.id, _method: 'card' });
