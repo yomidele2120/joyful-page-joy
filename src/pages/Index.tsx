@@ -9,6 +9,7 @@ import SupplierCard from '@/components/SupplierCard';
 import ProductCard from '@/components/ProductCard';
 import { useProducts, useSuppliers } from '@/hooks/useProducts';
 import { getMoq } from '@/lib/pricing';
+import { bnplEligibleForPrice, useMarketplaceSettings, usePayLaterAvailable, usePublicFinance } from '@/hooks/useMarketplace';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,6 +28,16 @@ export default function Index() {
   const { data: featured } = useProducts({ featured: true, limit: 12 });
   const { data: lowMoq } = useProducts({ maxMoq: 5, limit: 12 });
   const { data: suppliers } = useSuppliers({ limit: 10 });
+  const { data: bnplProducts } = useProducts({ bnplOnly: true, limit: 24 });
+  const { data: preorderProducts } = useProducts({ preorderOnly: true, limit: 12 });
+  const { data: finance } = usePublicFinance();
+  const payLaterOn = usePayLaterAvailable();
+  const { data: marketplace } = useMarketplaceSettings();
+  // Only products that really qualify for Pay later right now are advertised.
+  const payLaterRow = useMemo(
+    () => (bnplProducts ?? []).filter(p => bnplEligibleForPrice(p, finance, payLaterOn)).slice(0, 12),
+    [bnplProducts, finance, payLaterOn],
+  );
   const [visible, setVisible] = useState(FEED_PAGE);
   const sentinel = useRef<HTMLDivElement>(null);
 
@@ -90,6 +101,18 @@ export default function Index() {
         {flyersReady && (rowBanners[0]
           ? <ImageFlyerBanner className="mt-8 sm:mt-10" flyer={rowBanners[0]} />
           : hasUploadedRows ? null : <BrandFlyerBanner className="mt-8 sm:mt-10" flyer={BRAND_FLYERS.seamlessPurple} />)}
+
+        {payLaterOn && !!payLaterRow.length && (
+          <ScrollRow eyebrow="Buy now, pay later" title="Pay later with Klump" linkTo="/pay-later">
+            {payLaterRow.map(p => <ScrollItem key={p.id}><ProductCard {...p} /></ScrollItem>)}
+          </ScrollRow>
+        )}
+
+        {marketplace?.preorder_enabled !== false && !!preorderProducts?.length && (
+          <ScrollRow eyebrow="Order ahead" title="Preorders" linkTo="/preorders">
+            {preorderProducts.map(p => <ScrollItem key={p.id}><ProductCard {...p} /></ScrollItem>)}
+          </ScrollRow>
+        )}
 
         {!!lowMoq?.length && (products ?? []).some(p => getMoq(p) > 5) && (
           <ScrollRow eyebrow="Start small" title="Low MOQ" linkTo="/products">

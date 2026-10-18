@@ -1,12 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
-export function useProducts(options?: { categorySlug?: string; featured?: boolean; badge?: string; limit?: number; search?: string; vendorId?: string; maxMoq?: number; orderBy?: 'newest' | 'oldest' }) {
+export function useProducts(options?: { categorySlug?: string; featured?: boolean; badge?: string; limit?: number; search?: string; vendorId?: string; maxMoq?: number; orderBy?: 'newest' | 'oldest'; bnplOnly?: boolean; preorderOnly?: boolean }) {
   return useQuery({
     queryKey: ['products', options],
     queryFn: async () => {
       let query = supabase.from('products').select('*, categories(name, slug), vendors(id, user_id, store_name, logo_url, is_approved, location)').eq('is_active', true);
 
+      // A preorder listing only appears publicly once an admin has approved it.
+      query = query.or('is_preorder.eq.false,preorder_approved.eq.true');
+      if (options?.bnplOnly) query = query.eq('bnpl_eligible', true).eq('is_preorder', false);
+      if (options?.preorderOnly) query = query.eq('is_preorder', true).eq('preorder_approved', true).eq('preorder_status', 'open');
       if (options?.featured) query = query.eq('is_featured', true);
       if (options?.badge) query = query.eq('badge', options.badge);
       if (options?.vendorId) query = query.eq('vendor_id', options.vendorId);
@@ -41,13 +45,15 @@ export function useProduct(slug: string) {
   });
 }
 
-export function useCategories() {
+export function useCategories(options?: { includeHidden?: boolean }) {
   return useQuery({
-    queryKey: ['categories'],
+    queryKey: ['categories', options?.includeHidden ? 'all' : 'visible'],
     queryFn: async () => {
       const { data, error } = await supabase.from('categories').select('*').order('sort_order');
       if (error) throw error;
-      return data;
+      // Admins can hide a category from menus and filters. Filtering here keeps the site working
+      // even before the is_visible column exists.
+      return (data ?? []).filter(c => options?.includeHidden || c.is_visible !== false);
     },
   });
 }

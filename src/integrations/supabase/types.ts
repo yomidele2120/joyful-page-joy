@@ -24,6 +24,7 @@ export type Database = {
           parent_id: string | null
           slug: string
           sort_order: number | null
+          is_visible: boolean
         }
         Insert: {
           created_at?: string
@@ -34,6 +35,7 @@ export type Database = {
           parent_id?: string | null
           slug: string
           sort_order?: number | null
+          is_visible?: boolean
         }
         Update: {
           created_at?: string
@@ -44,6 +46,7 @@ export type Database = {
           parent_id?: string | null
           slug?: string
           sort_order?: number | null
+          is_visible?: boolean
         }
         Relationships: [
           {
@@ -294,6 +297,191 @@ export type Database = {
           },
         ]
       }
+      marketplace_settings: {
+        Row: {
+          bnpl_section_visible: boolean
+          id: boolean
+          preorder_delay_cancel_days: number
+          preorder_enabled: boolean
+          preorder_requires_approval: boolean
+          updated_at: string
+        }
+        Insert: {
+          bnpl_section_visible?: boolean
+          id?: boolean
+          preorder_delay_cancel_days?: number
+          preorder_enabled?: boolean
+          preorder_requires_approval?: boolean
+          updated_at?: string
+        }
+        Update: {
+          bnpl_section_visible?: boolean
+          id?: boolean
+          preorder_delay_cancel_days?: number
+          preorder_enabled?: boolean
+          preorder_requires_approval?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      support_tickets: {
+        Row: {
+          admin_reply: string | null
+          category: string
+          created_at: string
+          email: string
+          id: string
+          message: string
+          name: string
+          order_id: string | null
+          product_id: string | null
+          status: string
+          subject: string
+          updated_at: string
+          user_id: string | null
+          vendor_id: string | null
+        }
+        Insert: {
+          admin_reply?: string | null
+          category?: string
+          created_at?: string
+          email: string
+          id?: string
+          message: string
+          name: string
+          order_id?: string | null
+          product_id?: string | null
+          status?: string
+          subject: string
+          updated_at?: string
+          user_id?: string | null
+          vendor_id?: string | null
+        }
+        Update: {
+          admin_reply?: string | null
+          category?: string
+          created_at?: string
+          email?: string
+          id?: string
+          message?: string
+          name?: string
+          order_id?: string | null
+          product_id?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string
+          user_id?: string | null
+          vendor_id?: string | null
+        }
+        Relationships: []
+      }
+      disputes: {
+        Row: {
+          buyer_id: string
+          created_at: string
+          desired_outcome: string
+          details: string
+          id: string
+          order_id: string
+          reason: string
+          resolution: string | null
+          resolved_at: string | null
+          seller_response: string | null
+          status: string
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          buyer_id: string
+          created_at?: string
+          desired_outcome?: string
+          details: string
+          id?: string
+          order_id: string
+          reason: string
+          resolution?: string | null
+          resolved_at?: string | null
+          seller_response?: string | null
+          status?: string
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          buyer_id?: string
+          created_at?: string
+          desired_outcome?: string
+          details?: string
+          id?: string
+          order_id?: string
+          reason?: string
+          resolution?: string | null
+          resolved_at?: string | null
+          seller_response?: string | null
+          status?: string
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "disputes_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "disputes_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_requests: {
+        Row: {
+          admin_note: string | null
+          created_at: string
+          id: string
+          kind: string
+          order_id: string
+          reason: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          order_id: string
+          reason: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          order_id?: string
+          reason?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_requests_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           actor_id: string | null
@@ -404,6 +592,10 @@ export type Database = {
           total: number
           updated_at: string
           user_id: string | null
+          bnpl_fee: number
+          is_preorder: boolean
+          payment_method: string
+          terms_accepted_at: string | null
         }
         Insert: {
           created_at?: string
@@ -418,6 +610,10 @@ export type Database = {
           total?: number
           updated_at?: string
           user_id?: string | null
+          bnpl_fee?: number
+          is_preorder?: boolean
+          payment_method?: string
+          terms_accepted_at?: string | null
         }
         Update: {
           created_at?: string
@@ -432,6 +628,10 @@ export type Database = {
           total?: number
           updated_at?: string
           user_id?: string | null
+          bnpl_fee?: number
+          is_preorder?: boolean
+          payment_method?: string
+          terms_accepted_at?: string | null
         }
         Relationships: []
       }
@@ -644,6 +844,15 @@ export type Database = {
           updated_at: string
           vendor_id: string | null
           video_url: string | null
+          is_preorder: boolean
+          preorder_approved: boolean
+          preorder_status: string
+          preorder_release_date: string | null
+          preorder_delivery_estimate: string | null
+          preorder_quantity_limit: number | null
+          preorder_max_per_order: number | null
+          preorder_terms: string | null
+          preorder_due_notified: boolean
         }
         Insert: {
           badge?: string | null
@@ -670,6 +879,15 @@ export type Database = {
           updated_at?: string
           vendor_id?: string | null
           video_url?: string | null
+          is_preorder?: boolean
+          preorder_approved?: boolean
+          preorder_status?: string
+          preorder_release_date?: string | null
+          preorder_delivery_estimate?: string | null
+          preorder_quantity_limit?: number | null
+          preorder_max_per_order?: number | null
+          preorder_terms?: string | null
+          preorder_due_notified?: boolean
         }
         Update: {
           badge?: string | null
@@ -696,6 +914,15 @@ export type Database = {
           updated_at?: string
           vendor_id?: string | null
           video_url?: string | null
+          is_preorder?: boolean
+          preorder_approved?: boolean
+          preorder_status?: string
+          preorder_release_date?: string | null
+          preorder_delivery_estimate?: string | null
+          preorder_quantity_limit?: number | null
+          preorder_max_per_order?: number | null
+          preorder_terms?: string | null
+          preorder_due_notified?: boolean
         }
         Relationships: [
           {
@@ -1191,30 +1418,6 @@ export type Database = {
       }
     }
     Functions: {
-      admin_overview: {
-        Args: { _days?: number }
-        Returns: Json
-      }
-      admin_supplier_scorecard: {
-        Args: { _days?: number; _ship_sla_hours?: number }
-        Returns: Json
-      }
-      admin_funnel_losses: {
-        Args: { _days?: number }
-        Returns: Json
-      }
-      admin_search_insights: {
-        Args: { _days?: number }
-        Returns: Json
-      }
-      analytics_summary: {
-        Args: { _days?: number }
-        Returns: Json
-      }
-      purge_analytics: {
-        Args: { _keep_days?: number }
-        Returns: number
-      }
       create_order: {
         Args: {
           _address: string
@@ -1222,10 +1425,23 @@ export type Database = {
           _email: string
           _items: Json
           _payment_method?: string
+          _accepted_terms?: boolean
           _phone: string
           _state: string
         }
         Returns: Json
+      }
+      get_preorder_taken: {
+        Args: { _product_ids: string[] }
+        Returns: { product_id: string; taken: number }[]
+      }
+      get_my_bnpl_status: {
+        Args: { _order_ids: string[] }
+        Returns: { order_id: string; status: string; amount: number; updated_at: string }[]
+      }
+      notify_preorders_due: {
+        Args: Record<PropertyKey, never>
+        Returns: number
       }
       get_public_finance_settings: {
         Args: Record<PropertyKey, never>

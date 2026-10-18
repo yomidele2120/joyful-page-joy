@@ -30,7 +30,7 @@ interface PayoutRow {
   vendors?: { store_name: string } | null;
 }
 interface Settings {
-  default_commission_percent: number; payout_hold_days: number; min_payout_amount: number; delivery_confirm_days: number; free_period_months: number;
+  default_commission_percent: number; payout_hold_days: number; min_payout_amount: number;
   bnpl_enabled: boolean; bnpl_fee_percent: number; bnpl_fee_bearer: 'platform' | 'supplier' | 'customer';
   bnpl_min_order: number; bnpl_max_order: number; bnpl_max_outstanding_per_customer: number; bnpl_down_payment_percent: number;
 }
@@ -183,9 +183,7 @@ export default function FinanceTab() {
   const saveSettings = () => run('settings', async () => {
     if (!form) return;
     if (form.bnpl_min_order > form.bnpl_max_order) throw new Error('BNPL minimum order cannot be above the maximum');
-    // The commission rate and free period are changed only by a super admin, in Commission & terms.
-    const { default_commission_percent: _rate, free_period_months: _free, ...rest } = form;
-    const { error } = await db.from('finance_settings').update(rest).eq('id', true);
+    const { error } = await db.from('finance_settings').update(form).eq('id', true);
     if (error) throw error;
     qc.invalidateQueries({ queryKey: ['finance-settings'] });
     toast.success('Finance settings saved');
@@ -378,14 +376,11 @@ export default function FinanceTab() {
           {settingsLoading || !form ? <Skeleton className="h-64 w-full" /> : (
             <>
               <Panel title="Commission and payouts">
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  <div className="space-y-1.5"><Label>Default commission (%)</Label>
-                    <Input value={form ? String(form.default_commission_percent) : ''} disabled readOnly />
-                    <p className="text-xs text-muted-foreground">Charged after a supplier's {form?.free_period_months ?? 2}-month free period, on the product subtotal only. Only a super admin can change it, in Commission &amp; terms. A custom rate per supplier (Payables) also starts after the free period.</p></div>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="space-y-1.5"><Label>Default commission (%)</Label>{num('default_commission_percent')}
+                    <p className="text-xs text-muted-foreground">Taken from each supplier sale. Override per supplier in Payables.</p></div>
                   <div className="space-y-1.5"><Label>Hold after delivery (days)</Label>{num('payout_hold_days')}
                     <p className="text-xs text-muted-foreground">Protects you against returns before suppliers are paid.</p></div>
-                  <div className="space-y-1.5"><Label>Auto-confirm delivery (days)</Label>{num('delivery_confirm_days')}
-                    <p className="text-xs text-muted-foreground">If the buyer never confirms, a shipped order counts as delivered after this long.</p></div>
                   <div className="space-y-1.5"><Label>Minimum payout (₦)</Label>{num('min_payout_amount')}
                     <p className="text-xs text-muted-foreground">Smaller balances roll over to the next payout.</p></div>
                 </div>

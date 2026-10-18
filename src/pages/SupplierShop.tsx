@@ -30,7 +30,7 @@ export default function SupplierShop() {
   const { data: products } = useQuery({
     queryKey: ['shop-products', vendorId],
     queryFn: async () => {
-      const { data } = await supabase.from('products').select('*, categories(name)').eq('vendor_id', vendorId).eq('is_active', true).order('created_at', { ascending: false });
+      const { data } = await supabase.from('products').select('*, categories(name)').eq('vendor_id', vendorId).eq('is_active', true).or('is_preorder.eq.false,preorder_approved.eq.true').order('created_at', { ascending: false });
       return data || [];
     },
     enabled: !!vendorId,
@@ -154,7 +154,7 @@ export default function SupplierShop() {
         {activeTab === 'products' ? (
           products?.length ? (
             <div className="grid grid-cols-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-1.5 sm:gap-3">
-              {products.map(p => <ProductCard key={p.id} id={p.id} name={p.name} slug={p.slug} price={p.price} compare_at_price={p.compare_at_price} image_url={p.image_url} badge={p.badge} brand={p.brand} />)}
+              {products.map(p => <ProductCard key={p.id} id={p.id} name={p.name} slug={p.slug} price={p.price} compare_at_price={p.compare_at_price} image_url={p.image_url} badge={p.badge} brand={p.brand} moq={p.moq} unit={p.unit} price_tiers={p.price_tiers} bnpl_eligible={p.bnpl_eligible} is_preorder={p.is_preorder} preorder_approved={p.preorder_approved} preorder_release_date={p.preorder_release_date} />)}
             </div>
           ) : (
             <p className="text-muted-foreground text-center py-8">This shop has no products yet.</p>

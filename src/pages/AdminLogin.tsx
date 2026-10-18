@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Shield } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useCaptcha } from '@/components/auth/Captcha';
 import { supabase } from '@/integrations/supabase/client';
 
 export default function AdminLogin() {
@@ -15,6 +16,7 @@ export default function AdminLogin() {
   const [loading, setLoading] = useState(false);
   const { signIn, isAdmin, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const captcha = useCaptcha();
 
   // If already admin, redirect
   useEffect(() => {
@@ -27,7 +29,7 @@ export default function AdminLogin() {
     e.preventDefault();
     setLoading(true);
     try {
-      const { error, roles } = await signIn(email, password);
+      const { error, roles } = await signIn(email, password, captcha.token);
       if (error) throw error;
 
       const isUserAdmin = roles?.includes('admin');
@@ -42,6 +44,7 @@ export default function AdminLogin() {
       toast.error(err.message || 'Authentication failed');
     } finally {
       setLoading(false);
+      if (captcha.required) captcha.reset();
     }
   };
 
@@ -65,7 +68,8 @@ export default function AdminLogin() {
             <Label htmlFor="password">Password</Label>
             <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
           </div>
-          <Button type="submit" variant="destructive" className="w-full font-heading font-semibold" disabled={loading}>
+          {captcha.widget}
+          <Button type="submit" variant="destructive" className="w-full font-heading font-semibold" disabled={loading || !captcha.ready}>
             {loading ? 'Verifying...' : 'Access Admin Panel'}
           </Button>
         </form>

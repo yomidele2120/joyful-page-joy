@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useCaptcha } from '@/components/auth/Captcha';
 import { toast } from 'sonner';
-import { trackRegistration } from '@/lib/tracking';
 import {
   AuthShell, AuthFooterLink, Field, PasswordField, SelectField, PhoneField, ChoiceGroup,
   CheckboxRow, SubmitButton, LegalText, COUNTRIES,
@@ -25,6 +25,7 @@ export default function UserLogin() {
 
   const { signIn, signUp, user, isAdmin, isVendor, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const captcha = useCaptcha();
 
   // Redirect already-logged-in users to the right dashboard.
   useEffect(() => {
@@ -45,7 +46,7 @@ export default function UserLogin() {
     setLoading(true);
     try {
       if (isLogin) {
-        const { error } = await signIn(form.email.trim(), form.password);
+        const { error } = await signIn(form.email.trim(), form.password, captcha.token);
         if (error) throw error;
         toast.success('Welcome back!');
       } else {
@@ -57,16 +58,16 @@ export default function UserLogin() {
           buyer_type: form.buyerType,
           buys_to_resell: form.resells === 'yes',
           marketing_opt_in: form.marketing,
-        });
+        }, captcha.token);
         if (error) throw error;
         // The new account is already signed in (the redirect effect above takes over).
-        trackRegistration('buyer');
         toast.success('Account created successfully!');
       }
     } catch (err: any) {
       toast.error(err.message || 'Authentication failed');
     } finally {
       setLoading(false);
+      if (captcha.required) captcha.reset();
     }
   };
 
@@ -100,6 +101,11 @@ export default function UserLogin() {
           minLength={isLogin ? 6 : 8}
           required
         />
+        {isLogin && (
+          <p className="-mt-2 mb-3 text-right text-sm">
+            <Link to="/forgot-password" className="font-semibold text-primary hover:underline">Forgot your password?</Link>
+          </p>
+        )}
 
         {!isLogin && (
           <>
@@ -128,7 +134,8 @@ export default function UserLogin() {
           </>
         )}
 
-        <SubmitButton loading={loading} disabled={(isLogin ? !canSignIn : !canSignUp)}>
+        {captcha.widget}
+        <SubmitButton loading={loading} disabled={(isLogin ? !canSignIn : !canSignUp) || !captcha.ready}>
           {isLogin ? 'Sign in' : 'Create my account'}
         </SubmitButton>
 

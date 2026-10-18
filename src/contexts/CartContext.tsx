@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import type { Json } from '@/integrations/supabase/types';
 import { getMoq, unitPriceFor } from '@/lib/pricing';
-import { trackAddToCart } from '@/lib/tracking';
 
 export interface CartItem {
   id: string;
@@ -14,10 +13,13 @@ export interface CartItem {
   moq: number;
   unit: string;
   price_tiers: Json;
+  /** Preorders are paid for in their own order, never mixed with in-stock items. */
+  is_preorder?: boolean;
+  preorder_release_date?: string | null;
 }
 
 export type NewCartItem = Pick<CartItem, 'id' | 'name' | 'price' | 'image_url' | 'slug'> &
-  Partial<Pick<CartItem, 'moq' | 'unit' | 'price_tiers'>>;
+  Partial<Pick<CartItem, 'moq' | 'unit' | 'price_tiers' | 'is_preorder' | 'preorder_release_date'>>;
 
 interface CartContextType {
   items: CartItem[];
@@ -41,7 +43,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const addItem = useCallback((item: NewCartItem, quantity?: number) => {
     const moq = getMoq({ price: item.price, moq: item.moq });
-    trackAddToCart({ id: item.id, name: item.name, price: item.price, quantity: Math.max(quantity ?? moq, 1) });
     setItems(prev => {
       const existing = prev.find(i => i.id === item.id);
       if (existing) {
@@ -56,6 +57,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         moq,
         unit: item.unit || 'Piece',
         price_tiers: item.price_tiers ?? [],
+        is_preorder: !!item.is_preorder,
+        preorder_release_date: item.preorder_release_date ?? null,
         // A new line always starts at (at least) the minimum order quantity.
         quantity: Math.max(quantity ?? moq, moq),
       }];

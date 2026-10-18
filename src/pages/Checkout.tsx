@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { AnimatedDots, PaymentPreparingOverlay } from '@/components/PaymentPreparing';
 import { useQuery } from '@tanstack/react-query';
 import { functionErrorMessage } from '@/lib/functionError';
 import Layout from '@/components/layout/Layout';
@@ -6,12 +7,13 @@ import { useCart, unitPrice } from '@/contexts/CartContext';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { formatLongDate, useMarketplaceSettings } from '@/hooks/useMarketplace';
 import { Label } from '@/components/ui/label';
 import { formatNaira } from '@/lib/format';
 import { toast } from 'sonner';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { trackInitiateCheckout, trackPurchase } from '@/lib/tracking';
 
 // Set VITE_PAYSTACK_PUBLIC_KEY in Vercel (Settings > Environment Variables) and redeploy.
 const PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY as string | undefined;
@@ -23,18 +25,6 @@ declare const Klump: any;
 function getKlump(): any {
   try { if (typeof Klump !== 'undefined') return Klump; } catch { /* not defined */ }
   return (window as any).Klump;
-}
-
-// Dots that grow and shrink (. .. ... .. .) so the buyer can see the page is working.
-const DOT_STEPS = ['.', '..', '...', '..'];
-function AnimatedDots() {
-  const [step, setStep] = useState(0);
-  useEffect(() => {
-    const timer = window.setInterval(() => setStep(s => (s + 1) % DOT_STEPS.length), 350);
-    return () => window.clearInterval(timer);
-  }, []);
-  // Fixed width so the text next to it does not jump as the dots change.
-  return <span aria-hidden="true" className="inline-block w-[1.1em] text-left">{DOT_STEPS[step]}</span>;
 }
 
 type PayMethod = 'card' | 'bnpl';
@@ -73,23 +63,16 @@ export default function Checkout() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  // Full-screen wait message while Pay later is being prepared / confirmed.
+  const [overlay, setOverlay] = useState<null | 'preparing' | 'confirming'>(null);
+  // The buyer must accept the terms before anything is created or charged (recorded on the order by the server).
+  const [accepted, setAccepted] = useState(false);
+  const { data: marketplace } = useMarketplaceSettings();
   const [formData, setFormData] = useState({ name: '', email: '', phone: '', address: '', city: '', state: '' });
   const [searchParams] = useSearchParams();
   const wantsLater = searchParams.get('pay') === 'later';
   const [method, setMethod] = useState<PayMethod>(wantsLater ? 'bnpl' : 'card');
   const klumpDone = useRef(false);
-
-  // Tell Meta a checkout started (once per visit to this page, when the cart has items).
-  const checkoutReported = useRef(false);
-  useEffect(() => {
-    if (checkoutReported.current || !items.length) return;
-    checkoutReported.current = true;
-    trackInitiateCheckout(
-      items.map(i => ({ id: i.id, quantity: i.quantity, unitPrice: unitPrice(i) })),
-      totalPrice,
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items.length]);
 
   // Pay later is offered only when it is switched on, the Klump key is set, every item in the
   // cart was marked "Pay later" by its supplier, and the total is inside the admin's limits.
@@ -133,7 +116,9 @@ export default function Checkout() {
   const bnplCustomerFee = finance?.bnpl_fee_bearer === 'customer' ? bnplFee : 0;
   const bnplTotal = bnplBase + bnplCustomerFee;
   const allEligible = !!eligibility && eligibility.length === itemIds.length && eligibility.every(p => p.bnpl_eligible);
-  const bnplAvailable = !!KLUMP_PUBLIC_KEY && !!finance?.bnpl_enabled && allEligible
+  const hasPreorder = items.some(i => i.is_preorder);
+  const mixedCart = hasPreorder && items.some(i => !i.is_preorder);
+  const bnplAvailable = !hasPreorder && marketplace?.bnpl_section_visible !== false && !!KLUMP_PUBLIC_KEY && !!finance?.bnpl_enabled && allEligible
     && bnplBase >= Number(finance.bnpl_min_order) && bnplBase <= Number(finance.bnpl_max_order);
   const usingBnpl = method === 'bnpl' && bnplAvailable;
   const grandTotal = usingBnpl ? bnplTotal : cardTotal;
@@ -177,13 +162,14 @@ export default function Checkout() {
 
   const handleBnplSubmit = async () => {
     setLoading(true);
+    setOverlay('preparing');
     klumpDone.current = false;
     try {
       // 1. The order is created and priced on the server, with Pay later rules enforced there.
       const { data: created, error: orderError } = await supabase.rpc('create_order', {
         _items: items.map(item => ({ product_id: item.id, quantity: item.quantity })),
         _email: formData.email, _phone: formData.phone, _address: formData.address,
-        _city: formData.city, _state: formData.state, _payment_method: 'bnpl',
+        _city: formData.city, _state: formData.state, _payment_method: 'bnpl', _accepted_terms: accepted,
       });
       if (orderError) throw orderError;
       const order = created as { order_id: string; total: number };
@@ -199,6 +185,7 @@ export default function Checkout() {
       if (!KlumpCheckout) throw new Error('Pay later could not start. Please refresh the page and try again.');
 
       // 3. Open Klump. When it reports success the server double-checks with Klump before the order counts as paid.
+      setOverlay(null);
       new KlumpCheckout({
         publicKey: KLUMP_PUBLIC_KEY,
         data: init.data,
@@ -207,6 +194,7 @@ export default function Checkout() {
         onOpen: () => { /* widget opened */ },
         onSuccess: async (response: unknown) => {
           klumpDone.current = true;
+          setOverlay('confirming');
           // Klump stores a redirect URL right after this callback returns; replace it so the page is not redirected.
           window.setTimeout(() => { try { window.localStorage.setItem('klump_redirect_url', 'false'); } catch { /* ignore */ } }, 0);
           try {
@@ -214,20 +202,21 @@ export default function Checkout() {
               body: { order_id: order.order_id, klump_response: response },
             });
             if (vErr || v?.error) throw new Error(await functionErrorMessage(vErr, v));
-            // Only a payment Klump has confirmed is reported as a purchase; one still pending is not reported.
-            if (!v?.pending) trackPurchase(order.order_id, items.map(i => ({ id: i.id, quantity: i.quantity, unitPrice: unitPrice(i) })), Number(order.total));
             clearCart();
             if (v?.pending) toast.info('Thanks! Klump is confirming your payment. Your order will update shortly.');
             else toast.success('Your Pay later order has been placed!');
+            setOverlay(null);
             navigate('/');
           } catch (err: any) {
             toast.error(`We could not confirm your Pay later payment: ${err?.message ?? 'unknown error'}. Please contact support.`);
+            setOverlay(null);
             setLoading(false);
           }
         },
         onError: (err: unknown) => {
           console.error('Klump error:', err);
           toast.error('Pay later could not be completed. Please try again or pay by card.');
+          setOverlay(null);
           setLoading(false);
         },
         onClose: () => {
@@ -239,12 +228,15 @@ export default function Checkout() {
       });
     } catch (err: any) {
       toast.error(err.message || 'Something went wrong');
+      setOverlay(null);
       setLoading(false);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (mixedCart) { toast.error('Preorder items must be ordered separately from in-stock items. Please remove one type from your cart.'); return; }
+    if (!accepted) { toast.error('Please accept the terms to continue.'); return; }
     if (usingBnpl) { await handleBnplSubmit(); return; }
     if (!PAYSTACK_PUBLIC_KEY) {
       toast.error('Payments are not set up yet: VITE_PAYSTACK_PUBLIC_KEY is missing.');
@@ -263,6 +255,7 @@ export default function Checkout() {
         _address: formData.address,
         _city: formData.city,
         _state: formData.state,
+        _accepted_terms: accepted,
       });
       if (orderError) throw orderError;
 
@@ -305,7 +298,6 @@ export default function Checkout() {
               throw new Error(msg);
             }
 
-            trackPurchase(order.order_id, items.map(i => ({ id: i.id, quantity: i.quantity, unitPrice: unitPrice(i) })), Number(order.total));
             clearCart();
             toast.success('Payment successful! Your order has been placed.');
             navigate('/');
@@ -327,6 +319,7 @@ export default function Checkout() {
 
   return (
     <Layout>
+      {overlay && <PaymentPreparingOverlay message={overlay === 'confirming' ? 'Confirming your payment' : 'Preparing secure payment'} />}
       <div className="container py-8 max-w-2xl">
         <h1 className="font-heading text-3xl font-bold mb-6">Checkout</h1>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -394,7 +387,56 @@ export default function Checkout() {
             </div>
           </div>
 
-          <Button type="submit" size="lg" className="w-full font-heading font-semibold mt-4" disabled={loading}>
+          <section aria-label="Before you pay" className="mt-4 space-y-3 border border-border bg-secondary/40 p-4 text-sm">
+            {mixedCart && (
+              <p role="alert" className="border border-destructive/40 bg-destructive/10 p-2 text-destructive">
+                Your cart mixes preorder and in-stock items. They are paid for in separate orders; please remove one type.
+              </p>
+            )}
+            {hasPreorder && (
+              <div>
+                <p className="font-heading font-semibold">You are placing a preorder</p>
+                <p className="mt-1 text-muted-foreground">You pay the full price now and the seller delivers when the goods become available. Dates are estimates and you will be told if they change.</p>
+                <ul className="mt-2 list-disc space-y-0.5 pl-5 text-muted-foreground">
+                  {items.filter(i => i.is_preorder).map(i => (
+                    <li key={i.id}>{i.name}: expected {formatLongDate(i.preorder_release_date) || 'date to be confirmed'}</li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-muted-foreground">
+                  If the date moves more than {marketplace?.preorder_delay_cancel_days ?? 14} days later you can cancel for a full refund. See the{' '}
+                  <Link to="/preorder-policy" target="_blank" className="text-primary hover:underline">Preorder Policy</Link>.
+                </p>
+              </div>
+            )}
+            {usingBnpl && (
+              <div>
+                <p className="font-heading font-semibold">About Pay later</p>
+                <p className="mt-1 text-muted-foreground">
+                  Pay later is provided by Klump, not by us. Klump decides whether you are approved and shows your instalment plan before you confirm.
+                  By accepting a plan you agree to repay it under Klump's terms. Read the{' '}
+                  <Link to="/bnpl-terms" target="_blank" className="text-primary hover:underline">BNPL Terms</Link>.
+                </p>
+              </div>
+            )}
+            <p className="text-muted-foreground">
+              Delivery charges and times are arranged with the seller (see the{' '}
+              <Link to="/shipping-policy" target="_blank" className="text-primary hover:underline">Shipping Policy</Link>).
+              Cancellations and refunds follow the{' '}
+              <Link to="/returns-policy" target="_blank" className="text-primary hover:underline">Return, Refund and Cancellation Policy</Link>.
+            </p>
+            <div className="flex items-start gap-3">
+              <Checkbox id="accept-terms" checked={accepted} onCheckedChange={v => setAccepted(v === true)} className="mt-0.5" />
+              <Label htmlFor="accept-terms" className="cursor-pointer font-normal leading-6">
+                I have read and agree to the{' '}
+                <Link to="/terms" target="_blank" className="text-primary hover:underline">Terms and Conditions</Link>,{' '}
+                <Link to="/privacy-policy" target="_blank" className="text-primary hover:underline">Privacy Policy</Link>
+                {hasPreorder && <> and <Link to="/preorder-policy" target="_blank" className="text-primary hover:underline">Preorder Policy</Link></>}
+                {usingBnpl && <> and <Link to="/bnpl-terms" target="_blank" className="text-primary hover:underline">BNPL Terms</Link></>}.
+              </Label>
+            </div>
+          </section>
+
+          <Button type="submit" size="lg" className="w-full font-heading font-semibold mt-4" disabled={loading || !accepted || mixedCart}>
             {loading ? <span className="inline-flex items-center">Preparing secure payment<AnimatedDots /></span> : usingBnpl ? `Continue with Pay later (${formatNaira(grandTotal)})` : `Pay ${formatNaira(grandTotal)} with Paystack`}
           </Button>
           {loading && (

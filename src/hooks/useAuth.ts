@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { AuthError } from '@supabase/supabase-js';
+import { formatWait, lockoutSecondsRemaining, recordSignInFailure, recordSignInSuccess } from '@/lib/loginThrottle';
 import type { User, Session } from '@supabase/supabase-js';
 
 export function useAuth() {
@@ -78,20 +80,28 @@ export function useAuth() {
     };
   }, [checkRoles]);
 
-  const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  const signIn = async (email: string, password: string, captchaToken?: string) => {
+    const wait = lockoutSecondsRemaining();
+    if (wait > 0) {
+      return { error: new Error(`Too many sign-in attempts. Please wait ${formatWait(wait)} and try again.`) as Error | AuthError | null, roles: [] as string[] };
+    }
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email, password, options: captchaToken ? { captchaToken } : undefined,
+    });
+    if (error) recordSignInFailure(); else recordSignInSuccess();
     const roles = !error && data.user ? await checkRoles(data.user.id) : [];
-    return { error, roles };
+    return { error: error as Error | AuthError | null, roles };
   };
 
   const signUp = async (
     email: string, password: string, fullName: string,
     extra: Record<string, string | boolean>,
+    captchaToken?: string,
   ) => {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName, ...extra } },
+      options: { data: { full_name: fullName, ...extra }, ...(captchaToken ? { captchaToken } : {}) },
     });
     return { error };
   };

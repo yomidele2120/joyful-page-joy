@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ShoppingCart, Search, User, Menu, Heart, LogOut, Store, Clapperboard, Bell, MessageSquare,
-  FileText, ClipboardList, ChevronDown, LayoutGrid, Inbox, Package,
-} from 'lucide-react';
+  FileText, ClipboardList, ChevronDown, LayoutGrid, Inbox, Package, Wallet, CalendarClock } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +12,7 @@ import { useInquiryBasket } from '@/contexts/InquiryBasketContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useCategories } from '@/hooks/useProducts';
 import { useUnreadCount } from '@/hooks/useChat';
+import { useMarketplaceSettings, usePayLaterAvailable } from '@/hooks/useMarketplace';
 import { Badge } from '@/components/ui/badge';
 import ThemeToggle, { ThemeSwitchRow } from '@/components/ThemeToggle';
 import {
@@ -44,6 +44,10 @@ export default function Navbar() {
   const { data: categories } = useCategories();
   const unreadNotifications = useUnreadNotificationCount();
   const unreadMessages = useUnreadCount();
+  // Pay later is linked only while it is genuinely available; preorders while the admin keeps them on.
+  const payLaterOn = usePayLaterAvailable();
+  const { data: marketplace } = useMarketplaceSettings();
+  const preordersOn = marketplace?.preorder_enabled !== false;
   const navigate = useNavigate();
 
   const handleSearch = (e: React.FormEvent) => {
@@ -167,6 +171,9 @@ export default function Navbar() {
                   <MenuTile to="/messages" icon={<MessageSquare className="w-5 h-5" />} label="Messages" badge={unreadMessages} />
                   <MenuTile to="/cart" icon={<ShoppingCart className="w-5 h-5" />} label="Cart" badge={totalItems} />
                   <MenuTile to="/products?tab=suppliers" icon={<Store className="w-5 h-5" />} label="Suppliers" />
+                  {payLaterOn && <MenuTile to="/pay-later" icon={<Wallet className="w-5 h-5" />} label="Pay later" />}
+                  {preordersOn && <MenuTile to="/preorders" icon={<CalendarClock className="w-5 h-5" />} label="Preorders" />}
+                  <MenuTile to="/my-orders" icon={<Package className="w-5 h-5" />} label="My orders" />
                   {user ? (
                     <MenuTile to={accountHref} icon={<Bell className="w-5 h-5" />} label="Account" badge={unreadNotifications} />
                   ) : (
@@ -237,6 +244,8 @@ export default function Navbar() {
           <span className="h-4 w-px bg-border" aria-hidden="true" />
           <Link to="/products?tab=suppliers" className="hover:text-primary">Suppliers</Link>
           <Link to="/rfq/new" className="hover:text-primary">Request for Quotation</Link>
+          {payLaterOn && <Link to="/pay-later" className="hover:text-primary">Pay Later</Link>}
+          {preordersOn && <Link to="/preorders" className="hover:text-primary">Preorders</Link>}
           <Link to="/feed" className="hover:text-primary">Watch &amp; Shop</Link>
           <span className="h-4 w-px bg-border" aria-hidden="true" />
           <div className="flex items-center gap-5 overflow-x-auto text-xs text-muted-foreground">
@@ -281,6 +290,7 @@ function AccountMenu({ user, isAdmin, isVendor, accountHref, signOut }: {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
         <DropdownMenuItem asChild><Link to={accountHref}><Package className="mr-2 h-4 w-4" />{isAdmin ? 'Admin' : isVendor ? 'Seller Dashboard' : 'My Account'}</Link></DropdownMenuItem>
+        <DropdownMenuItem asChild><Link to="/my-orders"><Package className="mr-2 h-4 w-4" />My orders</Link></DropdownMenuItem>
         <DropdownMenuItem asChild><Link to="/inquiries"><Inbox className="mr-2 h-4 w-4" />Inquiries</Link></DropdownMenuItem>
         <DropdownMenuItem asChild><Link to="/messages"><MessageSquare className="mr-2 h-4 w-4" />Chats</Link></DropdownMenuItem>
         <DropdownMenuItem asChild><Link to="/rfq"><FileText className="mr-2 h-4 w-4" />Quotations</Link></DropdownMenuItem>

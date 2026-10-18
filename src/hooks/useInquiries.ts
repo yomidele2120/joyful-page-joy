@@ -1,4 +1,3 @@
-import { trackLead } from '@/lib/tracking';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -101,7 +100,6 @@ export async function submitInquiry(buyerId: string, target: InquiryTarget, mess
     message: text,
   });
   if (error) throw error;
-  trackLead('inquiry', target.productId ?? undefined);
 
   const convo = await getOrCreateConversation(buyerId, target.vendorUserId);
   const intro = target.productName

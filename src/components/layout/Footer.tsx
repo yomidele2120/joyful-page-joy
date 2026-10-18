@@ -2,9 +2,15 @@ import { BrandLogoPill } from '@/components/BrandLogo';
 import { Link } from 'react-router-dom';
 import { Globe, Mail, MapPin, Phone } from 'lucide-react';
 import { useCategories } from '@/hooks/useProducts';
+import { COMPANY_LINKS, LEGAL_LINKS } from '@/config/business';
+import { useConsent } from '@/contexts/ConsentContext';
+import { useMarketplaceSettings, usePayLaterAvailable } from '@/hooks/useMarketplace';
 
 export default function Footer() {
   const { data: categories } = useCategories();
+  const { openPreferences } = useConsent();
+  const payLaterOn = usePayLaterAvailable();
+  const { data: marketplace } = useMarketplaceSettings();
   return (
     <footer className="bg-foreground dark:bg-black text-background dark:text-white mt-16">
       <div className="container py-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-8 text-sm">
@@ -25,6 +31,9 @@ export default function Footer() {
             <Link to="/products" className="hover:text-primary transition-colors">All Products</Link>
             <Link to="/products?tab=suppliers" className="hover:text-primary transition-colors">Find Suppliers</Link>
             <Link to="/rfq/new" className="hover:text-primary transition-colors">Request for Quotation</Link>
+            {payLaterOn && <Link to="/pay-later" className="hover:text-primary transition-colors">Pay Later</Link>}
+            {marketplace?.preorder_enabled !== false && <Link to="/preorders" className="hover:text-primary transition-colors">Preorders</Link>}
+            <Link to="/my-orders" className="hover:text-primary transition-colors">My Orders</Link>
             <Link to="/inquiries" className="hover:text-primary transition-colors">My Inquiries</Link>
             <Link to="/messages" className="hover:text-primary transition-colors">Messages</Link>
             {(categories ?? []).slice(0, 3).map(cat => (
@@ -83,6 +92,15 @@ export default function Footer() {
           </div>
         </div>
       </div>
+
+      <nav aria-label="Policies and company" className="border-t border-background/10 dark:border-white/10 py-5">
+        <ul className="container flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-background/70 dark:text-white/70">
+          {[...LEGAL_LINKS, ...COMPANY_LINKS].map(link => (
+            <li key={link.to}><Link to={link.to} className="hover:text-primary transition-colors">{link.label}</Link></li>
+          ))}
+          <li><button type="button" onClick={openPreferences} className="hover:text-primary transition-colors">Cookie settings</button></li>
+        </ul>
+      </nav>
 
       <div className="border-t border-background/10 dark:border-white/10 py-4 px-6">
         <p className="text-center text-xs text-background/40 dark:text-white/40">

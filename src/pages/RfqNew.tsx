@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FileText, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { trackLead } from '@/lib/tracking';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -54,7 +53,7 @@ export default function RfqNew() {
       target_price: target,
       destination: form.destination.trim() || null,
     }, {
-      onSuccess: () => { trackLead('rfq'); toast.success('Your request has been posted'); navigate('/rfq'); },
+      onSuccess: () => { toast.success('Your request has been posted'); navigate('/rfq'); },
       onError: (err: Error) => toast.error(err.message || 'Could not post your request'),
     });
   };

@@ -19,17 +19,13 @@ import {
   Package, ShoppingCart, Users, DollarSign, Plus, LogOut, ArrowLeft,
   Trash2, Store, CheckCircle, XCircle, Eye, BarChart3, CreditCard,
   FileText, AlertCircle, TrendingUp, Layers, FolderPlus, Pencil, Flag, Image as ImageIcon,
-  LayoutDashboard, Megaphone, Settings, Wallet, ChevronRight, Landmark, Percent, Activity
+  LayoutDashboard, Megaphone, Settings, Wallet, ChevronRight, Landmark
 } from 'lucide-react';
 import DashboardShell, { Panel, StatCard, WelcomeBanner, useTabParam, type DashNavItem } from '@/components/dashboard/DashboardShell';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import FlyersTab from '@/components/admin/FlyersTab';
-import TrafficTab from '@/components/admin/TrafficTab';
+import MarketplaceAdminTab from '@/components/admin/MarketplaceAdminTab';
 import FinanceTab from '@/components/admin/FinanceTab';
-import OrderOpsTab from '@/components/admin/OrderOpsTab';
-import SupplierCommissionTab from '@/components/admin/SupplierCommissionTab';
-import AnalyticsTab from '@/components/admin/AnalyticsTab';
-import { ExportButton } from '@/components/admin/analyticsUi';
 import { usePendingReports, useResolveReport, useDeactivatePost, useDeleteComment } from '@/hooks/useReports';
 
 export default function AdminDashboard() {
@@ -112,7 +108,7 @@ export default function AdminDashboard() {
     enabled: canFetchAdminData,
   });
 
-  const { data: categories, isLoading: categoriesLoading } = useCategories();
+  const { data: categories, isLoading: categoriesLoading } = useCategories({ includeHidden: true });
 
   // Hooks must run on every render, so they live above the early returns below.
   const { data: pendingReports } = usePendingReports();
@@ -120,33 +116,10 @@ export default function AdminDashboard() {
   const deactivatePost = useDeactivatePost();
   const deleteComment = useDeleteComment();
 
-  // Money and head-counts come from the database (admin_overview), not from adding up rows in the
-  // browser: the browser only ever receives the first 1,000 rows of each table, and commission now varies
-  // per supplier, so a flat percentage was wrong.
-  const { data: overview, isLoading: overviewLoading } = useQuery({
-    queryKey: ['admin-overview-totals'],
-    enabled: canFetchAdminData,
-    staleTime: 60_000,
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('admin_overview', { _days: 30 });
-      if (error) throw error;
-      return data as unknown as {
-        all_time: {
-          orders: number; payments_received: number; successful_payments: number; commission: number; supplier_net: number;
-          users: number; products: number; suppliers: number;
-        };
-      };
-    },
-  });
-  const allTime = overview?.all_time;
-
   const successfulPayments = payments?.filter(p => p.status === 'success') || [];
-  const totalRevenue = allTime?.payments_received ?? successfulPayments.reduce((s, p) => s + Number(p.amount), 0);
-  // null = the analytics migration has not been run yet, so show a dash instead of a wrong number.
-  const platformCommission: number | null = allTime ? allTime.commission : null;
-  const supplierEarnings: number | null = allTime ? allTime.supplier_net : null;
-  const naira = (v: number | null) => (v === null ? '-' : formatNaira(v));
-  const successfulCount = allTime?.successful_payments ?? successfulPayments.length;
+  const totalRevenue = successfulPayments.reduce((s, p) => s + Number(p.amount), 0);
+  const platformCommission = totalRevenue * 0.05;
+  const supplierEarnings = totalRevenue - platformCommission;
   const pendingOrders = orders?.filter(o => o.status === 'pending') || [];
   const paidOrders = orders?.filter(o => o.status === 'paid') || [];
   const pendingVendors = vendors?.filter(v => !v.is_approved) || [];
@@ -238,18 +211,16 @@ export default function AdminDashboard() {
   const navItems: DashNavItem[] = [
     { key: 'overview', label: 'Overview', icon: LayoutDashboard, group: 'Dashboard' },
     { key: 'analytics', label: 'Analytics', icon: BarChart3, group: 'Dashboard' },
-    { key: 'traffic', label: 'Traffic', icon: Activity, group: 'Dashboard' },
     { key: 'earnings', label: 'Earnings', icon: TrendingUp, group: 'Dashboard' },
     { key: 'suppliers', label: 'Suppliers', icon: Store, badge: pendingVendors.length, group: 'Marketplace' },
     { key: 'products', label: 'Products', icon: Package, group: 'Marketplace' },
     { key: 'add-product', label: 'Add product', icon: Plus, group: 'Marketplace' },
     { key: 'categories', label: 'Categories', icon: Layers, group: 'Marketplace' },
     { key: 'flyers', label: 'Flyers', icon: Megaphone, group: 'Marketplace' },
+    { key: 'marketplace', label: 'Pay later, preorders and support', icon: Wallet, group: 'Marketplace' },
     { key: 'orders', label: 'Orders', icon: ShoppingCart, group: 'Sales' },
     { key: 'payments', label: 'Payments', icon: CreditCard, group: 'Sales' },
     { key: 'finance', label: 'Finance', icon: Landmark, group: 'Sales' },
-    { key: 'commission', label: 'Commission & terms', icon: Percent, group: 'Sales' },
-    { key: 'disputes', label: 'Disputes & refunds', icon: AlertCircle, group: 'Sales' },
     { key: 'users', label: 'Users', icon: Users, group: 'Community' },
     { key: 'moderation', label: 'Moderation', icon: Flag, badge: pendingReports?.length ?? 0, group: 'Community' },
     { key: 'settings', label: 'Settings', icon: Settings, group: 'System' },
@@ -307,11 +278,11 @@ export default function AdminDashboard() {
 
             <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
               <StatCard icon={<Wallet />} label="Total revenue" value={formatNaira(totalRevenue)} loading={paymentsLoading} />
-              <StatCard icon={<DollarSign />} tone="accent" label="Platform commission" value={naira(platformCommission)} loading={paymentsLoading && overviewLoading} />
-              <StatCard icon={<ShoppingCart />} tone="sky" label="Orders" value={String(allTime?.orders ?? orders?.length ?? 0)} loading={ordersLoading && overviewLoading} />
-              <StatCard icon={<Package />} label="Products" value={String(allTime?.products ?? products?.length ?? 0)} loading={productsLoading && overviewLoading} />
-              <StatCard icon={<Store />} tone="accent" label="Suppliers" value={String(allTime?.suppliers ?? vendors?.length ?? 0)} loading={vendorsLoading && overviewLoading} />
-              <StatCard icon={<Users />} tone="sky" label="Users" value={String(allTime?.users ?? profiles?.length ?? 0)} loading={profilesLoading && overviewLoading} />
+              <StatCard icon={<DollarSign />} tone="accent" label="Commission (5%)" value={formatNaira(platformCommission)} loading={paymentsLoading} />
+              <StatCard icon={<ShoppingCart />} tone="sky" label="Orders" value={String(orders?.length || 0)} loading={ordersLoading} />
+              <StatCard icon={<Package />} label="Products" value={String(products?.length || 0)} loading={productsLoading} />
+              <StatCard icon={<Store />} tone="accent" label="Suppliers" value={String(vendors?.length || 0)} loading={vendorsLoading} />
+              <StatCard icon={<Users />} tone="sky" label="Users" value={String(profiles?.length || 0)} loading={profilesLoading} />
             </div>
 
             {pendingVendors.length > 0 && (
@@ -345,8 +316,8 @@ export default function AdminDashboard() {
               <Panel title="Revenue">
                 <dl className="space-y-2.5 text-sm">
                   <div className="flex justify-between"><dt className="text-muted-foreground">Gross revenue</dt><dd className="font-medium">{formatNaira(totalRevenue)}</dd></div>
-                  <div className="flex justify-between"><dt className="text-muted-foreground">Platform commission</dt><dd className="font-medium text-primary">{naira(platformCommission)}</dd></div>
-                  <div className="flex justify-between"><dt className="text-muted-foreground">Supplier share</dt><dd className="font-medium">{naira(supplierEarnings)}</dd></div>
+                  <div className="flex justify-between"><dt className="text-muted-foreground">Platform (5%)</dt><dd className="font-medium text-primary">{formatNaira(platformCommission)}</dd></div>
+                  <div className="flex justify-between"><dt className="text-muted-foreground">Supplier payouts</dt><dd className="font-medium">{formatNaira(supplierEarnings)}</dd></div>
                 </dl>
               </Panel>
             </div>
@@ -409,14 +380,8 @@ export default function AdminDashboard() {
         {/* Orders */}
         {activeTab === 'orders' && (
           <div className="bg-card rounded-xl border border-border overflow-hidden">
-            <div className="p-4 border-b border-border flex flex-wrap items-center justify-between gap-2">
+            <div className="p-4 border-b border-border">
               <h2 className="font-heading font-bold">All Orders ({orders?.length || 0})</h2>
-              <ExportButton
-                filename="orders"
-                head={['Order', 'Date', 'Status', 'Payment method', 'Email', 'Phone', 'City', 'State', 'Total']}
-                rows={(orders || []).map((o: any) => [o.id, new Date(o.created_at).toISOString(), o.status, o.payment_method ?? 'card', o.email, o.phone, o.shipping_city, o.shipping_state, Number(o.total)])}
-                disabled={ordersLoading}
-              />
             </div>
             {ordersLoading ? <TableSkeleton /> : orders?.length ? (
               <div className="overflow-x-auto">
@@ -453,7 +418,6 @@ export default function AdminDashboard() {
                               <SelectItem value="shipped">Shipped</SelectItem>
                               <SelectItem value="delivered">Delivered</SelectItem>
                               <SelectItem value="cancelled">Cancelled</SelectItem>
-                              <SelectItem value="needs_refund">Needs refund</SelectItem>
                             </SelectContent>
                           </Select>
                         </td>
@@ -473,18 +437,12 @@ export default function AdminDashboard() {
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <StatCard icon={<DollarSign className="w-5 h-5 text-primary" />} label="Total Payments" value={formatNaira(totalRevenue)} loading={paymentsLoading} />
-              <StatCard icon={<CreditCard className="w-5 h-5 text-accent" />} label="Successful" value={String(successfulCount)} loading={paymentsLoading} />
+              <StatCard icon={<CreditCard className="w-5 h-5 text-accent" />} label="Successful" value={String(successfulPayments.length)} loading={paymentsLoading} />
               <StatCard icon={<AlertCircle className="w-5 h-5 text-destructive" />} label="Pending" value={String(payments?.filter(p => p.status === 'pending').length || 0)} loading={paymentsLoading} />
             </div>
             <div className="bg-card rounded-xl border border-border overflow-hidden">
-              <div className="p-4 border-b border-border flex flex-wrap items-center justify-between gap-2">
+              <div className="p-4 border-b border-border">
                 <h2 className="font-heading font-bold">All Transactions ({payments?.length || 0})</h2>
-                <ExportButton
-                  filename="payments"
-                  head={['Payment', 'Date', 'Status', 'Method', 'Reference', 'Order', 'Amount']}
-                  rows={(payments || []).map((p: any) => [p.id, new Date(p.created_at).toISOString(), p.status, p.payment_method ?? 'paystack', p.transaction_reference ?? p.paystack_reference, p.order_id, Number(p.amount)])}
-                  disabled={paymentsLoading}
-                />
               </div>
               {paymentsLoading ? <TableSkeleton /> : payments?.length ? (
                 <div className="overflow-x-auto">
@@ -579,12 +537,10 @@ export default function AdminDashboard() {
         )}
 
         {/* Categories */}
-        {activeTab === 'traffic' && <TrafficTab />}
         {activeTab === 'flyers' && <FlyersTab />}
+        {activeTab === 'marketplace' && <MarketplaceAdminTab />}
 
         {activeTab === 'finance' && <FinanceTab />}
-        {activeTab === 'commission' && <SupplierCommissionTab />}
-        {activeTab === 'disputes' && <OrderOpsTab />}
 
         {activeTab === 'categories' && (
           <CategoriesTab categories={categories || []} loading={categoriesLoading} onRefresh={() => queryClient.invalidateQueries({ queryKey: ['categories'] })} />
@@ -708,7 +664,73 @@ export default function AdminDashboard() {
         )}
 
         {/* Analytics */}
-        {activeTab === 'analytics' && <AnalyticsTab />}
+        {activeTab === 'analytics' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <StatCard icon={<Users className="w-5 h-5 text-primary" />} label="New Suppliers" value={String(pendingVendors.length)} loading={vendorsLoading} />
+              <StatCard icon={<ShoppingCart className="w-5 h-5 text-accent" />} label="Orders (7 days)" value={String((ordersPerDay || []).reduce((sum, [, count]) => sum + Number(count), 0))} loading={ordersLoading} />
+              <StatCard icon={<DollarSign className="w-5 h-5 text-primary" />} label="Total Sales" value={formatNaira(totalRevenue)} loading={paymentsLoading} />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="bg-card rounded-xl border border-border overflow-hidden">
+                <div className="p-4 border-b border-border">
+                  <h2 className="font-heading font-bold">Orders per Day (Last 7)</h2>
+                </div>
+                {ordersLoading ? <TableSkeleton /> : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-secondary">
+                        <tr>
+                          <th className="text-left p-3 font-heading">Day</th>
+                          <th className="text-left p-3 font-heading">Orders</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ordersPerDay.length ? ordersPerDay.map(([day, count]) => (
+                          <tr key={day} className="border-t border-border">
+                            <td className="p-3">{day}</td>
+                            <td className="p-3 font-medium">{count}</td>
+                          </tr>
+                        )) : (
+                          <tr><td className="p-3 text-muted-foreground" colSpan={2}>No order data yet.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-card rounded-xl border border-border overflow-hidden">
+                <div className="p-4 border-b border-border">
+                  <h2 className="font-heading font-bold">Popular Products</h2>
+                </div>
+                {productsLoading ? <TableSkeleton /> : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-secondary">
+                        <tr>
+                          <th className="text-left p-3 font-heading">Product</th>
+                          <th className="text-left p-3 font-heading">Stock</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {popularProducts.length ? popularProducts.map((product) => (
+                          <tr key={product.id} className="border-t border-border">
+                            <td className="p-3 font-medium">{product.name}</td>
+                            <td className="p-3">{product.stock_quantity}</td>
+                          </tr>
+                        )) : (
+                          <tr><td className="p-3 text-muted-foreground" colSpan={2}>No products available.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Settings */}
         {activeTab === 'settings' && (
@@ -758,8 +780,8 @@ export default function AdminDashboard() {
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <StatCard icon={<DollarSign className="w-5 h-5 text-primary" />} label="Total Revenue" value={formatNaira(totalRevenue)} loading={paymentsLoading} />
-              <StatCard icon={<DollarSign className="w-5 h-5 text-accent" />} label="Platform commission" value={naira(platformCommission)} loading={paymentsLoading && overviewLoading} />
-              <StatCard icon={<Store className="w-5 h-5 text-primary" />} label="Supplier share" value={naira(supplierEarnings)} loading={paymentsLoading && overviewLoading} />
+              <StatCard icon={<DollarSign className="w-5 h-5 text-accent" />} label="Platform Commission (5%)" value={formatNaira(platformCommission)} loading={paymentsLoading} />
+              <StatCard icon={<Store className="w-5 h-5 text-primary" />} label="Supplier Payouts" value={formatNaira(supplierEarnings)} loading={paymentsLoading} />
             </div>
             <div className="bg-card rounded-xl border border-border overflow-hidden">
               <div className="p-4 border-b border-border">

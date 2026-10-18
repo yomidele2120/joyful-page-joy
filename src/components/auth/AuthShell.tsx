@@ -243,7 +243,12 @@ export function SecondaryButton({ children, onClick }: { children: React.ReactNo
 export function LegalText() {
   return (
     <div className="mt-6 space-y-4 text-[15px] leading-relaxed text-slate-600">
-      <p>By clicking the “Create my account” button, you agree to the marketplace terms of use and data processing terms.</p>
+      <p>
+        By clicking the “Create my account” button, you agree to our{' '}
+        <Link to="/terms" className="font-semibold text-primary hover:underline">Terms and Conditions</Link> and acknowledge our{' '}
+        <Link to="/privacy-policy" className="font-semibold text-primary hover:underline">Privacy Policy</Link> and{' '}
+        <Link to="/cookie-policy" className="font-semibold text-primary hover:underline">Cookie Policy</Link>.
+      </p>
       <p>Your details are used only to run your account and process your orders.</p>
     </div>
   );

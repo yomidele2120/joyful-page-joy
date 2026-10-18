@@ -5,6 +5,8 @@ import { formatNaira } from '@/lib/format';
 import { formatMoq, priceRange } from '@/lib/pricing';
 import type { Json } from '@/integrations/supabase/types';
 import { motion } from 'framer-motion';
+import { PayLaterBadge, PreorderBadge } from '@/components/ProductBadges';
+import { bnplEligibleForPrice, usePayLaterAvailable, usePublicFinance } from '@/hooks/useMarketplace';
 
 export interface ProductCardProps {
   id: string;
@@ -20,6 +22,10 @@ export interface ProductCardProps {
   unit?: string | null;
   price_tiers?: Json | null;
   vendors?: { store_name: string; is_approved: boolean | null } | null;
+  bnpl_eligible?: boolean | null;
+  is_preorder?: boolean | null;
+  preorder_approved?: boolean | null;
+  preorder_release_date?: string | null;
 }
 
 export function ProductPrice({ product, className = '', compact = false }: { product: Pick<ProductCardProps, 'price' | 'price_tiers' | 'compare_at_price'>; className?: string; compact?: boolean }) {
@@ -39,7 +45,13 @@ export function ProductPrice({ product, className = '', compact = false }: { pro
 
 export default function ProductCard({
   name, slug, price, compare_at_price, image_url, badge, brand, stock_quantity, moq, unit, price_tiers, vendors,
+  bnpl_eligible, is_preorder, preorder_approved, preorder_release_date,
 }: ProductCardProps) {
+  // Pay later is only advertised when it is genuinely on and this product fits the limits; preorders never offer it.
+  const { data: finance } = usePublicFinance();
+  const payLaterAvailable = usePayLaterAvailable();
+  const showPreorder = !!is_preorder && !!preorder_approved;
+  const showPayLater = !showPreorder && bnplEligibleForPrice({ bnpl_eligible, price, moq }, finance, payLaterAvailable);
   const hasTiers = Array.isArray(price_tiers) && price_tiers.length > 0;
   const discount = !hasTiers && compare_at_price ? Math.round(((compare_at_price - price) / compare_at_price) * 100) : 0;
 
@@ -78,6 +90,12 @@ export default function ProductCard({
         </Link>
         <ProductPrice product={{ price, price_tiers, compare_at_price }} compact className="mt-1 sm:mt-2" />
         <p className="mt-0.5 hidden text-[11px] sm:block sm:text-xs text-muted-foreground">{formatMoq({ price, moq, unit })}</p>
+        {(showPreorder || showPayLater) && (
+          <div className="mt-1 flex flex-wrap gap-1">
+            {showPreorder && <PreorderBadge date={preorder_release_date} />}
+            {showPayLater && <PayLaterBadge />}
+          </div>
+        )}
         <div className="mt-1.5 hidden items-center justify-between gap-2 text-[10px] sm:flex sm:text-xs text-muted-foreground">
           <span className="flex min-w-0 items-center gap-1">
             {vendors?.is_approved && <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-primary" aria-label="Verified supplier" />}

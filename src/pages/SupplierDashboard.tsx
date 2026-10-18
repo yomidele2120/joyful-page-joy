@@ -10,6 +10,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { PreorderEditor, PreorderFields, buildPreorderPayload, emptyPreorder, type PreorderForm } from '@/components/seller/PreorderFields';
+import SellerDisputes from '@/components/seller/SellerDisputes';
 import { functionErrorMessage } from '@/lib/functionError';
 import { BANKS, BANK_PLACEHOLDER, isValidAccountNumber } from '@/lib/banks';
 import { formatNaira } from '@/lib/format';
@@ -20,8 +22,6 @@ import { BrandFlyerBanner } from '@/components/flyers/BrandFlyerImage';
 import { BRAND_FLYERS } from '@/lib/brandFlyers';
 import { useUnreadCount } from '@/hooks/useChat';
 import VendorVideosTab from '@/components/dashboard/VendorVideosTab';
-import VendorOrdersTab, { type VendorOrder } from '@/components/dashboard/VendorOrdersTab';
-import SupplierAgreementPanel from '@/components/dashboard/SupplierAgreementPanel';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 export default function SupplierDashboard() {
@@ -30,7 +30,8 @@ export default function SupplierDashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useTabParam('overview', ['overview', 'products', 'videos', 'orders', 'add-product', 'shop-settings']);
+  const [activeTab, setActiveTab] = useTabParam('overview', ['overview', 'products', 'videos', 'orders', 'disputes', 'add-product', 'shop-settings']);
+  const [preorderProduct, setPreorderProduct] = useState<any>(null);
   const autoCompose = searchParams.get('compose') === '1';
 
   const { data: vendor, isLoading: vendorLoading } = useQuery({
@@ -88,10 +89,14 @@ export default function SupplierDashboard() {
   const { data: orders } = useQuery({
     queryKey: ['vendor-orders', vendor?.id],
     queryFn: async () => {
-      // Server function: only this supplier's own items, and the delivery address only once paid.
-      const { data, error } = await (supabase as any).rpc('vendor_order_list');
-      if (error) throw error;
-      return (data ?? []) as VendorOrder[];
+      const { data: vendorProductIds } = await supabase.from('products').select('id').eq('vendor_id', vendor!.id);
+      if (!vendorProductIds?.length) return [];
+      const ids = vendorProductIds.map(p => p.id);
+      const { data: orderItems } = await supabase.from('order_items').select('order_id, quantity, price, product_id').in('product_id', ids);
+      if (!orderItems?.length) return [];
+      const orderIds = [...new Set(orderItems.map(oi => oi.order_id))];
+      const { data: orderData } = await supabase.from('orders').select('*').in('id', orderIds).order('created_at', { ascending: false });
+      return orderData || [];
     },
     enabled: !!vendor?.id && isApproved,
   });
@@ -101,7 +106,7 @@ export default function SupplierDashboard() {
   const stats = {
     products: products?.length || 0,
     orders: orders?.length || 0,
-    revenue: orders?.filter(o => o.ship_status && o.ship_status !== 'refunded').reduce((s, o) => s + Number(o.gross), 0) || 0,
+    revenue: orders?.reduce((s, o) => s + Number(o.total), 0) || 0,
   };
 
   if (loading || vendorLoading) {
@@ -131,6 +136,7 @@ export default function SupplierDashboard() {
         { key: 'products', label: 'My products', icon: Package, group: 'Store' },
         { key: 'add-product', label: 'Add product', icon: Plus, group: 'Store' },
         { key: 'orders', label: 'Orders', icon: ShoppingCart, group: 'Sales' },
+        { key: 'disputes', label: 'Disputes', icon: AlertCircle, group: 'Sales' },
         { key: 'videos', label: 'Videos', icon: Film, group: 'Grow' },
         { key: 'shop-settings', label: 'Shop settings', icon: Settings, group: 'Account' },
       ]
@@ -151,7 +157,6 @@ export default function SupplierDashboard() {
 
   const notice = (
     <>
-        <SupplierAgreementPanel />
         {/* Pending Verification Banner */}
         {!isApproved && (
           <div className="bg-accent/10 border border-accent/30 rounded-lg p-6 mb-6">
@@ -261,6 +266,7 @@ export default function SupplierDashboard() {
                           <th className="text-left p-3 font-heading">Price</th>
                           <th className="text-left p-3 font-heading">Stock</th>
                           <th className="text-left p-3 font-heading">Pay later</th>
+                          <th className="text-left p-3 font-heading">Preorder</th>
                           <th className="text-left p-3 font-heading">Actions</th>
                         </tr>
                       </thead>
@@ -276,12 +282,25 @@ export default function SupplierDashboard() {
                             <td className="p-3">{formatNaira(p.price)}</td>
                             <td className="p-3">{p.stock_quantity}</td>
                             <td className="p-3">
-                              <Switch checked={!!(p as any).bnpl_eligible} aria-label="Allow Pay later"
+                              <Switch checked={!!(p as any).bnpl_eligible} disabled={!!(p as any).is_preorder} aria-label="Allow Pay later"
                                 onCheckedChange={async (v) => {
                                   const { error } = await supabase.from('products').update({ bnpl_eligible: v }).eq('id', p.id);
                                   if (error) toast.error(error.message);
                                   else { queryClient.invalidateQueries({ queryKey: ['vendor-products'] }); toast.success(v ? 'Pay later enabled' : 'Pay later disabled'); }
                                 }} />
+                            </td>
+                            <td className="p-3">
+                              <div className="flex flex-col items-start gap-1">
+                                {(p as any).is_preorder && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {!(p as any).preorder_approved ? 'Awaiting approval'
+                                      : (p as any).preorder_status === 'open' ? 'Open' : (p as any).preorder_status === 'ready' ? 'Ready' : 'Closed'}
+                                  </span>
+                                )}
+                                <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setPreorderProduct(p)}>
+                                  {(p as any).is_preorder ? 'Manage' : 'Set up'}
+                                </Button>
+                              </div>
                             </td>
                             <td className="p-3">
                               <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive"
@@ -308,10 +327,34 @@ export default function SupplierDashboard() {
             )}
 
             {activeTab === 'orders' && (
-              <VendorOrdersTab
-                orders={orders ?? []}
-                onChanged={() => queryClient.invalidateQueries({ queryKey: ['vendor-orders'] })}
-              />
+              <div className="bg-card rounded-xl border border-border overflow-hidden">
+                {orders?.length ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-secondary">
+                        <tr>
+                          <th className="text-left p-3 font-heading">Order ID</th>
+                          <th className="text-left p-3 font-heading">Status</th>
+                          <th className="text-left p-3 font-heading">Total</th>
+                          <th className="text-left p-3 font-heading">Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {orders.map(o => (
+                          <tr key={o.id} className="border-t border-border">
+                            <td className="p-3 font-mono text-xs">{o.id.slice(0, 8)}...</td>
+                            <td className="p-3"><span className="px-2 py-0.5 rounded-full text-xs bg-secondary font-medium">{o.status}</span></td>
+                            <td className="p-3 font-medium">{formatNaira(Number(o.total))}</td>
+                            <td className="p-3 text-muted-foreground">{new Date(o.created_at).toLocaleDateString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="p-8 text-center text-muted-foreground">No orders yet.</p>
+                )}
+              </div>
             )}
 
             {activeTab === 'videos' && (
@@ -322,11 +365,21 @@ export default function SupplierDashboard() {
               />
             )}
 
+            {activeTab === 'disputes' && <SellerDisputes vendorId={vendor.id} />}
+
             {activeTab === 'add-product' && (
               <SupplierAddProduct vendorId={vendor.id} categories={categories || []} onSuccess={() => {
                 queryClient.invalidateQueries({ queryKey: ['vendor-products'] });
                 setActiveTab('products');
               }} />
+            )}
+
+            {preorderProduct && (
+              <PreorderEditor
+                product={preorderProduct}
+                onClose={() => setPreorderProduct(null)}
+                onSaved={() => { setPreorderProduct(null); queryClient.invalidateQueries({ queryKey: ['vendor-products'] }); }}
+              />
             )}
 
             {activeTab === 'shop-settings' && (
@@ -353,9 +406,12 @@ function SupplierAddProduct({ vendorId, categories, onSuccess }: { vendorId: str
   const [extraImages, setExtraImages] = useState<File[]>([]);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
+  const [preorder, setPreorder] = useState<PreorderForm>(emptyPreorder);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const preorderResult = buildPreorderPayload(preorder, true);
+    if ('error' in preorderResult) { toast.error(preorderResult.error); return; }
     setLoading(true);
     // Phone photos are several MB. Shrink them first (1200 px is plenty for a
     // product card) and upload them all at the same time instead of one by one.
@@ -401,6 +457,7 @@ function SupplierAddProduct({ vendorId, categories, onSuccess }: { vendorId: str
       stock_quantity: Number(form.stock_quantity), description: form.description || null,
       image_url: imageUrl || null, badge: form.badge || null, bnpl_eligible: form.bnpl_eligible,
       vendor_id: vendorId, is_active: true,
+      ...preorderResult.data,
     });
     setLoading(false);
     if (error) toast.error(error.message);
@@ -446,12 +503,14 @@ function SupplierAddProduct({ vendorId, categories, onSuccess }: { vendorId: str
       </div>
 
       <div className="flex items-start gap-3 rounded-lg border border-border p-4">
-        <Switch id="bnpl-eligible" checked={form.bnpl_eligible} onCheckedChange={v => setForm(p => ({ ...p, bnpl_eligible: v }))} />
+        <Switch id="bnpl-eligible" checked={form.bnpl_eligible && !preorder.enabled} disabled={preorder.enabled} onCheckedChange={v => setForm(p => ({ ...p, bnpl_eligible: v }))} />
         <div>
           <Label htmlFor="bnpl-eligible" className="font-medium">Allow Pay later (buy now, pay later)</Label>
           <p className="text-xs text-muted-foreground">Buyers can pay in instalments through Klump, and you are paid in full after delivery like any other order. Best for higher-priced items such as laptops and phones.</p>
         </div>
       </div>
+
+      <PreorderFields value={preorder} onChange={setPreorder} />
 
       <div>
         <Label>Price breaks (optional)</Label>

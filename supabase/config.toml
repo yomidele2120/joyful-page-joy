@@ -29,9 +29,3 @@ verify_jwt = false
 
 [functions.klump-webhook]
 verify_jwt = false
-
-[functions.refund-order]
-verify_jwt = false
-
-[functions.paystack-readiness]
-verify_jwt = false
