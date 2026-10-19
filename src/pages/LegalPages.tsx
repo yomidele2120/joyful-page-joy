@@ -172,6 +172,7 @@ export function CookiePolicy() {
     ['Payment services', 'Paystack and Klump load scripts so you can pay. Klump keeps a short-lived setting in your browser during Pay later checkout.', 'During checkout'],
     ['Video', 'Cloudflare Stream plays videos on the Watch page.', 'While watching'],
     ['Fonts', 'Text fonts are loaded from Google Fonts.', 'Per browser cache rules'],
+    ['Saved shop data and offline copy', 'Speeds up repeat visits by keeping public shop data (products, categories, flyers) and the site\'s own files on your device, and lets the site show an offline page. It holds nothing about you.', 'Up to 24 hours for shop data; site files until replaced'],
   ];
   return (
     <LegalPage
@@ -195,10 +196,10 @@ export function CookiePolicy() {
         </div>
       </Section>
       <Section title="2. Analytics (optional)">
-        <p>Analytics cookies would help us see how the site is used. We do not currently run any. If we add them, they will load only after you allow them.</p>
+        <p>If you allow analytics, we count visits and record which pages are viewed and what happens next (searching, adding to a cart, starting checkout, buying) so we can improve the shop. This uses a random visitor ID kept in your browser's storage (named ana_vid, ana_sid and ana_attr). It does not include your name, email, phone number or address. Nothing is recorded on account, seller or admin pages. If you decline, or later withdraw consent, none of this is recorded and the ID is deleted from your device.</p>
       </Section>
       <Section title="3. Marketing (optional)">
-        <p>Marketing cookies would be used to show relevant offers and measure advertising. We do not currently run any. If we add them, they will load only after you allow them.</p>
+        <p>If you allow marketing, and the shop has an advertising pixel switched on, Meta (Facebook and Instagram) receives which products you view or add to a cart, and order totals, to measure and improve our adverts. We do not send your name, email, phone number or address. The pixel loads only after you allow it, and stops if you withdraw consent.</p>
       </Section>
       <Section title="4. Your choices">
         <p>You can change your choice at any time, and we will keep optional cookies off until you say yes.</p>

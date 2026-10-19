@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useCaptcha } from '@/components/auth/Captcha';
 import { toast } from 'sonner';
+import { trackRegistration } from '@/lib/tracking';
 import {
   AuthShell, AuthFooterLink, Field, PasswordField, SelectField, PhoneField, ChoiceGroup,
   CheckboxRow, SubmitButton, LegalText, COUNTRIES,
@@ -61,6 +62,7 @@ export default function UserLogin() {
         }, captcha.token);
         if (error) throw error;
         // The new account is already signed in (the redirect effect above takes over).
+        trackRegistration('buyer');
         toast.success('Account created successfully!');
       }
     } catch (err: any) {

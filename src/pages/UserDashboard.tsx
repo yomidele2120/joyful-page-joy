@@ -15,6 +15,7 @@ import {
 import { formatNaira } from '@/lib/format';
 import { useUnreadCount } from '@/hooks/useChat';
 import UserMessages from '@/components/dashboard/UserMessages';
+import OrderShipments, { type Shipment } from '@/components/dashboard/OrderShipments';
 import DashboardShell, { Panel, StatCard, WelcomeBanner, useTabParam, type DashNavItem } from '@/components/dashboard/DashboardShell';
 import { BrandFlyerBanner } from '@/components/flyers/BrandFlyerImage';
 import { BRAND_FLYERS } from '@/lib/brandFlyers';
@@ -50,6 +51,16 @@ export default function UserDashboard() {
         .eq('user_id', user!.id)
         .order('created_at', { ascending: false });
       return data || [];
+    },
+    enabled: !!user,
+  });
+
+  // Shipments (one per supplier per order): shipped, confirm receipt, report a problem
+  const { data: shipments } = useQuery({
+    queryKey: ['user-shipments', user?.id],
+    queryFn: async () => {
+      const { data } = await (supabase as any).from('order_shipments').select('*, vendors(store_name)');
+      return (data ?? []) as Shipment[];
     },
     enabled: !!user,
   });
@@ -222,6 +233,10 @@ export default function UserDashboard() {
                     <p className="text-sm font-medium">{formatNaira(item.price)}</p>
                   </div>
                 ))}
+                <OrderShipments
+                  shipments={(shipments ?? []).filter(s => s.order_id === order.id)}
+                  onChanged={() => queryClient.invalidateQueries({ queryKey: ['user-shipments'] })}
+                />
               </Panel>
             ))}
           </div>

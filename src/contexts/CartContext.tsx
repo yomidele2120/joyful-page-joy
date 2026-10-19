@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import type { Json } from '@/integrations/supabase/types';
 import { getMoq, unitPriceFor } from '@/lib/pricing';
+import { trackAddToCart } from '@/lib/tracking';
 
 export interface CartItem {
   id: string;
@@ -43,6 +44,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const addItem = useCallback((item: NewCartItem, quantity?: number) => {
     const moq = getMoq({ price: item.price, moq: item.moq });
+    trackAddToCart({ id: item.id, name: item.name, price: item.price, quantity: Math.max(quantity ?? moq, 1) });
     setItems(prev => {
       const existing = prev.find(i => i.id === item.id);
       if (existing) {

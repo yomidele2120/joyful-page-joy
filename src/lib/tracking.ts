@@ -5,10 +5,20 @@
 
 import * as meta from './metaPixel';
 import * as own from './analytics';
+import { hasConsent, onConsentChange } from './consent';
 
+// Both kinds of tracking are optional cookies/storage, so nothing starts until the visitor allows it:
+//   own analytics  -> "analytics" consent      Meta Pixel -> "marketing" consent
+// Choices made later in the cookie banner switch them on or off straight away.
+function syncWithConsent(): void {
+  if (hasConsent('analytics')) own.initAnalytics(); else own.stopAnalytics();
+  if (hasConsent('marketing')) meta.initPixel(); else meta.stopPixel();
+}
+
+let listening = false;
 export function initTracking(): void {
-  own.initAnalytics();
-  meta.initPixel();
+  syncWithConsent();
+  if (!listening) { listening = true; onConsentChange(syncWithConsent); }
 }
 
 export function trackPageView(pathname: string) { own.trackPageView(pathname); meta.trackPageView(pathname); }

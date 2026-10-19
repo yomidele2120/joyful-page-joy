@@ -1,4 +1,4 @@
-import { Suspense, lazy } from "react";
+import { Suspense } from "react";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -11,56 +11,82 @@ import { ConsentProvider } from "@/contexts/ConsentContext";
 import CookieConsent from "@/components/CookieConsent";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ScrollToTop from "@/components/ScrollToTop";
+import Tracker from "@/components/Tracker";
 import Index from "./pages/Index";
+import { lazyPage } from "@/lib/lazyPage";
+import { persistQueryCache, restoreQueryCache } from "@/lib/queryPersist";
 
-// Lazy-loaded: the video feed pulls in its own components and isn't
-// needed for people who just land on the marketplace to shop, so it's
-// kept out of the main bundle and only fetched when visited.
-const Feed = lazy(() => import("./pages/Feed"));
-// Marketplace sections, account pages and legal pages are loaded on demand.
-const PayLater = lazy(() => import("./pages/PayLater"));
-const Preorders = lazy(() => import("./pages/Preorders"));
-const MyOrders = lazy(() => import("./pages/MyOrders"));
-const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
-const ResetPassword = lazy(() => import("./pages/ResetPassword"));
-const PrivacyPolicy = lazy(() => import("./pages/LegalPages").then(m => ({ default: m.PrivacyPolicy })));
-const TermsAndConditions = lazy(() => import("./pages/LegalPages").then(m => ({ default: m.TermsAndConditions })));
-const CookiePolicy = lazy(() => import("./pages/LegalPages").then(m => ({ default: m.CookiePolicy })));
-const ShippingPolicy = lazy(() => import("./pages/LegalPages").then(m => ({ default: m.ShippingPolicy })));
-const ReturnsPolicy = lazy(() => import("./pages/LegalPages").then(m => ({ default: m.ReturnsPolicy })));
-const SellerAgreement = lazy(() => import("./pages/LegalPages").then(m => ({ default: m.SellerAgreement })));
-const BnplTerms = lazy(() => import("./pages/LegalPages").then(m => ({ default: m.BnplTerms })));
-const PreorderPolicy = lazy(() => import("./pages/LegalPages").then(m => ({ default: m.PreorderPolicy })));
-const DisputePolicy = lazy(() => import("./pages/LegalPages").then(m => ({ default: m.DisputePolicy })));
-const AboutUs = lazy(() => import("./pages/CompanyPages").then(m => ({ default: m.AboutUs })));
-const ContactUs = lazy(() => import("./pages/CompanyPages").then(m => ({ default: m.ContactUs })));
-const Faq = lazy(() => import("./pages/CompanyPages").then(m => ({ default: m.Faq })));
-import Products from "./pages/Products";
-import ProductDetail from "./pages/ProductDetail";
-import CategoryPage from "./pages/CategoryPage";
-import Cart from "./pages/Cart";
-import Checkout from "./pages/Checkout";
-import Auth from "./pages/Auth";
-import UserLogin from "./pages/UserLogin";
-import UserDashboard from "./pages/UserDashboard";
-import SupplierLogin from "./pages/SupplierLogin";
-import SupplierSignup from "./pages/SupplierSignup";
-import SupplierDashboard from "./pages/SupplierDashboard";
-import SupplierChat from "./pages/SupplierChat";
-import SupplierShop from "./pages/SupplierShop";
-import AdminLogin from "./pages/AdminLogin";
-import Wishlist from "./pages/Wishlist";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import Messages from "./pages/Messages";
-import Inquiries from "./pages/Inquiries";
-import RfqNew from "./pages/RfqNew";
-import Rfqs from "./pages/Rfqs";
-import NotFound from "./pages/NotFound";
+// Every page except the home page is loaded only when it is visited, so a first-time visitor downloads
+// the home page and not the admin dashboard, charts, video feed and so on.
+const Feed = lazyPage(() => import("./pages/Feed"));
+const Products = lazyPage(() => import("./pages/Products"));
+const ProductDetail = lazyPage(() => import("./pages/ProductDetail"));
+const CategoryPage = lazyPage(() => import("./pages/CategoryPage"));
+const Cart = lazyPage(() => import("./pages/Cart"));
+const Checkout = lazyPage(() => import("./pages/Checkout"));
+const Auth = lazyPage(() => import("./pages/Auth"));
+const UserLogin = lazyPage(() => import("./pages/UserLogin"));
+const UserDashboard = lazyPage(() => import("./pages/UserDashboard"));
+const SupplierLogin = lazyPage(() => import("./pages/SupplierLogin"));
+const SupplierSignup = lazyPage(() => import("./pages/SupplierSignup"));
+const SupplierDashboard = lazyPage(() => import("./pages/SupplierDashboard"));
+const SupplierChat = lazyPage(() => import("./pages/SupplierChat"));
+const SupplierShop = lazyPage(() => import("./pages/SupplierShop"));
+const AdminLogin = lazyPage(() => import("./pages/AdminLogin"));
+const Wishlist = lazyPage(() => import("./pages/Wishlist"));
+const AdminDashboard = lazyPage(() => import("./pages/admin/AdminDashboard"));
+const Messages = lazyPage(() => import("./pages/Messages"));
+const Inquiries = lazyPage(() => import("./pages/Inquiries"));
+const RfqNew = lazyPage(() => import("./pages/RfqNew"));
+const Rfqs = lazyPage(() => import("./pages/Rfqs"));
+const NotFound = lazyPage(() => import("./pages/NotFound"));
+// Marketplace sections, account pages, legal and company pages
+const PayLater = lazyPage(() => import("./pages/PayLater"));
+const Preorders = lazyPage(() => import("./pages/Preorders"));
+const MyOrders = lazyPage(() => import("./pages/MyOrders"));
+const ForgotPassword = lazyPage(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazyPage(() => import("./pages/ResetPassword"));
+const PrivacyPolicy = lazyPage(() => import("./pages/LegalPages").then(m => ({ default: m.PrivacyPolicy })));
+const TermsAndConditions = lazyPage(() => import("./pages/LegalPages").then(m => ({ default: m.TermsAndConditions })));
+const CookiePolicy = lazyPage(() => import("./pages/LegalPages").then(m => ({ default: m.CookiePolicy })));
+const ShippingPolicy = lazyPage(() => import("./pages/LegalPages").then(m => ({ default: m.ShippingPolicy })));
+const ReturnsPolicy = lazyPage(() => import("./pages/LegalPages").then(m => ({ default: m.ReturnsPolicy })));
+const SellerAgreement = lazyPage(() => import("./pages/LegalPages").then(m => ({ default: m.SellerAgreement })));
+const BnplTerms = lazyPage(() => import("./pages/LegalPages").then(m => ({ default: m.BnplTerms })));
+const PreorderPolicy = lazyPage(() => import("./pages/LegalPages").then(m => ({ default: m.PreorderPolicy })));
+const DisputePolicy = lazyPage(() => import("./pages/LegalPages").then(m => ({ default: m.DisputePolicy })));
+const AboutUs = lazyPage(() => import("./pages/CompanyPages").then(m => ({ default: m.AboutUs })));
+const ContactUs = lazyPage(() => import("./pages/CompanyPages").then(m => ({ default: m.ContactUs })));
+const Faq = lazyPage(() => import("./pages/CompanyPages").then(m => ({ default: m.Faq })));
 
-// Keep fetched data for a minute so moving between pages doesn't refetch everything.
+// Once the home page has settled, quietly download the pages shoppers visit next (skipped on Data Saver),
+// so tapping a product or going to checkout does not wait for a code download.
+const SHOPPING_PAGES = [Products, ProductDetail, Cart, Checkout];
+function prefetchShoppingPages() {
+  const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+  if (conn?.saveData) return;
+  SHOPPING_PAGES.forEach(page => { void page.preload(); });
+}
+
+function PageLoader() {
+  return (
+    <div className="flex min-h-[50vh] items-center justify-center" role="status" aria-label="Loading">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+    </div>
+  );
+}
+
+// Keep fetched data for a minute so moving between pages doesn't refetch everything. Public data (products,
+// categories, flyers) has longer lifetimes set in lib/cachePolicy.ts and is saved between visits.
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, refetchOnWindowFocus: false, retry: 1 } },
 });
+if (typeof window !== "undefined") {
+  restoreQueryCache(queryClient);
+  persistQueryCache(queryClient);
+  const idle = (window as Window & { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback;
+  window.addEventListener("load", () => (idle ? idle(prefetchShoppingPages) : window.setTimeout(prefetchShoppingPages, 2500)), { once: true });
+}
 
 // Old /chat?vendor=... links now open the unified inbox.
 function ChatRedirect() {
@@ -81,19 +107,11 @@ const App = () => (
           <BrowserRouter>
             <ScrollToTop />
             <CookieConsent />
-            <Suspense fallback={<div className="min-h-screen" aria-busy="true" aria-label="Loading" />}>
+            <Tracker />
+            <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/" element={<Index />} />
-              <Route
-                path="/feed"
-                element={
-                  <Suspense
-                    fallback={<div className="fixed inset-0 bg-black flex items-center justify-center text-white">Loading...</div>}
-                  >
-                    <Feed />
-                  </Suspense>
-                }
-              />
+              <Route path="/feed" element={<Feed />} />
               <Route path="/products" element={<Products />} />
               <Route path="/product/:slug" element={<ProductDetail />} />
               <Route path="/category/:slug" element={<CategoryPage />} />

@@ -1,11 +1,26 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, type QueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Tables } from '@/integrations/supabase/types';
+import { CACHE } from '@/lib/cachePolicy';
 
-export function useProducts(options?: { categorySlug?: string; featured?: boolean; badge?: string; limit?: number; search?: string; vendorId?: string; maxMoq?: number; orderBy?: 'newest' | 'oldest'; bnplOnly?: boolean; preorderOnly?: boolean }) {
+// Product lists show cards, so they skip the heavy columns (specs, gallery, video, SKU) and, unless asked,
+// the long description. The full row is only loaded on the product page (useProduct).
+const LIST_COLUMNS = 'id, name, slug, price, compare_at_price, image_url, badge, brand, category_id, vendor_id, is_featured, is_active, moq, unit, price_tiers, stock_quantity, bnpl_eligible, created_at, updated_at, is_preorder, preorder_approved, preorder_status, preorder_release_date, preorder_delivery_estimate, preorder_quantity_limit, preorder_max_per_order, preorder_terms, preorder_due_notified';
+const LIST_JOINS = 'categories(name, slug), vendors(id, user_id, store_name, logo_url, is_approved, location)';
+
+export type ProductListRow = Omit<Tables<'products'>, 'specs' | 'images' | 'video_url' | 'sku' | 'description'> & {
+  description?: string | null;
+  categories: { name: string; slug: string } | null;
+  vendors: { id: string; user_id: string; store_name: string; logo_url: string | null; is_approved: boolean | null; location: string | null } | null;
+};
+
+export function useProducts(options?: { categorySlug?: string; featured?: boolean; badge?: string; limit?: number; search?: string; vendorId?: string; maxMoq?: number; orderBy?: 'newest' | 'oldest'; bnplOnly?: boolean; preorderOnly?: boolean; withDescription?: boolean }) {
   return useQuery({
     queryKey: ['products', options],
+    ...CACHE.products,
     queryFn: async () => {
-      let query = supabase.from('products').select('*, categories(name, slug), vendors(id, user_id, store_name, logo_url, is_approved, location)').eq('is_active', true);
+      const columns = `${LIST_COLUMNS}${options?.withDescription ? ', description' : ''}, ${LIST_JOINS}`;
+      let query = supabase.from('products').select(columns).eq('is_active', true);
 
       // A preorder listing only appears publicly once an admin has approved it.
       query = query.or('is_preorder.eq.false,preorder_approved.eq.true');
@@ -24,30 +39,40 @@ export function useProducts(options?: { categorySlug?: string; featured?: boolea
 
       const { data, error } = await query.order('created_at', { ascending: options?.orderBy === 'oldest' });
       if (error) throw error;
-      return data;
+      return (data ?? []) as unknown as ProductListRow[];
     },
   });
+}
+
+async function fetchProduct(slug: string) {
+  const { data, error } = await supabase
+    .from('products')
+    .select('*, categories(name, slug), vendors(id, user_id, store_name, whatsapp_number, phone, logo_url, is_approved, location, business_type, year_established)')
+    .eq('slug', slug)
+    .single();
+  if (error) throw error;
+  return data;
 }
 
 export function useProduct(slug: string) {
   return useQuery({
     queryKey: ['product', slug],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*, categories(name, slug), vendors(id, user_id, store_name, whatsapp_number, phone, logo_url, is_approved, location, business_type, year_established)')
-        .eq('slug', slug)
-        .single();
-      if (error) throw error;
-      return data;
-    },
+    ...CACHE.products,
+    queryFn: () => fetchProduct(slug),
     enabled: !!slug,
   });
+}
+
+/** Warm the cache for a product page, e.g. while the pointer is over its card, so opening it feels instant. */
+export function prefetchProduct(client: QueryClient, slug: string) {
+  if (!slug) return;
+  void client.prefetchQuery({ queryKey: ['product', slug], queryFn: () => fetchProduct(slug), ...CACHE.products });
 }
 
 export function useCategories(options?: { includeHidden?: boolean }) {
   return useQuery({
     queryKey: ['categories', options?.includeHidden ? 'all' : 'visible'],
+    ...CACHE.categories,
     queryFn: async () => {
       const { data, error } = await supabase.from('categories').select('*').order('sort_order');
       if (error) throw error;
@@ -62,6 +87,7 @@ export function useCategories(options?: { includeHidden?: boolean }) {
 export function useMarketplaceStats() {
   return useQuery({
     queryKey: ['marketplace-stats'],
+    ...CACHE.directory,
     queryFn: async () => {
       const [{ count: productCount }, { count: vendorCount }] = await Promise.all([
         supabase.from('products').select('*', { count: 'exact', head: true }).eq('is_active', true),
@@ -89,6 +115,7 @@ export interface SupplierSummary {
 export function useSuppliers(options?: { limit?: number; search?: string }) {
   return useQuery({
     queryKey: ['suppliers', options],
+    ...CACHE.directory,
     queryFn: async () => {
       let query = supabase
         .from('vendors')

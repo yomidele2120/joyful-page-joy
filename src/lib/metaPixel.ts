@@ -43,6 +43,8 @@ export function isPrivatePath(pathname: string): boolean {
 export function initPixel(): void {
   if (started || typeof window === 'undefined' || !isPixelEnabled()) return;
   started = true;
+  // Coming back after the visitor withdrew and then re-allowed marketing: the script is already on the page.
+  if (window.fbq?.callMethod || window.fbq?.loaded) window.fbq('consent', 'grant');
 
   // This is Meta's standard loader, written out in TypeScript. Calls made before
   // the script has downloaded are queued and replayed by Meta's script.
@@ -65,6 +67,13 @@ export function initPixel(): void {
   }
 
   window.fbq!('init', PIXEL_ID);
+}
+
+/** Stop sending events (visitor withdrew marketing consent). Meta's script cannot be unloaded, so it is told to stand down. */
+export function stopPixel(): void {
+  if (!started) return;
+  started = false;
+  try { window.fbq?.('consent', 'revoke'); } catch { /* ignore */ }
 }
 
 function send(event: string, params?: Record<string, unknown>, eventId?: string): void {

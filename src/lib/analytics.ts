@@ -181,6 +181,18 @@ export function initAnalytics(): void {
   window.addEventListener('pagehide', flush);
 }
 
+/** Stop recording and forget this device's analytics ids (used when a visitor withdraws consent). */
+export function stopAnalytics(): void {
+  ready = false;
+  queue.length = 0;
+  if (timer !== undefined) { window.clearTimeout(timer); timer = undefined; }
+  try {
+    window.localStorage.removeItem('ana_vid');
+    window.sessionStorage.removeItem('ana_sid');
+    window.sessionStorage.removeItem('ana_attr');
+  } catch { /* storage unavailable */ }
+}
+
 export function trackPageView(pathname: string): void {
   record('PageView', { path: pathname });
 }

@@ -85,17 +85,30 @@ serve(async (req) => {
         status: 'success',
         payment_method: verifyData.data.channel,
         metadata: verifyData.data,
+        paystack_fee: Number(verifyData.data.fees ?? 0) / 100,
       })
       .eq('paystack_reference', reference);
+    await adminClient.from('payments')
+      .update({ paid_at: new Date().toISOString() })
+      .eq('paystack_reference', reference)
+      .is('paid_at', null);
 
-    await adminClient.from('orders')
-      .update({ status: 'paid', payment_method: 'card' })
-      .eq('id', orderId);
-    // Money has reached you: supplier earnings on this order can start their hold period.
-    await adminClient.from('orders')
-      .update({ settled_at: new Date().toISOString() })
-      .eq('id', orderId)
-      .is('settled_at', null);
+    const { data: paidResult } = await adminClient.rpc('mark_order_paid', { _order_id: orderId, _method: 'card' });
+    if (paidResult !== 'needs_refund') {
+      // Money has reached you: supplier earnings on this order can start their hold period.
+      await adminClient.from('orders')
+        .update({ settled_at: new Date().toISOString() })
+        .eq('id', orderId)
+        .is('settled_at', null);
+    }
+
+    if (paidResult === 'needs_refund') {
+      return new Response(JSON.stringify({
+        success: false,
+        needs_refund: true,
+        message: 'Your payment arrived after the reservation expired and the items have since sold out. A full refund has been queued.',
+      }), { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
 
     return new Response(JSON.stringify({
       success: true,

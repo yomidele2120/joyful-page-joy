@@ -1,4 +1,6 @@
 import { Link } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import { prefetchProduct } from '@/hooks/useProducts';
 import { BadgeCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { formatNaira } from '@/lib/format';
@@ -52,6 +54,9 @@ export default function ProductCard({
   const payLaterAvailable = usePayLaterAvailable();
   const showPreorder = !!is_preorder && !!preorder_approved;
   const showPayLater = !showPreorder && bnplEligibleForPrice({ bnpl_eligible, price, moq }, finance, payLaterAvailable);
+  const queryClient = useQueryClient();
+  // Start loading the product page as soon as someone shows interest, so opening it feels instant.
+  const warm = () => prefetchProduct(queryClient, slug);
   const hasTiers = Array.isArray(price_tiers) && price_tiers.length > 0;
   const discount = !hasTiers && compare_at_price ? Math.round(((compare_at_price - price) / compare_at_price) * 100) : 0;
 
@@ -63,7 +68,7 @@ export default function ProductCard({
       transition={{ duration: 0.3 }}
       className="group bg-card rounded-none overflow-hidden h-full flex flex-col border border-border/70"
     >
-      <Link to={`/product/${slug}`} className="block relative aspect-square overflow-hidden bg-white">
+      <Link to={`/product/${slug}`} className="block relative aspect-square overflow-hidden bg-white" onPointerEnter={warm} onFocus={warm} onTouchStart={warm}>
         <img
           src={image_url || '/placeholder.svg'}
           alt={name}
@@ -83,7 +88,7 @@ export default function ProductCard({
       </Link>
 
       <div className="px-1.5 pb-2 pt-1.5 flex flex-col flex-1 sm:px-3 sm:pb-3 sm:pt-2">
-        <Link to={`/product/${slug}`} className="min-h-[26px] sm:min-h-9">
+        <Link to={`/product/${slug}`} className="min-h-[26px] sm:min-h-9" onPointerEnter={warm} onFocus={warm} onTouchStart={warm}>
           <h3 className="font-medium text-[10px] leading-tight sm:text-sm sm:leading-snug line-clamp-2 text-foreground group-hover:text-primary transition-colors">
             {name}
           </h3>

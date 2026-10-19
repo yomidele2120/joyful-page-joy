@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { CACHE } from '@/lib/cachePolicy';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 import type { FlyerPlacement } from '@/lib/flyerPlacements';
@@ -30,8 +31,7 @@ export function useFlyers() {
       if (error) throw error;
       return data ?? [];
     },
-    staleTime: 15_000,
-    refetchOnMount: 'always',
+    ...CACHE.flyers,
     refetchOnWindowFocus: true,
     retry: 2,
   });
