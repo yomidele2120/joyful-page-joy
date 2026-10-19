@@ -36,3 +36,6 @@ steps above, and add it only if database load becomes the limit.
 ## After merging with the cookie-consent work
 The saved shop data and offline copy hold only public data and no personal information, so they are listed in the Cookie Policy
 under essential storage. Our own analytics and the Meta Pixel are not essential: they wait for the visitor's consent.
+
+## Safe mode
+The service worker is now opt-in (`VITE_ENABLE_SW=true`) and the manual file-splitting was removed, to rule them out while chasing a blank page. Pages are still loaded on demand, the public data cache and the cache headers are unchanged.
