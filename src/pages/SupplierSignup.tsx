@@ -11,6 +11,7 @@ import {
   AuthShell, AuthFooterLink, Field, PasswordField, SelectField, PhoneField, ChoiceGroup,
   CheckboxRow, SubmitButton, SecondaryButton, LegalText, COUNTRIES,
 } from '@/components/auth/AuthShell';
+import { MAKE_MONEY_BADGE } from '@/lib/brandFlyers';
 
 const BUSINESS_TYPES: Record<string, string> = {
   starter: 'Starter business',
@@ -160,6 +161,13 @@ export default function SupplierSignup() {
         </div>
         <p className="mt-2 text-center text-sm text-slate-500">Step {step} of 3</p>
       </div>
+
+      {step === 1 && (
+        <div className="mb-5 flex items-center gap-3 rounded-md bg-slate-50 p-3">
+          <img src={MAKE_MONEY_BADGE.src} alt={MAKE_MONEY_BADGE.alt} className="h-14 w-14 shrink-0" />
+          <p className="text-sm leading-snug text-slate-600">Open your store in minutes and sell to buyers across Nigeria.</p>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit}>
         {step === 1 && (

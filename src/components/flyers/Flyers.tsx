@@ -109,8 +109,8 @@ export function FlyerPair({
 
 /** Compact tile for the hero's side column. */
 export function FlyerTile({
-  flyer, images, className = '',
-}: { flyer: Flyer; images: string[]; className?: string }) {
+  flyer, images, badge, className = '',
+}: { flyer: Flyer; images: string[]; badge?: { src: string; alt: string }; className?: string }) {
   const tone = TONES[flyer.tone];
   return (
     <Link
@@ -123,7 +123,16 @@ export function FlyerTile({
           {flyer.cta} <ArrowRight className="h-3.5 w-3.5" />
         </span>
       </div>
-      <FlyerArt flyer={flyer} images={images.slice(0, 2)} size="sm" className="mt-2 self-end max-lg:-mb-6 max-lg:-mr-1 lg:absolute lg:-bottom-4 lg:-right-1 lg:mt-0" />
+      {badge ? (
+        <img
+          src={badge.src}
+          alt={badge.alt}
+          loading="lazy"
+          className="mt-2 h-14 w-14 self-end drop-shadow-md sm:h-16 sm:w-16 lg:absolute lg:bottom-2 lg:right-2 lg:mt-0 lg:h-[76px] lg:w-[76px]"
+        />
+      ) : (
+        <FlyerArt flyer={flyer} images={images.slice(0, 2)} size="sm" className="mt-2 self-end max-lg:-mb-6 max-lg:-mr-1 lg:absolute lg:-bottom-4 lg:-right-1 lg:mt-0" />
+      )}
     </Link>
   );
 }

@@ -60,33 +60,43 @@ export default function SupplierAgreementPanel() {
 
   return (
     <>
-      <div className={`mb-6 flex flex-wrap items-center gap-3 rounded-lg border p-4 ${status.needs_acceptance ? 'border-amber-300 bg-amber-50' : 'border-border bg-card'}`}>
-        {status.needs_acceptance
-          ? <FileWarning className="h-5 w-5 shrink-0 text-amber-600" />
-          : <FileCheck2 className="h-5 w-5 shrink-0 text-primary" />}
-        <div className="min-w-0 flex-1 text-sm">
-          {status.needs_acceptance ? (
-            <>
-              <p className="font-medium">Please review and accept the Supplier Terms and Commission Policy (version {status.current_terms_version}).</p>
-              <p className="text-muted-foreground">{status.terms_accepted_at ? 'The terms were updated since you last accepted them. ' : 'Your account cannot be approved until you accept. '}{summary}</p>
-            </>
-          ) : (
-            <>
-              <p className="font-medium">{summary}</p>
-              <p className="text-muted-foreground">
-                Terms version {status.terms_version} accepted on {formatLagos(status.terms_accepted_at)}.
-                {status.activated_at ? ` Account activated ${formatLagos(status.activated_at)}.` : ''}
-              </p>
-            </>
-          )}
+      {/* Phone: icon + text use the full width and the button sits underneath.
+          Desktop (sm and up): one row, button on the right. */}
+      <div
+        className={`mb-6 flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center sm:gap-4 sm:p-4 ${
+          status.needs_acceptance
+            ? 'border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-500/40 dark:bg-amber-950/30 dark:text-amber-50'
+            : 'border-border bg-card'
+        }`}
+      >
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          {status.needs_acceptance
+            ? <FileWarning className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+            : <FileCheck2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />}
+          <div className="min-w-0 flex-1 space-y-0.5 text-sm leading-snug">
+            {status.needs_acceptance ? (
+              <>
+                <p className="font-medium">Please review and accept the Supplier Terms and Commission Policy (version {status.current_terms_version}).</p>
+                <p className="text-amber-900/80 dark:text-amber-100/75">{status.terms_accepted_at ? 'The terms were updated since you last accepted them. ' : 'Your account cannot be approved until you accept. '}{summary}</p>
+              </>
+            ) : (
+              <>
+                <p className="font-medium">{summary}</p>
+                <p className="text-xs text-muted-foreground sm:text-sm">
+                  Terms version {status.terms_version} accepted on {formatLagos(status.terms_accepted_at)}.
+                  {status.activated_at ? ` Account activated ${formatLagos(status.activated_at)}.` : ''}
+                </p>
+              </>
+            )}
+          </div>
         </div>
         {status.needs_acceptance
-          ? <Button size="sm" onClick={() => { setAccepted(false); setOpen('accept'); }}>Review and accept</Button>
-          : <Button size="sm" variant="outline" onClick={() => setOpen('view')}>View accepted terms</Button>}
+          ? <Button size="sm" className="w-full sm:w-auto sm:shrink-0" onClick={() => { setAccepted(false); setOpen('accept'); }}>Review and accept</Button>
+          : <Button size="sm" variant="outline" className="w-full sm:w-auto sm:shrink-0" onClick={() => setOpen('view')}>View accepted terms</Button>}
       </div>
 
       <Dialog open={open === 'view'} onOpenChange={o => !o && setOpen(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Terms you accepted</DialogTitle></DialogHeader>
           {agreement ? (
             <>
@@ -103,9 +113,9 @@ export default function SupplierAgreementPanel() {
       </Dialog>
 
       <Dialog open={open === 'accept'} onOpenChange={o => !o && setOpen(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto">
           <DialogHeader><DialogTitle>Supplier Terms and Commission Policy</DialogTitle></DialogHeader>
-          <div className="max-h-[65vh] overflow-y-auto">
+          <div className="max-h-[60vh] overflow-y-auto">
             <SupplierTermsBox onChange={(a, t) => { setAccepted(a); setTerms(t); }} />
           </div>
           <Button onClick={accept} disabled={!accepted || busy}>{busy ? 'Saving...' : 'Accept and continue'}</Button>

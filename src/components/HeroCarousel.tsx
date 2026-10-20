@@ -7,7 +7,7 @@ import { FLYERS } from '@/lib/flyers';
 import { CtaPill, FlyerArt, FlyerTile, TONES, pickImages } from '@/components/flyers/Flyers';
 import { ImageFlyerFill } from '@/components/flyers/ImageFlyers';
 import { BrandFlyerFill } from '@/components/flyers/BrandFlyerImage';
-import { HERO_IMAGE_SLIDES } from '@/lib/brandFlyers';
+import { HERO_IMAGE_SLIDES, MAKE_MONEY_BADGE } from '@/lib/brandFlyers';
 
 // Hero = category list | auto-playing flyer slider | two flyer tiles (desktop).
 // On phones the slider comes first and the two tiles sit right under it.
@@ -92,7 +92,7 @@ export default function HeroCarousel({ images }: { images: string[] }) {
 
               {showBuiltIn && HERO_IMAGE_SLIDES.map((flyer, i) => (
                 <div key={flyer.id} className="h-full w-full shrink-0" aria-hidden={index !== U + i}>
-                  <BrandFlyerFill flyer={flyer} tabIndex={index === U + i ? 0 : -1} imgClassName={flyer.focus} />
+                  <BrandFlyerFill flyer={flyer} tabIndex={index === U + i ? 0 : -1} imgClassName={flyer.focus} fit={flyer.fit} />
                 </div>
               ))}
 
@@ -167,7 +167,7 @@ export default function HeroCarousel({ images }: { images: string[] }) {
                 const uploaded = uploadedSide[i];
                 return uploaded
                   ? <ImageFlyerFill key={uploaded.id} flyer={uploaded} className="min-h-[120px]" />
-                  : <FlyerTile key={fallback.id} flyer={fallback} images={pickImages(images, fallback.offset, 2)} />;
+                  : <FlyerTile key={fallback.id} flyer={fallback} images={pickImages(images, fallback.offset, 2)} badge={fallback.id === 'sell' ? MAKE_MONEY_BADGE : undefined} />;
               })}
         </div>
       </div>

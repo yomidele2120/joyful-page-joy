@@ -28,15 +28,15 @@ export default function SupplierTermsBox({ onChange }: { onChange: (accepted: bo
   useEffect(() => { cb.current(accepted && !!terms, terms); }, [accepted, terms]);
 
   if (failed) {
-    return <p className="my-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+    return <p className="my-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-950/30 dark:text-red-200">
       The Supplier Terms could not be loaded. Refresh the page to try again. You cannot register without them.
     </p>;
   }
-  if (!terms) return <p className="my-4 text-sm text-slate-500">Loading the Supplier Terms...</p>;
+  if (!terms) return <p className="my-4 text-sm text-slate-500 dark:text-slate-400">Loading the Supplier Terms...</p>;
 
   return (
     <div className="my-5">
-      <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+      <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900 dark:border-emerald-500/40 dark:bg-emerald-950/30 dark:text-emerald-100">
         <p className="font-semibold">Commission, in short</p>
         <ul className="mt-1 list-disc space-y-0.5 pl-5">
           <li>Your first <strong>{monthsLabel(terms.free_period_months)}</strong> after your account is approved are <strong>commission-free</strong>.</li>
@@ -45,12 +45,12 @@ export default function SupplierTermsBox({ onChange }: { onChange: (accepted: bo
         </ul>
       </div>
 
-      <p className="mb-1 text-sm font-medium text-slate-800">{terms.title} (version {terms.version})</p>
-      <div className="max-h-56 overflow-y-auto whitespace-pre-wrap rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs leading-relaxed text-slate-700">
+      <p className="mb-1 text-sm font-medium text-slate-800 dark:text-slate-100">{terms.title} (version {terms.version})</p>
+      <div className="max-h-56 overflow-y-auto whitespace-pre-wrap rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs leading-relaxed text-slate-700 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-200">
         {terms.body.trim()}
       </div>
 
-      <label className="mt-3 flex cursor-pointer items-start gap-2.5 text-sm text-slate-800">
+      <label className="mt-3 flex cursor-pointer items-start gap-2.5 text-sm text-slate-800 dark:text-slate-100">
         <input
           type="checkbox"
           checked={accepted}
