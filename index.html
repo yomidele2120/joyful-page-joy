@@ -13,8 +13,6 @@
     <link rel="preconnect" href="https://js.paystack.co" />
     <link rel="preconnect" href="https://checkout.paystack.com" />
     <link rel="preconnect" href="https://js.useklump.com" />
-    <script src="https://js.paystack.co/v2/inline.js" defer></script>
-    <script src="https://js.useklump.com/klump.js" defer></script>
     <meta name="author" content="Lovable" />
 
     <!-- TODO: Update og:title to match your application name -->
@@ -40,5 +38,10 @@
     </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <!-- Payment scripts load AFTER the app script on purpose. Deferred scripts run in page order, so with them
+         in <head> the whole site waited for Paystack and Klump to download before it could even start.
+         They are still deferred, so #klump__checkout above exists when klump.js runs. -->
+    <script src="https://js.paystack.co/v2/inline.js" defer></script>
+    <script src="https://js.useklump.com/klump.js" defer></script>
   </body>
 </html>

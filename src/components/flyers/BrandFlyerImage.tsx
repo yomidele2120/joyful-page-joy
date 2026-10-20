@@ -13,12 +13,32 @@ export function BrandFlyerBanner({ flyer, className }: { flyer: BrandFlyer; clas
   );
 }
 
-/** A built-in brand flyer that fills its box (cropping the edges). For hero slides. */
-export function BrandFlyerFill({ flyer, className, imgClassName, tabIndex, fit = 'cover' }: { flyer: BrandFlyer; className?: string; imgClassName?: string; tabIndex?: number; fit?: 'cover' | 'contain' }) {
+/**
+ * A built-in brand flyer that fills its box. For hero slides.
+ *  fit 'cover'      fills the box, cropping the edges
+ *  fit 'contain'    shows the whole flyer on a blurred copy of itself
+ *  fit 'contain-sm' like 'cover' on phones, like 'contain' from tablet size up
+ *  load={false}     keeps the picture out of the page until the slide is about to be seen (saves data)
+ *  eager            the first slide: fetch it straight away instead of lazily
+ */
+export function BrandFlyerFill({ flyer, className, imgClassName, tabIndex, fit = 'cover', load = true, eager = false }: {
+  flyer: BrandFlyer; className?: string; imgClassName?: string; tabIndex?: number;
+  fit?: 'cover' | 'contain' | 'contain-sm'; load?: boolean; eager?: boolean;
+}) {
+  const fitClass = fit === 'contain' ? 'object-contain' : fit === 'contain-sm' ? 'object-cover sm:object-contain' : 'object-cover';
+  const backdropClass = fit === 'contain-sm' ? 'hidden sm:block' : 'block';
   return (
     <Link to={flyer.href} aria-label={flyer.alt} tabIndex={tabIndex} className={cn('relative block h-full w-full overflow-hidden bg-secondary', focusRing, className)}>
-      {fit === 'contain' && <img src={flyer.src} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-2xl" />}
-      <img src={flyer.src} alt={flyer.alt} decoding="async" className={cn('absolute inset-0 h-full w-full', fit === 'contain' ? 'object-contain' : 'object-cover', imgClassName)} />
+      {load && (
+        <>
+          {fit !== 'cover' && (
+            <img src={flyer.src} alt="" aria-hidden="true" loading={eager ? 'eager' : 'lazy'} decoding="async"
+              className={cn('absolute inset-0 h-full w-full scale-110 object-cover opacity-90 blur-2xl', backdropClass)} />
+          )}
+          <img src={flyer.src} alt={flyer.alt} loading={eager ? 'eager' : 'lazy'} decoding="async"
+            className={cn('absolute inset-0 h-full w-full', fitClass, imgClassName)} />
+        </>
+      )}
     </Link>
   );
 }

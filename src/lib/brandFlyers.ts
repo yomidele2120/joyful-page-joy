@@ -20,12 +20,13 @@ export interface BrandFlyer {
   href: string;
   /** Optional object-position classes, e.g. to keep the subject visible when cropped. */
   focus?: string;
-  /** 'contain' shows the whole flyer (never cropped) on a blurred copy of itself. Default is 'cover'. */
-  fit?: 'cover' | 'contain';
+  /** 'contain' shows the whole flyer (never cropped) on a blurred copy of itself. Default is 'cover'.
+   *  'contain-sm' crops to fill on phones (using `focus`) and shows the whole flyer from tablet size up. */
+  fit?: 'cover' | 'contain' | 'contain-sm';
 }
 
 export const BRAND_FLYERS = {
-  elevate: { id: 'elevate', src: elevate, alt: 'Elevate your life at I.T Hub Africa, up to 30% off', href: '/products', focus: 'object-[65%_center] sm:object-center' },
+  elevate: { id: 'elevate', src: elevate, alt: 'Elevate your life at I.T Hub Africa, up to 30% off', href: '/products', focus: 'object-[65%_center]', fit: 'contain-sm' },
   seamlessPurple: { id: 'seamless-purple', src: seamlessPurple, alt: 'Seamless payment: fast, safe and trusted', href: '/products' },
   seamlessOlive: { id: 'seamless-olive', src: seamlessOlive, alt: 'Seamless payment: fast, safe and trusted', href: '/products' },
   techFlatlay: { id: 'tech-flatlay', src: techFlatlay, alt: 'Tech gadgets and electronics from verified suppliers at I.T Hub Africa', href: '/products' },

@@ -16,7 +16,7 @@ export const PLACEMENTS: PlacementInfo[] = [
   {
     value: 'hero_slide', label: 'Hero slider',
     where: 'Big sliding banner at the top of the homepage',
-    desktop: '1200 x 480 px', mobile: '800 x 400 px', limit: 'All of them slide in turn; the image is scaled to fill the slide',
+    desktop: '1200 x 600 px', mobile: '800 x 400 px', limit: 'All of them slide in turn. Use a 2:1 shape (twice as wide as tall) so it fills the slide; other shapes are shown whole on soft blurred bars, never cropped',
   },
   {
     value: 'hero_side', label: 'Hero side tile',
@@ -44,5 +44,8 @@ export const PLACEMENTS: PlacementInfo[] = [
     desktop: '600 x 900 px', mobile: 'Not needed', limit: 'Used in turn as people scroll',
   },
 ];
+
+/** Shape of the homepage hero slider (width : height). Flyers drawn at this shape fill it exactly. */
+export const HERO_SLIDE_RATIO = 2;
 
 export const placementInfo = (value: string) => PLACEMENTS.find(p => p.value === value);
