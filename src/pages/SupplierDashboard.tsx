@@ -17,11 +17,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { PreorderEditor, PreorderFields, buildPreorderPayload, emptyPreorder, type PreorderForm } from '@/components/seller/PreorderFields';
 import SellerDisputes from '@/components/seller/SellerDisputes';
+import { PriceEditor } from '@/components/seller/PriceEditor';
 import { functionErrorMessage } from '@/lib/functionError';
 import { BANKS, BANK_PLACEHOLDER, isValidAccountNumber } from '@/lib/banks';
 import { formatNaira } from '@/lib/format';
 import { useCategories } from '@/hooks/useProducts';
-import { Package, ShoppingCart, DollarSign, Plus, LogOut, ArrowLeft, Trash2, Store, Upload, MessageCircle, AlertCircle, Clock, CheckCircle, CreditCard, LayoutDashboard, Film, Settings, ExternalLink } from 'lucide-react';
+import { Package, ShoppingCart, DollarSign, Plus, LogOut, ArrowLeft, Trash2, Store, Upload, MessageCircle, AlertCircle, Clock, CheckCircle, CreditCard, LayoutDashboard, Film, Settings, ExternalLink, Pencil } from 'lucide-react';
 import DashboardShell, { Panel, StatCard, WelcomeBanner, useTabParam, type DashNavItem } from '@/components/dashboard/DashboardShell';
 import { BrandFlyerBanner } from '@/components/flyers/BrandFlyerImage';
 import { BRAND_FLYERS } from '@/lib/brandFlyers';
@@ -39,6 +40,7 @@ export default function SupplierDashboard() {
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useTabParam('overview', ['overview', 'products', 'videos', 'orders', 'disputes', 'add-product', 'shop-settings']);
   const [preorderProduct, setPreorderProduct] = useState<any>(null);
+  const [priceProduct, setPriceProduct] = useState<any>(null);
   const autoCompose = searchParams.get('compose') === '1';
 
   const { data: vendor, isLoading: vendorLoading } = useQuery({
@@ -314,7 +316,14 @@ export default function SupplierDashboard() {
                                 <span className="font-medium line-clamp-1">{p.name}</span>
                               </div>
                             </td>
-                            <td className="p-3">{formatNaira(p.price)}</td>
+                            <td className="p-3">
+                              <div className="flex items-center gap-1">
+                                <span>{formatNaira(p.price)}</span>
+                                <Button variant="ghost" size="icon" className="h-7 w-7" aria-label={`Edit price of ${p.name}`} onClick={() => setPriceProduct(p)}>
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </Button>
+                              </div>
+                            </td>
                             <td className="p-3">{p.stock_quantity}</td>
                             <td className="p-3">
                               <Switch checked={!!(p as any).bnpl_eligible} disabled={!!(p as any).is_preorder} aria-label="Allow Pay later"
@@ -387,6 +396,13 @@ export default function SupplierDashboard() {
               }} />
             )}
 
+            {priceProduct && (
+              <PriceEditor
+                product={priceProduct}
+                onClose={() => setPriceProduct(null)}
+                onSaved={() => { setPriceProduct(null); queryClient.invalidateQueries({ queryKey: ['vendor-products'] }); }}
+              />
+            )}
             {preorderProduct && (
               <PreorderEditor
                 product={preorderProduct}

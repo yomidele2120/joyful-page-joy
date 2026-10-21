@@ -11,7 +11,8 @@ export const MANAGE_PAGE_SIZE = 25;
 export const MAX_MANAGE_PAGES = 200;
 
 export interface ManagedProduct {
-  id: string; name: string; slug: string; price: number; stock_quantity: number | null;
+  id: string; name: string; slug: string; price: number; compare_at_price: number | null;
+  moq: number | null; unit: string | null; price_tiers: unknown; stock_quantity: number | null;
   image_url: string | null; thumb_url: string | null; created_at: string;
   is_active: boolean | null; bnpl_eligible: boolean | null;
   is_preorder: boolean; preorder_approved: boolean; preorder_status: string;
@@ -22,7 +23,7 @@ export interface ManagedProduct {
 }
 
 const COLUMNS =
-  'id, name, slug, price, stock_quantity, image_url, thumb_url, created_at, is_active, bnpl_eligible, ' +
+  'id, name, slug, price, compare_at_price, moq, unit, price_tiers, stock_quantity, image_url, thumb_url, created_at, is_active, bnpl_eligible, ' +
   'is_preorder, preorder_approved, preorder_status, preorder_release_date, preorder_delivery_estimate, ' +
   'preorder_quantity_limit, preorder_max_per_order, preorder_terms, categories(name), vendors(store_name)';
 

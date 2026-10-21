@@ -98,3 +98,58 @@ export function formatMoq(product: PricedProduct): string {
   const unit = (product.unit || 'Piece').trim();
   return `${moq} ${moq === 1 ? unit : pluralUnit(unit)} (MOQ)`;
 }
+
+// ---- Editing a price after the product is listed ----------------------------------------------
+
+export interface PriceEditInput {
+  price: string;
+  compare_at_price: string;
+  tiers: { min_qty: string; price: string }[];
+}
+
+export type PriceEditResult =
+  | { ok: true; value: { price: number; compare_at_price: number | null; price_tiers: PriceTier[] } }
+  | { ok: false; error: string };
+
+export const MAX_PRICE_TIERS = 4;
+
+/** Checks what a supplier typed in the "Edit price" form. Empty bulk-price rows are ignored. */
+export function validatePriceEdit(input: PriceEditInput, moq: number): PriceEditResult {
+  const price = input.price.trim() === '' ? NaN : Number(input.price);
+  if (!Number.isFinite(price) || price <= 0) return { ok: false, error: 'Enter a price above 0' };
+
+  let compare: number | null = null;
+  if (input.compare_at_price.trim() !== '') {
+    compare = Number(input.compare_at_price);
+    if (!Number.isFinite(compare) || compare <= price) {
+      return { ok: false, error: 'The old price must be higher than the price (or leave it empty)' };
+    }
+  }
+
+  const tiers: PriceTier[] = [];
+  for (const row of input.tiers) {
+    const qtyText = row.min_qty.trim();
+    const priceText = row.price.trim();
+    if (!qtyText && !priceText) continue;
+    const min_qty = Number(qtyText);
+    const tierPrice = Number(priceText);
+    if (!qtyText || !priceText || !Number.isInteger(min_qty) || !Number.isFinite(tierPrice) || tierPrice <= 0) {
+      return { ok: false, error: 'Fill in both the quantity and a price above 0 for every bulk price, or remove the row' };
+    }
+    if (min_qty <= moq) return { ok: false, error: `Each bulk price must start above the minimum order (${moq})` };
+    tiers.push({ min_qty, price: tierPrice });
+  }
+  if (tiers.length > MAX_PRICE_TIERS) return { ok: false, error: `Use at most ${MAX_PRICE_TIERS} bulk prices` };
+  if (new Set(tiers.map(t => t.min_qty)).size !== tiers.length) {
+    return { ok: false, error: 'Two bulk prices cannot start at the same quantity' };
+  }
+  tiers.sort((a, b) => a.min_qty - b.min_qty);
+  let ceiling = price;
+  for (const t of tiers) {
+    if (t.price > ceiling) {
+      return { ok: false, error: 'Bulk prices must not be higher than the price for fewer items. Check the amounts' };
+    }
+    ceiling = t.price;
+  }
+  return { ok: true, value: { price, compare_at_price: compare, price_tiers: tiers } };
+}
