@@ -17,6 +17,8 @@ export interface ProductCardProps {
   price: number;
   compare_at_price?: number | null;
   image_url?: string | null;
+  /** Small copy of the photo (about 400 px). Cards show this when there is one. */
+  thumb_url?: string | null;
   badge?: string | null;
   brand?: string | null;
   stock_quantity?: number;
@@ -46,7 +48,7 @@ export function ProductPrice({ product, className = '', compact = false }: { pro
 }
 
 export default function ProductCard({
-  name, slug, price, compare_at_price, image_url, badge, brand, stock_quantity, moq, unit, price_tiers, vendors,
+  name, slug, price, compare_at_price, image_url, thumb_url, badge, brand, stock_quantity, moq, unit, price_tiers, vendors,
   bnpl_eligible, is_preorder, preorder_approved, preorder_release_date,
 }: ProductCardProps) {
   // Pay later is only advertised when it is genuinely on and this product fits the limits; preorders never offer it.
@@ -70,8 +72,9 @@ export default function ProductCard({
     >
       <Link to={`/product/${slug}`} className="block relative aspect-square overflow-hidden bg-white" onPointerEnter={warm} onFocus={warm} onTouchStart={warm}>
         <img
-          src={image_url || '/placeholder.svg'}
+          src={thumb_url || image_url || '/placeholder.svg'}
           alt={name}
+          decoding="async"
           className="w-full h-full object-contain p-1 sm:p-3 group-hover:scale-[1.03] transition-transform duration-300"
           loading="lazy"
         />

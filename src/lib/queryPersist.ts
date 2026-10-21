@@ -19,6 +19,11 @@ export const isPublicQuery = (query: Pick<Query, 'queryKey' | 'state'>): boolean
   const [root, variant] = query.queryKey;
   // The admin's category list also contains hidden categories, so only the public (visible) list is saved.
   if (root === 'categories') return variant === 'visible';
+  // Only the plain first page is saved (not every search or filter), so the saved copy stays small.
+  if (root === 'products-page') {
+    const p = variant as { page?: number; search?: string } | undefined;
+    return !!p && p.page === 1 && !p.search;
+  }
   return PUBLIC_ROOTS.has(String(root));
 };
 

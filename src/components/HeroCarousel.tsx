@@ -166,7 +166,7 @@ export default function HeroCarousel({ images }: { images: string[] }) {
                   <div className="grid flex-1 grid-cols-4 gap-2 sm:ml-auto sm:max-w-[460px]">
                     {picks.map(p => (
                       <Link key={p.id} to={`/product/${p.slug}`} tabIndex={index === U + IMG + SLIDE_FLYERS.length ? 0 : -1} className="aspect-square overflow-hidden bg-white">
-                        <img src={p.image_url!} alt={p.name} className="h-full w-full object-contain p-1" loading="lazy" />
+                        <img src={p.thumb_url || p.image_url!} alt={p.name} className="h-full w-full object-contain p-1" loading="lazy" />
                       </Link>
                     ))}
                   </div>

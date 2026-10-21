@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import ProductCard from '@/components/ProductCard';
+import ProductPager from '@/components/ProductPager';
+import { usePagedProducts } from '@/hooks/usePagedProducts';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { MessageCircle, MapPin, Phone, Store, MessageSquare, Heart, Images, Film, UserPlus, UserCheck } from 'lucide-react';
@@ -27,14 +29,11 @@ export default function SupplierShop() {
     enabled: !!vendorId,
   });
 
-  const { data: products } = useQuery({
-    queryKey: ['shop-products', vendorId],
-    queryFn: async () => {
-      const { data } = await supabase.from('products').select('*, categories(name)').eq('vendor_id', vendorId).eq('is_active', true).or('is_preorder.eq.false,preorder_approved.eq.true').order('created_at', { ascending: false });
-      return data || [];
-    },
-    enabled: !!vendorId,
-  });
+  // A shop can hold hundreds of thousands of products, so it loads one page at a time from the database.
+  const [page, setPage] = useState(1);
+  const { data: productPage } = usePagedProducts({ page, vendorId }, !!vendorId);
+  const products = productPage?.items ?? [];
+  const productTotal = productPage?.total ?? 0;
 
   const { data: posts } = useVendorPosts(vendorId);
   const { data: followerCount } = useVendorFollowerCount(vendorId);
@@ -137,7 +136,7 @@ export default function SupplierShop() {
               activeTab === 'products' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'
             }`}
           >
-            {products?.length || 0} Products
+            {productTotal.toLocaleString('en-NG')} Products
           </button>
           <button
             onClick={() => setSearchParams({ view: 'posts' })}
@@ -152,10 +151,16 @@ export default function SupplierShop() {
 
       <div className="container py-6 px-4">
         {activeTab === 'products' ? (
-          products?.length ? (
+          products.length ? (
+            <>
             <div className="grid grid-cols-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-1.5 sm:gap-3">
               {products.map(p => <ProductCard key={p.id} id={p.id} name={p.name} slug={p.slug} price={p.price} compare_at_price={p.compare_at_price} image_url={p.image_url} badge={p.badge} brand={p.brand} moq={p.moq} unit={p.unit} price_tiers={p.price_tiers} bnpl_eligible={p.bnpl_eligible} is_preorder={p.is_preorder} preorder_approved={p.preorder_approved} preorder_release_date={p.preorder_release_date} />)}
             </div>
+            <ProductPager
+              page={Math.min(page, productPage?.pageCount ?? 1)} pageCount={productPage?.pageCount ?? 1} capped={productPage?.capped}
+              onChange={p => { setPage(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+            />
+            </>
           ) : (
             <p className="text-muted-foreground text-center py-8">This shop has no products yet.</p>
           )

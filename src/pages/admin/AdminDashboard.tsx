@@ -31,6 +31,10 @@ import OrderOpsTab from '@/components/admin/OrderOpsTab';
 import SupplierCommissionTab from '@/components/admin/SupplierCommissionTab';
 import AnalyticsTab from '@/components/admin/AnalyticsTab';
 import { ExportButton } from '@/components/admin/analyticsUi';
+import ProductPager from '@/components/ProductPager';
+import { useManagedProducts, MANAGE_PAGE_SIZE, MAX_MANAGE_PAGES } from '@/hooks/useManagedProducts';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { formatProductCount } from '@/lib/productSearch';
 import { usePendingReports, useResolveReport, useDeactivatePost, useDeleteComment } from '@/hooks/useReports';
 
 export default function AdminDashboard() {
@@ -47,19 +51,14 @@ export default function AdminDashboard() {
 
   const canFetchAdminData = !loading && !!user && isAdmin;
 
-  const { data: products, isLoading: productsLoading, error: productsError } = useQuery({
-    queryKey: ['admin-products'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*, categories(name), vendors(store_name)')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: canFetchAdminData,
+  // One page of products at a time, searched and paged by the database (millions of products).
+  const [productPage, setProductPage] = useState(1);
+  const [productSearch, setProductSearch] = useState('');
+  const debouncedProductSearch = useDebouncedValue(productSearch.trim(), 350);
+  const { data: productData, isLoading: productsLoading, error: productsError, isPlaceholderData: productsRefreshing } = useManagedProducts({
+    scope: 'admin', page: productPage, search: debouncedProductSearch, enabled: canFetchAdminData && activeTab === 'products',
   });
+  const products = productData?.items;
 
   const { data: orders, isLoading: ordersLoading, error: ordersError } = useQuery({
     queryKey: ['admin-orders'],
@@ -163,11 +162,6 @@ export default function AdminDashboard() {
       return acc;
     }, {})
   ).slice(-7);
-
-  const popularProducts = (products || [])
-    .slice()
-    .sort((a, b) => Number(b.stock_quantity || 0) - Number(a.stock_quantity || 0))
-    .slice(0, 5);
 
   if (loading) {
     return (
@@ -311,7 +305,7 @@ export default function AdminDashboard() {
               <StatCard icon={<Wallet />} label="Total revenue" value={formatNaira(totalRevenue)} loading={paymentsLoading} />
               <StatCard icon={<DollarSign />} tone="accent" label="Platform commission" value={naira(platformCommission)} loading={paymentsLoading && overviewLoading} />
               <StatCard icon={<ShoppingCart />} tone="sky" label="Orders" value={String(allTime?.orders ?? orders?.length ?? 0)} loading={ordersLoading && overviewLoading} />
-              <StatCard icon={<Package />} label="Products" value={String(allTime?.products ?? products?.length ?? 0)} loading={productsLoading && overviewLoading} />
+              <StatCard icon={<Package />} label="Products" value={String(allTime?.products ?? 0)} loading={productsLoading && overviewLoading} />
               <StatCard icon={<Store />} tone="accent" label="Suppliers" value={String(allTime?.suppliers ?? vendors?.length ?? 0)} loading={vendorsLoading && overviewLoading} />
               <StatCard icon={<Users />} tone="sky" label="Users" value={String(allTime?.users ?? profiles?.length ?? 0)} loading={profilesLoading && overviewLoading} />
             </div>
@@ -524,11 +518,20 @@ export default function AdminDashboard() {
         {activeTab === 'products' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="font-heading font-bold">All Products ({products?.length || 0})</h2>
+              <h2 className="font-heading font-bold">All Products{productData ? ` (${formatProductCount(productData.total)})` : ''}</h2>
               <Button size="sm" onClick={() => setActiveTab('add-product')}><Plus className="w-4 h-4 mr-1" /> Add Product</Button>
             </div>
-            <div className="bg-card rounded-xl border border-border overflow-hidden">
-              {productsLoading ? <TableSkeleton /> : (
+            <Input
+              value={productSearch}
+              onChange={e => { setProductSearch(e.target.value); setProductPage(1); }}
+              placeholder="Search products by name"
+              className="max-w-sm"
+              aria-label="Search products"
+            />
+            <div className={`bg-card rounded-xl border border-border overflow-hidden transition-opacity ${productsRefreshing ? 'opacity-60' : ''}`}>
+              {productsLoading ? <TableSkeleton /> : !products?.length ? (
+                <p className="p-8 text-center text-muted-foreground">{debouncedProductSearch ? 'No products match that search.' : 'No products yet.'}</p>
+              ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead className="bg-secondary">
@@ -548,12 +551,12 @@ export default function AdminDashboard() {
                         <tr key={p.id} className="border-t border-border">
                           <td className="p-3">
                             <div className="flex items-center gap-2">
-                              <img src={p.image_url || '/placeholder.svg'} alt="" className="w-8 h-8 rounded object-cover" />
+                              <img src={p.thumb_url || p.image_url || '/placeholder.svg'} alt="" loading="lazy" decoding="async" className="w-8 h-8 rounded object-cover" />
                               <span className="font-medium line-clamp-1">{p.name}</span>
                             </div>
                           </td>
-                          <td className="p-3 text-muted-foreground">{(p.vendors as any)?.store_name || 'Admin'}</td>
-                          <td className="p-3 text-muted-foreground">{(p.categories as any)?.name || '-'}</td>
+                          <td className="p-3 text-muted-foreground">{p.vendors?.store_name || 'Admin'}</td>
+                          <td className="p-3 text-muted-foreground">{p.categories?.name || '-'}</td>
                           <td className="p-3 font-medium">{formatNaira(p.price)}</td>
                           <td className="p-3">{p.stock_quantity}</td>
                           <td className="p-3">
@@ -577,6 +580,12 @@ export default function AdminDashboard() {
                 </div>
               )}
             </div>
+            <ProductPager page={productPage} pageCount={productData?.pageCount ?? 1} onChange={setProductPage} />
+            {productData?.capped && (
+              <p className="text-center text-xs text-muted-foreground">
+                Showing the newest {(MAX_MANAGE_PAGES * MANAGE_PAGE_SIZE).toLocaleString('en-NG')} products. Use the search box to find older ones.
+              </p>
+            )}
           </div>
         )}
 

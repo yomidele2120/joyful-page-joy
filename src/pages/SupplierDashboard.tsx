@@ -3,6 +3,11 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { compressImage } from '@/lib/mediaProcessing';
+import { makeThumbnail } from '@/lib/images';
+import ProductPager from '@/components/ProductPager';
+import { useManagedProducts } from '@/hooks/useManagedProducts';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { formatProductCount } from '@/lib/productSearch';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -79,13 +84,33 @@ export default function SupplierDashboard() {
   }, [vendor, isApproved, queryClient]);
   const hasPaystack = !!vendor?.paystack_subaccount_code;
 
-  const { data: products } = useQuery({
-    queryKey: ['vendor-products', vendor?.id],
+  // One page of this supplier's products at a time, searched and paged by the database.
+  const [productPage, setProductPage] = useState(1);
+  const [productSearch, setProductSearch] = useState('');
+  const debouncedProductSearch = useDebouncedValue(productSearch.trim(), 350);
+  const { data: productData, isPlaceholderData: productsRefreshing } = useManagedProducts({
+    scope: 'vendor', vendorId: vendor?.id, page: productPage, search: debouncedProductSearch, enabled: !!vendor?.id && isApproved,
+  });
+  const products = productData?.items;
+
+  // The supplier's total for the overview card (a search in the list must not change it).
+  const { data: productCount } = useQuery({
+    queryKey: ['vendor-products', 'count', vendor?.id],
     queryFn: async () => {
-      const { data } = await supabase.from('products').select('*, categories(name)').eq('vendor_id', vendor!.id).order('created_at', { ascending: false });
-      return data || [];
+      const { count } = await supabase.from('products').select('id', { count: 'estimated', head: true }).eq('vendor_id', vendor!.id);
+      return count ?? 0;
     },
     enabled: !!vendor?.id && isApproved,
+  });
+
+  // The short list used to tag a product in a video post: the 100 newest (a post can also be made without one).
+  const { data: pickableProducts } = useQuery({
+    queryKey: ['vendor-products-pick', vendor?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from('products').select('id, name').eq('vendor_id', vendor!.id).order('created_at', { ascending: false }).limit(100);
+      return data || [];
+    },
+    enabled: !!vendor?.id && isApproved && activeTab === 'videos',
   });
 
   const { data: orders } = useQuery({
@@ -102,7 +127,7 @@ export default function SupplierDashboard() {
   const { data: categories } = useCategories();
 
   const stats = {
-    products: products?.length || 0,
+    products: productCount ?? 0,
     orders: orders?.length || 0,
     revenue: orders?.filter(o => o.ship_status && o.ship_status !== 'refunded').reduce((s, o) => s + Number(o.gross), 0) || 0,
   };
@@ -255,7 +280,18 @@ export default function SupplierDashboard() {
             )}
 
             {activeTab === 'products' && (
-              <div className="bg-card rounded-xl border border-border overflow-hidden">
+              <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="font-heading font-bold">My products{productData ? ` (${formatProductCount(productData.total)})` : ''}</h2>
+                <Input
+                  value={productSearch}
+                  onChange={e => { setProductSearch(e.target.value); setProductPage(1); }}
+                  placeholder="Search my products"
+                  className="max-w-xs"
+                  aria-label="Search my products"
+                />
+              </div>
+              <div className={`bg-card rounded-xl border border-border overflow-hidden transition-opacity ${productsRefreshing ? 'opacity-60' : ''}`}>
                 {products?.length ? (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
@@ -274,7 +310,7 @@ export default function SupplierDashboard() {
                           <tr key={p.id} className="border-t border-border">
                             <td className="p-3">
                               <div className="flex items-center gap-2">
-                                <img src={p.image_url || '/placeholder.svg'} alt="" className="w-8 h-8 rounded object-cover" />
+                                <img src={p.thumb_url || p.image_url || '/placeholder.svg'} alt="" loading="lazy" decoding="async" className="w-8 h-8 rounded object-cover" />
                                 <span className="font-medium line-clamp-1">{p.name}</span>
                               </div>
                             </td>
@@ -318,10 +354,12 @@ export default function SupplierDashboard() {
                   </div>
                 ) : (
                   <div className="p-8 text-center">
-                    <p className="text-muted-foreground mb-4">No products yet.</p>
-                    <Button onClick={() => setActiveTab('add-product')}><Plus className="w-4 h-4 mr-1" /> Add Product</Button>
+                    <p className="text-muted-foreground mb-4">{debouncedProductSearch ? 'No products match that search.' : 'No products yet.'}</p>
+                    {!debouncedProductSearch && <Button onClick={() => setActiveTab('add-product')}><Plus className="w-4 h-4 mr-1" /> Add Product</Button>}
                   </div>
                 )}
+              </div>
+              <ProductPager page={productPage} pageCount={productData?.pageCount ?? 1} onChange={setProductPage} />
               </div>
             )}
 
@@ -335,7 +373,7 @@ export default function SupplierDashboard() {
             {activeTab === 'videos' && (
               <VendorVideosTab
                 vendorId={vendor.id}
-                products={(products || []).map(p => ({ id: p.id, name: p.name }))}
+                products={pickableProducts ?? []}
                 autoOpenComposer={autoCompose}
               />
             )}
@@ -399,6 +437,15 @@ function SupplierAddProduct({ vendorId, categories, onSuccess }: { vendorId: str
     };
     const stamp = Date.now();
     const mainUpload = imageFile ? uploadPhoto(imageFile, `${stamp}`) : Promise.resolve(null);
+    // A small copy for product cards and lists (about 400 px). If it fails, cards simply use the full photo.
+    const thumbUpload: Promise<string | null> = imageFile
+      ? makeThumbnail(imageFile).then(async blob => {
+          if (!blob) return null;
+          const path = `${vendorId}/products/${stamp}_thumb.jpg`;
+          const { error } = await supabase.storage.from('vendor-assets').upload(path, blob, { contentType: 'image/jpeg', cacheControl: '31536000' });
+          return error ? null : supabase.storage.from('vendor-assets').getPublicUrl(path).data.publicUrl;
+        }).catch(() => null)
+      : Promise.resolve(null);
     const extraUploads = Promise.all(extraImages.map((file, i) => uploadPhoto(file, `${stamp}-${i + 1}`)));
     // B2B fields: MOQ, quantity price breaks and specifications
     const moq = Math.max(1, Math.floor(Number(form.moq)) || 1);
@@ -418,7 +465,7 @@ function SupplierAddProduct({ vendorId, categories, onSuccess }: { vendorId: str
     const specsObject: Record<string, string> = {};
     specs.forEach(sp => { if (sp.key.trim() && sp.value.trim()) specsObject[sp.key.trim()] = sp.value.trim(); });
 
-    const [mainUrl, extraResults] = await Promise.all([mainUpload, extraUploads]);
+    const [mainUrl, extraResults, thumbUrl] = await Promise.all([mainUpload, extraUploads, thumbUpload]);
     const imageUrl = mainUrl ?? form.image_url;
     const extraUrls = extraResults.filter((u): u is string => !!u);
 
@@ -430,7 +477,7 @@ function SupplierAddProduct({ vendorId, categories, onSuccess }: { vendorId: str
       compare_at_price: form.compare_at_price ? Number(form.compare_at_price) : null,
       category_id: form.category_id || null, brand: form.brand || null,
       stock_quantity: Number(form.stock_quantity), description: form.description || null,
-      image_url: imageUrl || null, badge: form.badge || null, bnpl_eligible: form.bnpl_eligible,
+      image_url: imageUrl || null, thumb_url: mainUrl ? thumbUrl : null, badge: form.badge || null, bnpl_eligible: form.bnpl_eligible,
       vendor_id: vendorId, is_active: true,
       ...preorderResult.data,
     });

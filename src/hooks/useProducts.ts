@@ -5,11 +5,12 @@ import { CACHE } from '@/lib/cachePolicy';
 
 // Product lists show cards, so they skip the heavy columns (specs, gallery, video, SKU) and, unless asked,
 // the long description. The full row is only loaded on the product page (useProduct).
-const LIST_COLUMNS = 'id, name, slug, price, compare_at_price, image_url, badge, brand, category_id, vendor_id, is_featured, is_active, moq, unit, price_tiers, stock_quantity, bnpl_eligible, created_at, updated_at, is_preorder, preorder_approved, preorder_status, preorder_release_date, preorder_delivery_estimate, preorder_quantity_limit, preorder_max_per_order, preorder_terms, preorder_due_notified';
-const LIST_JOINS = 'categories(name, slug), vendors(id, user_id, store_name, logo_url, is_approved, location)';
+export const LIST_COLUMNS = 'id, name, slug, price, compare_at_price, image_url, thumb_url, badge, brand, category_id, vendor_id, is_featured, is_active, moq, unit, price_tiers, stock_quantity, bnpl_eligible, created_at, updated_at, is_preorder, preorder_approved, preorder_status, preorder_release_date, preorder_delivery_estimate, preorder_quantity_limit, preorder_max_per_order, preorder_terms, preorder_due_notified';
+export const LIST_JOINS = 'categories(name, slug), vendors(id, user_id, store_name, logo_url, is_approved, location)';
 
 export type ProductListRow = Omit<Tables<'products'>, 'specs' | 'images' | 'video_url' | 'sku' | 'description'> & {
   description?: string | null;
+  thumb_url?: string | null;
   categories: { name: string; slug: string } | null;
   vendors: { id: string; user_id: string; store_name: string; logo_url: string | null; is_approved: boolean | null; location: string | null } | null;
 };
@@ -20,17 +21,16 @@ export function useProducts(options?: { categorySlug?: string; featured?: boolea
     ...CACHE.products,
     queryFn: async () => {
       const columns = `${LIST_COLUMNS}${options?.withDescription ? ', description' : ''}, ${LIST_JOINS}`;
-      let query = supabase.from('products').select(columns).eq('is_active', true);
-
-      // A preorder listing only appears publicly once an admin has approved it.
-      query = query.or('is_preorder.eq.false,preorder_approved.eq.true');
+      // is_public = active, and a preorder only once an admin has approved it. It is a ready-made column,
+      // so the database can use the small partial indexes (needs the 20261021090000 migration).
+      let query: any = (supabase as any).from('products').select(columns).eq('is_public', true);
       if (options?.bnplOnly) query = query.eq('bnpl_eligible', true).eq('is_preorder', false);
-      if (options?.preorderOnly) query = query.eq('is_preorder', true).eq('preorder_approved', true).eq('preorder_status', 'open');
+      if (options?.preorderOnly) query = query.eq('is_preorder', true).eq('preorder_status', 'open');
       if (options?.featured) query = query.eq('is_featured', true);
       if (options?.badge) query = query.eq('badge', options.badge);
       if (options?.vendorId) query = query.eq('vendor_id', options.vendorId);
       if (options?.maxMoq) query = query.lte('moq', options.maxMoq);
-      if (options?.limit) query = query.limit(options.limit);
+      query = query.limit(Math.min(options?.limit ?? 120, 200));
       if (options?.search) query = query.ilike('name', `%${options.search}%`);
       if (options?.categorySlug) {
         const { data: cat } = await supabase.from('categories').select('id').eq('slug', options.categorySlug).single();
@@ -90,7 +90,8 @@ export function useMarketplaceStats() {
     ...CACHE.directory,
     queryFn: async () => {
       const [{ count: productCount }, { count: vendorCount }] = await Promise.all([
-        supabase.from('products').select('*', { count: 'exact', head: true }).eq('is_active', true),
+        // An estimated count is instant on millions of rows (exact counts scan the whole table).
+        (supabase as any).from('products').select('id', { count: 'estimated', head: true }).eq('is_public', true),
         supabase.from('vendors').select('*', { count: 'exact', head: true }).eq('is_approved', true),
       ]);
       return { productCount: productCount ?? 0, vendorCount: vendorCount ?? 0 };
@@ -123,15 +124,17 @@ export function useSuppliers(options?: { limit?: number; search?: string }) {
         .eq('is_approved', true)
         .order('created_at', { ascending: false });
       if (options?.search) query = query.ilike('store_name', `%${options.search}%`);
-      if (options?.limit) query = query.limit(options.limit);
+      // Never download every supplier: a page of them, and the search box finds the rest.
+      query = query.limit(Math.min(options?.limit ?? 60, 100));
       const { data: vendors, error } = await query;
       if (error) throw error;
 
       const ids = (vendors ?? []).map(v => v.id);
       const counts = new Map<string, number>();
       if (ids.length) {
-        const { data: rows } = await supabase.from('products').select('vendor_id').eq('is_active', true).in('vendor_id', ids);
-        (rows ?? []).forEach(r => { if (r.vendor_id) counts.set(r.vendor_id, (counts.get(r.vendor_id) ?? 0) + 1); });
+        // Counted by the database for just these suppliers (never downloads product rows).
+        const { data: rows } = await (supabase as any).rpc('vendor_product_counts', { _vendor_ids: ids });
+        ((rows ?? []) as { vendor_id: string; product_count: number }[]).forEach(r => counts.set(r.vendor_id, Number(r.product_count)));
       }
       return (vendors ?? []).map(v => ({ ...v, product_count: counts.get(v.id) ?? 0 })) as SupplierSummary[];
     },

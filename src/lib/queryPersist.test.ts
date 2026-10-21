@@ -10,6 +10,9 @@ describe('public query cache', () => {
   it('only treats public, successful queries as saveable', () => {
     expect(isPublicQuery({ queryKey: ['products', {}], state: { status: 'success' } } as never)).toBe(true);
     expect(isPublicQuery({ queryKey: ['categories', 'visible'], state: { status: 'success' } } as never)).toBe(true);
+    expect(isPublicQuery({ queryKey: ['products-page', { page: 1 }], state: { status: 'success' } } as never)).toBe(true);
+    expect(isPublicQuery({ queryKey: ['products-page', { page: 2 }], state: { status: 'success' } } as never)).toBe(false);
+    expect(isPublicQuery({ queryKey: ['products-page', { page: 1, search: 'iphone' }], state: { status: 'success' } } as never)).toBe(false);
     expect(isPublicQuery({ queryKey: ['categories', 'all'], state: { status: 'success' } } as never)).toBe(false);
     expect(isPublicQuery({ queryKey: ['products'], state: { status: 'error' } } as never)).toBe(false);
     expect(isPublicQuery({ queryKey: ['user-orders', 'abc'], state: { status: 'success' } } as never)).toBe(false);

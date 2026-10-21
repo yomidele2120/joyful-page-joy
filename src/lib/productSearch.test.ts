@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  MAX_PRODUCT_PAGES, PRODUCT_PAGE_SIZE, cleanLike, formatProductCount, pageCountFor, sortKeys, toPrefixQuery,
+  MAX_PRODUCT_PAGES, PRODUCT_PAGE_SIZE, SUPPLIER_COUNT_CAP, cleanLike, formatProductCount, formatSupplierProductCount, pageCountFor, sortKeys, toPrefixQuery,
 } from './productSearch';
 
 describe('toPrefixQuery', () => {
@@ -59,5 +59,13 @@ describe('formatProductCount', () => {
   it('shows exact small counts and approximate large ones', () => {
     expect(formatProductCount(42)).toBe('42');
     expect(formatProductCount(1_998_400)).toMatch(/^About 1,998,400$/);
+  });
+});
+
+describe('formatSupplierProductCount', () => {
+  it('shows the real number below the cap and a "+" at the cap', () => {
+    expect(formatSupplierProductCount(0)).toBe('0');
+    expect(formatSupplierProductCount(SUPPLIER_COUNT_CAP - 1)).toBe('9999');
+    expect(formatSupplierProductCount(SUPPLIER_COUNT_CAP)).toBe('10,000+');
   });
 });

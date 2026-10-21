@@ -38,6 +38,14 @@ export function pageCountFor(total: number, pageSize = PRODUCT_PAGE_SIZE, maxPag
   return { pageCount: Math.min(raw, maxPages), capped: raw > maxPages };
 }
 
+/** The database stops counting a supplier's products here (counting a million per supplier is slow). */
+export const SUPPLIER_COUNT_CAP = 10_000;
+
+/** "42" for small catalogues, "10,000+" once the count hit the cap. */
+export function formatSupplierProductCount(count: number): string {
+  return count >= SUPPLIER_COUNT_CAP ? `${SUPPLIER_COUNT_CAP.toLocaleString('en-NG')}+` : String(count);
+}
+
 /** Large totals come from the database's estimate, so they are shown as approximate. */
 export function formatProductCount(total: number): string {
   const text = total.toLocaleString('en-NG');

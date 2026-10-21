@@ -7,7 +7,11 @@ import Layout from '@/components/layout/Layout';
 import ProductCard, { ProductPrice } from '@/components/ProductCard';
 import SupplierCard from '@/components/SupplierCard';
 import InquiryDialog, { type InquiryDialogTarget } from '@/components/InquiryDialog';
-import { useProducts, useCategories, useSuppliers } from '@/hooks/useProducts';
+import { useCategories, useSuppliers, type ProductListRow } from '@/hooks/useProducts';
+import { usePagedProducts, type ProductPageParams } from '@/hooks/usePagedProducts';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import ProductPager from '@/components/ProductPager';
+import { formatProductCount, type ProductSort } from '@/lib/productSearch';
 import { useAuth } from '@/hooks/useAuth';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -15,15 +19,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { formatMoq, getMoq, priceRange } from '@/lib/pricing';
+import { formatMoq, getMoq } from '@/lib/pricing';
 import { FlyerCard, pickImages } from '@/components/flyers/Flyers';
 import { FLYERS } from '@/lib/flyers';
 import { useFlyers } from '@/hooks/useFlyers';
 import { ImageFlyerBanner, ImageFlyerFill } from '@/components/flyers/ImageFlyers';
 import { BrandFlyerBanner, BrandFlyerFill } from '@/components/flyers/BrandFlyerImage';
 import { BRAND_FLYERS } from '@/lib/brandFlyers';
-
-const PAGE_SIZE = 24;
 
 interface Filters {
   category: string;
@@ -54,47 +56,42 @@ export default function Products() {
   useEffect(() => { setSearch(searchFromUrl); }, [searchFromUrl]);
   useEffect(() => { setPage(1); }, [search, sortBy, filters, tab]);
 
-  const { data: products, isLoading } = useProducts({ search: search || undefined, withDescription: true });
+  // The database does the searching, filtering, sorting and paging: only this page's 24 products are downloaded.
+  // The search waits until typing pauses, so it does not fire on every key.
+  const debouncedSearch = useDebouncedValue(search.trim(), 350);
+  const pageParams: ProductPageParams = useMemo(() => ({
+    page,
+    search: debouncedSearch || undefined,
+    categoryId: filters.category !== 'all' ? filters.category : undefined,
+    minPrice: filters.minPrice ? Number(filters.minPrice) : null,
+    maxPrice: filters.maxPrice ? Number(filters.maxPrice) : null,
+    maxMoq: filters.maxMoq ? Number(filters.maxMoq) : null,
+    verifiedOnly: filters.verifiedOnly,
+    inStockOnly: filters.inStockOnly,
+    sort: sortBy as ProductSort,
+    withDescription: true,
+  }), [page, debouncedSearch, filters, sortBy]);
+  const { data: pageData, isLoading, isPlaceholderData } = usePagedProducts(pageParams, tab === 'products');
+  const pageItems = pageData?.items ?? [];
+  const total = pageData?.total ?? 0;
+  const pageCount = pageData?.pageCount ?? 1;
+  const current = Math.min(page, pageCount);
 
   // Record each search once, with how many products it found, so the admin can see searches that came up empty.
   const trackedSearch = useRef('');
   useEffect(() => {
-    if (!searchFromUrl || isLoading || !products || search !== searchFromUrl) return;
+    if (!searchFromUrl || isLoading || isPlaceholderData || !pageData || debouncedSearch !== searchFromUrl) return;
     if (trackedSearch.current === searchFromUrl) return;
     trackedSearch.current = searchFromUrl;
-    trackSearch(searchFromUrl, products.length);
-  }, [searchFromUrl, search, isLoading, products]);
+    trackSearch(searchFromUrl, pageData.total);
+  }, [searchFromUrl, debouncedSearch, isLoading, isPlaceholderData, pageData]);
   const { data: categories } = useCategories();
-  const { data: suppliers, isLoading: suppliersLoading } = useSuppliers({ search: search || undefined });
+  const { data: suppliers, isLoading: suppliersLoading } = useSuppliers({ search: search || undefined, limit: 48 });
 
-  const filtered = useMemo(() => {
-    const min = filters.minPrice ? Number(filters.minPrice) : null;
-    const max = filters.maxPrice ? Number(filters.maxPrice) : null;
-    const maxMoq = filters.maxMoq ? Number(filters.maxMoq) : null;
-    return (products ?? [])
-      .filter(p => filters.category === 'all' || p.category_id === filters.category)
-      .filter(p => {
-        const range = priceRange(p);
-        return (min === null || range.max >= min) && (max === null || range.min <= max);
-      })
-      .filter(p => maxMoq === null || getMoq(p) <= maxMoq)
-      .filter(p => !filters.verifiedOnly || !!p.vendors?.is_approved)
-      .filter(p => !filters.inStockOnly || p.stock_quantity > 0)
-      .sort((a, b) => {
-        if (sortBy === 'price-low') return priceRange(a).min - priceRange(b).min;
-        if (sortBy === 'price-high') return priceRange(b).min - priceRange(a).min;
-        if (sortBy === 'moq-low') return getMoq(a) - getMoq(b);
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      });
-  }, [products, filters, sortBy]);
-
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const current = Math.min(page, pageCount);
-  const pageItems = filtered.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
   const { ready: flyersReady, forPlacement } = useFlyers();
   const feedBanners = forPlacement('feed_banner');
   const feedCards = forPlacement('feed_card');
-  const photos = useMemo(() => (products ?? []).map(p => p.image_url).filter((u): u is string => !!u), [products]);
+  const photos = useMemo(() => pageItems.map(p => p.image_url).filter((u): u is string => !!u), [pageItems]);
   const activeFilterCount =
     (filters.category !== 'all' ? 1 : 0) + (filters.minPrice || filters.maxPrice ? 1 : 0) + (filters.maxMoq ? 1 : 0) +
     (filters.verifiedOnly ? 1 : 0) + (filters.inStockOnly ? 1 : 0);
@@ -105,7 +102,7 @@ export default function Products() {
     setSearchParams(params);
   };
 
-  const openInquiry = (p: NonNullable<typeof products>[number]) => {
+  const openInquiry = (p: ProductListRow) => {
     if (!p.vendors) { toast.error('This product has no supplier to contact'); return; }
     setInquiryTarget({
       vendorId: p.vendors.id, vendorUserId: p.vendors.user_id, vendorName: p.vendors.store_name,
@@ -198,7 +195,7 @@ export default function Products() {
 
             {tab === 'products' ? (
               <>
-                <p className="mb-3 text-sm text-muted-foreground">{isLoading ? 'Loading products...' : `${filtered.length} product${filtered.length === 1 ? '' : 's'}`}</p>
+                <p className="mb-3 text-sm text-muted-foreground">{isLoading ? 'Loading products...' : `${formatProductCount(total)} product${total === 1 ? '' : 's'}`}</p>
 
                 {isLoading ? (
                   <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-3 xl:grid-cols-4 sm:gap-3">
@@ -259,9 +256,10 @@ export default function Products() {
                   </div>
                 )}
 
-                {pageCount > 1 && (
-                  <Pager page={current} pageCount={pageCount} onChange={p => { setPage(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
-                )}
+                <ProductPager
+                  page={current} pageCount={pageCount} capped={pageData?.capped}
+                  onChange={p => { setPage(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                />
               </>
             ) : suppliersLoading ? (
               <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-24 animate-pulse bg-secondary" />)}</div>
@@ -283,7 +281,7 @@ export default function Products() {
         <SheetContent side="left" className="w-[85vw] overflow-y-auto sm:w-80">
           <SheetHeader><SheetTitle>Filters</SheetTitle></SheetHeader>
           <div className="mt-4">{filterPanel}</div>
-          <Button className="mt-6 w-full" onClick={() => setFiltersOpen(false)}>Show {filtered.length} result{filtered.length === 1 ? '' : 's'}</Button>
+          <Button className="mt-6 w-full" onClick={() => setFiltersOpen(false)}>Show {formatProductCount(total)} result{total === 1 ? '' : 's'}</Button>
         </SheetContent>
       </Sheet>
 
@@ -350,22 +348,5 @@ function FilterPanel({ filters, setFilters, categories, onReset, activeCount }: 
         </div>
       </div>
     </div>
-  );
-}
-
-function Pager({ page, pageCount, onChange }: { page: number; pageCount: number; onChange: (page: number) => void }) {
-  const pages = Array.from({ length: pageCount }, (_, i) => i + 1)
-    .filter(p => p === 1 || p === pageCount || Math.abs(p - page) <= 1);
-  return (
-    <nav className="mt-6 flex flex-wrap items-center justify-center gap-1.5" aria-label="Pagination">
-      <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => onChange(page - 1)}>Previous</Button>
-      {pages.map((p, i) => (
-        <span key={p} className="flex items-center gap-1.5">
-          {i > 0 && p - pages[i - 1] > 1 && <span className="text-muted-foreground">...</span>}
-          <Button variant={p === page ? 'default' : 'outline'} size="sm" onClick={() => onChange(p)} aria-current={p === page ? 'page' : undefined}>{p}</Button>
-        </span>
-      ))}
-      <Button variant="outline" size="sm" disabled={page >= pageCount} onClick={() => onChange(page + 1)}>Next</Button>
-    </nav>
   );
 }

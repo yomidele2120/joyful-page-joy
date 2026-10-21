@@ -2,12 +2,13 @@ import { Link } from 'react-router-dom';
 import { BadgeCheck, MapPin, MessageSquare, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { SupplierSummary } from '@/hooks/useProducts';
+import { formatSupplierProductCount } from '@/lib/productSearch';
 
 export default function SupplierCard({ supplier, layout = 'card' }: { supplier: SupplierSummary; layout?: 'card' | 'row' }) {
   const meta = [
     supplier.business_type,
     supplier.year_established ? `Since ${supplier.year_established}` : null,
-    `${supplier.product_count} product${supplier.product_count === 1 ? '' : 's'}`,
+    `${formatSupplierProductCount(supplier.product_count)} product${supplier.product_count === 1 ? '' : 's'}`,
   ].filter(Boolean).join(' - ');
 
   const logo = supplier.logo_url ? (
