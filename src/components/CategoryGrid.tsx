@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useCategories } from '@/hooks/useProducts';
-import { Laptop, Monitor, Printer, Smartphone, Gamepad2, Headphones, Cpu, Battery, Camera, Watch, Tv, Tag, Tablet, Package, Shirt, Home, HeartPulse, ShoppingBasket, Baby, Dumbbell, BookOpen, Sparkles, Car, PawPrint, Gem } from 'lucide-react';
+import { Laptop, Monitor, Printer, Smartphone, Gamepad2, Headphones, Cpu, Battery, Camera, Watch, Tv, Tag, Tablet, Package, Shirt, Home, HeartPulse, ShoppingBasket, Baby, Dumbbell, BookOpen, Sparkles, Car, PawPrint, Gem, Wifi, Sun, ShieldCheck, HardDrive, Briefcase, Speaker, Server, Plug, Lightbulb, KeyRound, Store, Sofa, Hammer, Sprout, Factory, Stethoscope, HardHat, Puzzle, Droplets, Coffee, Scissors, Music, Wrench } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
@@ -36,6 +36,31 @@ const iconMap: Record<string, React.ReactNode> = {
   'automotive': <Car className="w-full h-full" />,
   'pets': <PawPrint className="w-full h-full" />,
   'jewelry-accessories': <Gem className="w-full h-full" />,
+  'networking': <Wifi className="w-full h-full" />,
+  'solar-power': <Sun className="w-full h-full" />,
+  'cctv-security': <ShieldCheck className="w-full h-full" />,
+  'computer-components': <Cpu className="w-full h-full" />,
+  'storage-memory': <HardDrive className="w-full h-full" />,
+  'office-equipment': <Briefcase className="w-full h-full" />,
+  'pos-retail': <Store className="w-full h-full" />,
+  'audio-speakers': <Speaker className="w-full h-full" />,
+  'servers-datacenter': <Server className="w-full h-full" />,
+  'cables-adapters': <Plug className="w-full h-full" />,
+  'lighting-electrical': <Lightbulb className="w-full h-full" />,
+  'software-licenses': <KeyRound className="w-full h-full" />,
+  'furniture': <Sofa className="w-full h-full" />,
+  'building-construction': <Hammer className="w-full h-full" />,
+  'tools-hardware': <Wrench className="w-full h-full" />,
+  'agriculture': <Sprout className="w-full h-full" />,
+  'industrial-machinery': <Factory className="w-full h-full" />,
+  'packaging-printing': <Package className="w-full h-full" />,
+  'medical-supplies': <Stethoscope className="w-full h-full" />,
+  'safety-workwear': <HardHat className="w-full h-full" />,
+  'toys-games': <Puzzle className="w-full h-full" />,
+  'cleaning-hygiene': <Droplets className="w-full h-full" />,
+  'beverages': <Coffee className="w-full h-full" />,
+  'textiles': <Scissors className="w-full h-full" />,
+  'music-instruments': <Music className="w-full h-full" />,
 };
 
 // A muted-tone rotation so icon-only tiles (no category image set yet)
