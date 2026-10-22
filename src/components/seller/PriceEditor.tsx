@@ -37,7 +37,7 @@ export function PriceEditor({ product, onClose, onSaved }: {
 
   const save = async () => {
     const result = validatePriceEdit({ price, compare_at_price: compare, tiers }, moq);
-    if (!result.ok) { toast.error(result.error); return; }
+    if ('error' in result) { toast.error(result.error); return; }
     setSaving(true);
     const { data, error } = await supabase.from('products')
       .update({
