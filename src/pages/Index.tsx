@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FileText, PackageSearch, Send, Store } from 'lucide-react';
+import { Send } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import HeroCarousel from '@/components/HeroCarousel';
 import TrustStrip from '@/components/TrustStrip';
@@ -18,7 +18,7 @@ import { FLYERS } from '@/lib/flyers';
 import { useFlyers } from '@/hooks/useFlyers';
 import { ImageFlyerBanner, ImageFlyerFill } from '@/components/flyers/ImageFlyers';
 import { BrandFlyerBanner, BrandFlyerFill } from '@/components/flyers/BrandFlyerImage';
-import { BRAND_FLYERS, MAKE_MONEY_BADGE } from '@/lib/brandFlyers';
+import { BRAND_FLYERS } from '@/lib/brandFlyers';
 import BrandMarquee from '@/components/BrandMarquee';
 
 const FEED_PAGE = 20;
@@ -81,17 +81,6 @@ export default function Index() {
       <TrustStrip />
 
       <div className="container max-w-[1440px] pb-6">
-        <section className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
-          <ActionTile to="/rfq/new" icon={<FileText />} title="Post RFQ" text="Request a quotation" />
-          <ActionTile to="/products?tab=suppliers" icon={<Store />} title="Suppliers" text="Browse verified sellers" />
-          <ActionTile to="/products" icon={<PackageSearch />} title="Products" text="Explore the marketplace" />
-          {isVendor ? (
-            <ActionTile to="/supplier-dashboard" icon={<Store />} title="Seller dashboard" text="Manage your store" />
-          ) : (
-            <ActionTile to="/supplier-signup" icon={<Store />} badge={MAKE_MONEY_BADGE} title="Sell on IT Hub Africa" text="Open your store" />
-          )}
-        </section>
-
         {!!suppliers?.length && (
           <ScrollRow eyebrow="Trusted sellers" title="Verified suppliers" linkTo="/products?tab=suppliers">
             {suppliers.map(s => <ScrollItem key={s.id} wide><SupplierCard supplier={s} /></ScrollItem>)}
@@ -144,44 +133,39 @@ export default function Index() {
           </ScrollRow>
         )}
 
-        {/* Flyer: wide banner before the endless feed */}
-        {flyersReady && (rowBanners[2]
-          ? <ImageFlyerBanner className="mt-8 sm:mt-10" flyer={rowBanners[2]} />
-          : hasUploadedRows ? null : <BrandFlyerBanner className="mt-8 sm:mt-10" flyer={BRAND_FLYERS.seamlessOlive} />)}
-
         <section className="mt-9 sm:mt-12">
-          <h2 className="mb-3 font-heading text-xl font-bold sm:text-2xl">You may like</h2>
+          <h2 className="mb-4 font-heading text-xl font-bold sm:text-2xl">You may like</h2>
           {isLoading ? (
-            <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 sm:gap-3">
-              {Array.from({ length: 10 }).map((_, index) => <div key={index} className="aspect-[3/4] animate-pulse bg-secondary" />)}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              {Array.from({ length: 10 }).map((_, index) => <div key={index} className="aspect-[3/4] animate-pulse rounded-2xl bg-secondary" />)}
             </div>
           ) : feed.length ? (
             <>
-              <div className="grid grid-flow-dense grid-cols-4 gap-1.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 sm:gap-3">
+              <div className="grid grid-flow-dense grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                 {feed.slice(0, visible).flatMap((product, i) => {
                   const cells: React.ReactNode[] = [<ProductCard key={product.id} {...product} />];
-                  // Flyers inside the feed: a card-sized one after the 6th product of
-                  // every 20, a full-width banner after the 14th. grid-flow-dense lets
+                  // Flyers inside the feed: a card-sized one after the 10th product of
+                  // every 30, a full-width banner after the 24th. grid-flow-dense lets
                   // later products fill any gap a full-width banner leaves.
-                  const slot = (i + 1) % 20;
-                  const round = Math.floor(i / 20);
+                  const slot = (i + 1) % 30;
+                  const round = Math.floor(i / 30);
                   // Picture flyers are two columns wide and two rows tall on a phone, so the next products fill the
                   // space beside them. They need at least 2 more products after them, otherwise they are left out.
                   const roomBesideFlyer = Math.min(visible, feed.length) - (i + 1) >= 2;
-                  if (slot === 6 && flyersReady) {
+                  if (slot === 10 && flyersReady) {
                     if (feedCards.length) {
                       const u = feedCards[round % feedCards.length];
-                      if (roomBesideFlyer) cells.push(<div key={`fc-${i}`} className="col-span-2 row-span-2 min-h-[260px] sm:col-span-1 sm:row-span-1"><ImageFlyerFill flyer={u} /></div>);
+                      if (roomBesideFlyer) cells.push(<div key={`fc-${i}`} className="col-span-2 min-h-[200px] sm:col-span-1 sm:min-h-[260px]"><ImageFlyerFill flyer={u} /></div>);
                     } else {
                       if (round % 2 === 0) {
-                        if (roomBesideFlyer) cells.push(<div key={`fc-${i}`} className="col-span-2 row-span-2 min-h-[260px] sm:col-span-1 sm:row-span-1"><BrandFlyerFill flyer={BRAND_FLYERS.mysteryDeal} fit="contain" /></div>);
+                        if (roomBesideFlyer) cells.push(<div key={`fc-${i}`} className="col-span-2 min-h-[200px] sm:col-span-1 sm:min-h-[260px]"><BrandFlyerFill flyer={BRAND_FLYERS.mysteryDeal} fit="contain" /></div>);
                       } else {
                         const f = [FLYERS.suppliers, FLYERS.rfq, FLYERS.sell][Math.floor(round / 2) % 3];
                         cells.push(<div key={`fc-${i}`} className="col-span-2 sm:col-span-1"><FlyerCard flyer={f} images={art(f.offset + round * 2, 2)} /></div>);
                       }
                     }
                   }
-                  if (slot === 14 && flyersReady) {
+                  if (slot === 24 && flyersReady) {
                     if (feedBanners.length) {
                       const u = feedBanners[round % feedBanners.length];
                       cells.push(<ImageFlyerBanner key={`fb-${i}`} className="col-span-full" flyer={u} />);
@@ -232,19 +216,5 @@ export default function Index() {
         </div>
       </section>
     </Layout>
-  );
-}
-
-function ActionTile({ to, icon, badge, title, text }: { to: string; icon: React.ReactNode; badge?: { src: string; alt: string }; title: string; text: string }) {
-  return (
-    <Link to={to} className="flex min-w-0 items-center gap-3 border border-border bg-card px-3 py-3 transition-colors hover:bg-secondary/60 sm:px-4">
-      {badge
-        ? <img src={badge.src} alt={badge.alt} loading="lazy" className="h-11 w-11 shrink-0" />
-        : <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary [&_svg]:h-5 [&_svg]:w-5">{icon}</span>}
-      <span className="min-w-0">
-        <span className="block truncate text-sm font-semibold">{title}</span>
-        <span className="mt-0.5 block truncate text-xs text-muted-foreground">{text}</span>
-      </span>
-    </Link>
   );
 }

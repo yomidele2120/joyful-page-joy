@@ -66,7 +66,7 @@
     --popover: 0 0% 8%;
     --popover-foreground: 0 0% 96%;
 
-    --primary: 208 72% 36%;
+    --primary: 208 80% 50%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 0 0% 13%;
@@ -83,23 +83,23 @@
 
     --border: 0 0% 16%;
     --input: 0 0% 16%;
-    --ring: 208 72% 36%;
+    --ring: 208 80% 50%;
 
     --card-shadow: 0 2px 12px -2px hsl(0 0% 0% / 0.5);
     --card-hover-shadow: 0 8px 30px -4px hsl(0 0% 0% / 0.7);
-    --badge-glow: 0 0 12px hsl(208 72% 36% / 0.35);
+    --badge-glow: 0 0 12px hsl(208 80% 50% / 0.35);
 
     --strip: 0 0% 13%;
     --strip-foreground: 0 0% 90%;
 
     --sidebar-background: 0 0% 3%;
     --sidebar-foreground: 0 0% 92%;
-    --sidebar-primary: 208 72% 36%;
+    --sidebar-primary: 208 80% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 0 0% 11%;
     --sidebar-accent-foreground: 0 0% 92%;
     --sidebar-border: 0 0% 14%;
-    --sidebar-ring: 208 72% 36%;
+    --sidebar-ring: 208 80% 50%;
   }
 }
 

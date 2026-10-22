@@ -186,7 +186,7 @@ export function ContactUs() {
                   <li key={t.id} className="p-3 text-sm">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="font-medium">{t.subject}</span>
-                      <Badge variant="secondary" className="rounded-none">{STATUS_LABEL[t.status] ?? t.status}</Badge>
+                      <Badge variant="secondary" className="rounded-full">{STATUS_LABEL[t.status] ?? t.status}</Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">{new Date(t.created_at).toLocaleDateString()}</p>
                     {t.admin_reply && <p className="mt-2 whitespace-pre-wrap border-l-2 border-primary pl-3 text-muted-foreground">{t.admin_reply}</p>}

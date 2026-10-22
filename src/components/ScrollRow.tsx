@@ -19,7 +19,7 @@ export default function ScrollRow({ title, eyebrow, linkTo, linkLabel = 'View al
     <section className="mt-8 sm:mt-10">
       <div className="mb-3 flex items-end justify-between gap-4">
         <div>
-          {eyebrow && <p className="text-xs font-semibold uppercase text-primary">{eyebrow}</p>}
+          {eyebrow && <p className="text-xs font-semibold uppercase tracking-wider text-primary">{eyebrow}</p>}
           <h2 className="font-heading text-xl font-bold sm:text-2xl">{title}</h2>
         </div>
         <div className="flex items-center gap-2">
@@ -36,5 +36,5 @@ export default function ScrollRow({ title, eyebrow, linkTo, linkLabel = 'View al
 }
 
 export function ScrollItem({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
-  return <div className={`shrink-0 snap-start ${wide ? 'w-64 sm:w-72' : 'w-[calc(25%-6px)] sm:w-48 lg:w-52'}`}>{children}</div>;
+  return <div className={`shrink-0 snap-start ${wide ? 'w-64 sm:w-72' : 'w-[44vw] max-w-[190px] sm:w-48 sm:max-w-none lg:w-52'}`}>{children}</div>;
 }

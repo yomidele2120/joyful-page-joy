@@ -162,9 +162,9 @@ export default function MyOrders() {
                       <span className="ml-2 text-xs text-muted-foreground">{new Date(order.created_at).toLocaleDateString()}</span>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                      {order.is_preorder && <Badge className="rounded-none bg-accent text-accent-foreground"><CalendarClock className="mr-1 h-3 w-3" />Preorder</Badge>}
-                      {order.payment_method === 'bnpl' && <Badge className="rounded-none bg-primary/10 text-primary"><Wallet className="mr-1 h-3 w-3" />Pay later</Badge>}
-                      <Badge variant="secondary" className="rounded-none">{ORDER_STATUS[order.status] ?? order.status}</Badge>
+                      {order.is_preorder && <Badge className="rounded-full bg-accent text-accent-foreground"><CalendarClock className="mr-1 h-3 w-3" />Preorder</Badge>}
+                      {order.payment_method === 'bnpl' && <Badge className="rounded-full bg-primary/10 text-primary"><Wallet className="mr-1 h-3 w-3" />Pay later</Badge>}
+                      <Badge variant="secondary" className="rounded-full">{ORDER_STATUS[order.status] ?? order.status}</Badge>
                     </div>
                   </div>
 

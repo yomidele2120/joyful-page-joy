@@ -68,7 +68,7 @@ export default function Navbar() {
     <HeaderFlyerStrip />
     <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-md border-b border-border">
       {/* Utility bar */}
-      <div className="bg-primary text-primary-foreground text-xs py-1">
+      <div className="hidden bg-primary py-1 text-xs text-primary-foreground md:block">
         <div className="container flex items-center justify-between">
           <HeaderTicker />
           <div className="flex items-center gap-4 shrink-0">

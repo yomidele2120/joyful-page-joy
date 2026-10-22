@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge';
 import { formatNaira } from '@/lib/format';
 import { formatMoq, priceRange } from '@/lib/pricing';
 import type { Json } from '@/integrations/supabase/types';
-import { motion } from 'framer-motion';
 import { PayLaterBadge, PreorderBadge } from '@/components/ProductBadges';
 import { bnplEligibleForPrice, usePayLaterAvailable, usePublicFinance } from '@/hooks/useMarketplace';
 
@@ -37,11 +36,11 @@ export function ProductPrice({ product, className = '', compact = false }: { pro
   const hasRange = max > min;
   return (
     <div className={`flex flex-wrap items-baseline gap-x-1.5 ${className}`}>
-      <span className={`font-heading font-bold text-foreground ${compact ? 'text-[11px] leading-tight sm:text-base' : 'text-sm sm:text-base'}`}>
+      <span className={`font-heading font-bold tabular-nums text-foreground ${compact ? 'text-sm leading-tight sm:text-base' : 'text-base'}`}>
         {hasRange ? `${formatNaira(min)} - ${formatNaira(max)}` : formatNaira(min)}
       </span>
       {!hasRange && product.compare_at_price && (
-        <span className={`text-muted-foreground line-through ${compact ? 'hidden text-[10px] sm:inline' : 'text-[10px]'}`}>{formatNaira(product.compare_at_price)}</span>
+        <span className={`text-muted-foreground line-through text-xs`}>{formatNaira(product.compare_at_price)}</span>
       )}
     </div>
   );
@@ -62,57 +61,54 @@ export default function ProductCard({
   const hasTiers = Array.isArray(price_tiers) && price_tiers.length > 0;
   const discount = !hasTiers && compare_at_price ? Math.round(((compare_at_price - price) / compare_at_price) * 100) : 0;
 
+  const soldOut = typeof stock_quantity === 'number' && stock_quantity <= 0;
+  const seller = vendors?.store_name || brand || 'IT Hub Africa seller';
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-30px" }}
-      transition={{ duration: 0.3 }}
-      className="group bg-card rounded-none overflow-hidden h-full flex flex-col border border-border/70"
-    >
-      <Link to={`/product/${slug}`} className="block relative aspect-square overflow-hidden bg-white" onPointerEnter={warm} onFocus={warm} onTouchStart={warm}>
+    <div className="group flex h-full flex-col overflow-hidden rounded-2xl bg-card ring-1 ring-border/50 transition-shadow duration-200 animate-fade-in hover:shadow-lg">
+      <Link to={`/product/${slug}`} className="relative m-1.5 block aspect-square overflow-hidden rounded-xl bg-white" onPointerEnter={warm} onFocus={warm} onTouchStart={warm}>
         <img
           src={thumb_url || image_url || '/placeholder.svg'}
           alt={name}
           decoding="async"
-          className="w-full h-full object-contain p-1 sm:p-3 group-hover:scale-[1.03] transition-transform duration-300"
+          className="h-full w-full object-contain p-2 transition-transform duration-300 group-hover:scale-[1.04] sm:p-3"
           loading="lazy"
         />
         {badge && (
-          <Badge className="absolute top-1 left-1 bg-primary/10 text-primary border-none text-[8px] px-1 py-0 sm:top-2 sm:left-2 sm:text-[10px] sm:px-2 sm:py-0.5 rounded-none">
+          <Badge className="absolute left-1.5 top-1.5 rounded-full border-none bg-background/90 px-2 py-0.5 text-[11px] font-medium text-primary shadow-sm">
             {badge}
           </Badge>
         )}
         {discount > 0 && (
-          <span className="absolute bottom-1 left-1 bg-accent text-accent-foreground text-[8px] font-semibold px-1 py-0 sm:bottom-2 sm:left-2 sm:text-[10px] sm:px-2 sm:py-0.5 rounded-none">
+          <span className="absolute bottom-1.5 left-1.5 rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-accent-foreground">
             -{discount}%
           </span>
         )}
       </Link>
 
-      <div className="px-1.5 pb-2 pt-1.5 flex flex-col flex-1 sm:px-3 sm:pb-3 sm:pt-2">
-        <Link to={`/product/${slug}`} className="min-h-[26px] sm:min-h-9" onPointerEnter={warm} onFocus={warm} onTouchStart={warm}>
-          <h3 className="font-medium text-[10px] leading-tight sm:text-sm sm:leading-snug line-clamp-2 text-foreground group-hover:text-primary transition-colors">
+      <div className="flex flex-1 flex-col px-2.5 pb-3 pt-1 sm:px-3">
+        <Link to={`/product/${slug}`} className="min-h-[2.5rem]" onPointerEnter={warm} onFocus={warm} onTouchStart={warm}>
+          <h3 className="line-clamp-2 text-[13px] font-medium leading-snug text-foreground transition-colors group-hover:text-primary sm:text-sm">
             {name}
           </h3>
         </Link>
-        <ProductPrice product={{ price, price_tiers, compare_at_price }} compact className="mt-1 sm:mt-2" />
-        <p className="mt-0.5 hidden text-[11px] sm:block sm:text-xs text-muted-foreground">{formatMoq({ price, moq, unit })}</p>
+        <ProductPrice product={{ price, price_tiers, compare_at_price }} className="mt-1.5" />
+        {/* MOQ and seller are the two facts a B2B buyer needs, so they show on phones too */}
+        <p className="mt-0.5 text-xs text-muted-foreground">{formatMoq({ price, moq, unit })}</p>
         {(showPreorder || showPayLater) && (
-          <div className="mt-1 flex flex-wrap gap-1">
+          <div className="mt-1.5 flex flex-wrap gap-1">
             {showPreorder && <PreorderBadge date={preorder_release_date} />}
             {showPayLater && <PayLaterBadge />}
           </div>
         )}
-        <div className="mt-1.5 hidden items-center justify-between gap-2 text-[10px] sm:flex sm:text-xs text-muted-foreground">
+        <div className="mt-auto flex items-center justify-between gap-2 pt-2 text-xs text-muted-foreground">
           <span className="flex min-w-0 items-center gap-1">
             {vendors?.is_approved && <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-primary" aria-label="Verified supplier" />}
-            <span className="truncate">{vendors?.store_name || brand || 'IT Hub Africa seller'}</span>
+            <span className="truncate">{seller}</span>
           </span>
-          {typeof stock_quantity === 'number' && stock_quantity <= 0 && <span className="shrink-0 text-destructive">Sold out</span>}
+          {soldOut && <span className="shrink-0 font-medium text-destructive">Sold out</span>}
         </div>
-        {typeof stock_quantity === 'number' && stock_quantity <= 0 && <p className="mt-0.5 text-[9px] text-destructive sm:hidden">Sold out</p>}
       </div>
-    </motion.div>
+    </div>
   );
 }

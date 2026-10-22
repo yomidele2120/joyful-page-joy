@@ -20,8 +20,10 @@ export default function BottomNav() {
 
   const isActive = (path: string) => (path === '/' ? location.pathname === '/' : location.pathname.startsWith(path));
 
+  // Vendors get the create sheet; buyers go straight to Post RFQ instead of a "vendors only" dead end.
   const handlePlusClick = () => {
-    setComposerOpen(true);
+    if (isVendor) setComposerOpen(true);
+    else navigate('/rfq/new');
   };
 
   return (
@@ -31,7 +33,7 @@ export default function BottomNav() {
           <NavTab to="/" icon={<Home className="w-5 h-5" />} label="Home" active={isActive('/')} />
           <NavTab to="/feed" icon={<Clapperboard className="w-5 h-5" />} label="Watch" active={isActive('/feed')} />
 
-          <button onClick={handlePlusClick} className="flex flex-col items-center justify-center gap-0.5" aria-label="Create">
+          <button onClick={handlePlusClick} className="flex flex-col items-center justify-center gap-0.5" aria-label={isVendor ? 'Create' : 'Post RFQ'}>
             <span className="w-9 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center -mt-1">
               <Plus className="w-5 h-5" />
             </span>
