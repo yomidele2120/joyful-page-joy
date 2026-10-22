@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import { useMarketplaceSettings } from '@/hooks/useMarketplace';
 
 export interface PreorderForm {
@@ -144,7 +145,8 @@ export function PreorderEditor({ product, onClose, onSaved }: {
     const result = buildPreorderPayload(form, !product.is_preorder);
     if ('error' in result) { toast.error(result.error); return; }
     setSaving(true);
-    const { error } = await supabase.from('products').update(result.data).eq('id', product.id);
+    const { error } = await supabase.from('products')
+      .update(result.data as Database['public']['Tables']['products']['Update']).eq('id', product.id);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
     toast.success('Preorder settings saved');
