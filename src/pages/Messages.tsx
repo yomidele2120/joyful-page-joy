@@ -11,7 +11,8 @@ import MediaUploadButton from '@/components/chat/MediaUploadButton';
 import VoiceRecorder from '@/components/chat/VoiceRecorder';
 import ProductChatCard, { type ChatProduct } from '@/components/chat/ProductChatCard';
 import { useAuth } from '@/hooks/useAuth';
-import { getOrCreateConversation, sendMessage, useConversations, useMessages, type Conversation } from '@/hooks/useChat';
+import { getOrCreateConversation, sendMessage, useConversations, useMarkConversationRead, useMessages, type Conversation } from '@/hooks/useChat';
+import MessageTicks from '@/components/chat/MessageTicks';
 import { supabase } from '@/integrations/supabase/client';
 
 function useChatProducts(ids: string[]) {
@@ -100,13 +101,8 @@ export default function Messages() {
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages.length, activeId]);
 
-  // Mark incoming messages read while the thread is open.
-  useEffect(() => {
-    if (!activeId || !user) return;
-    supabase.from('messages').update({ is_read: true })
-      .eq('conversation_id', activeId).neq('sender_id', user.id).eq('is_read', false)
-      .then(() => {});
-  }, [activeId, user, messages.length]);
+  // Mark incoming messages read while the thread is open and on screen.
+  useMarkConversationRead(activeId, user?.id, messages.length);
 
   const open = (id: string) => setSearchParams({ c: id });
   const back = () => setSearchParams({});
@@ -245,8 +241,9 @@ export default function Messages() {
                             ) : (
                               <p className="whitespace-pre-wrap break-words">{m.content}</p>
                             )}
-                            <span className={`mt-1 block text-[10px] ${own ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                            <span className={`mt-1 flex items-center gap-1 text-[10px] ${own ? 'justify-end text-primary-foreground/70' : 'text-muted-foreground'}`}>
                               {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {own && <MessageTicks isRead={!!m.is_read} readAt={m.read_at} />}
                             </span>
                           </div>
                         </div>

@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useConversations, useMessages, sendMessage, getOrCreateConversation, Conversation } from '@/hooks/useChat';
+import { useConversations, useMessages, useMarkConversationRead, sendMessage, getOrCreateConversation, Conversation } from '@/hooks/useChat';
+import MessageTicks from '@/components/chat/MessageTicks';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,15 +36,8 @@ export default function SupplierChat() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Mark messages as read when viewing
-  useEffect(() => {
-    if (!activeConvoId || !user) return;
-    (supabase as any).from('messages').update({ is_read: true })
-      .eq('conversation_id', activeConvoId)
-      .neq('sender_id', user.id)
-      .eq('is_read', false)
-      .then(() => {});
-  }, [activeConvoId, user, messages]);
+  // Mark messages as read when viewing (only while the page is on screen)
+  useMarkConversationRead(activeConvoId, user?.id, messages.length);
 
   const uploadMedia = async (file: Blob, ext: string): Promise<string | null> => {
     const fileName = `${user!.id}/${Date.now()}.${ext}`;
@@ -301,10 +295,11 @@ export default function SupplierChat() {
                         ) : (
                           <p>{m.content}</p>
                         )}
-                        <span className={`text-[10px] mt-1 block ${
-                          m.sender_id === user?.id ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                        <span className={`text-[10px] mt-1 flex items-center gap-1 ${
+                          m.sender_id === user?.id ? 'justify-end text-primary-foreground/70' : 'text-muted-foreground'
                         }`}>
                           {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {m.sender_id === user?.id && <MessageTicks isRead={!!m.is_read} readAt={m.read_at} />}
                         </span>
                       </div>
                     </div>

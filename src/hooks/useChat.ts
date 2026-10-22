@@ -21,6 +21,7 @@ export interface Message {
   sender_id: string;
   content: string;
   is_read: boolean;
+  read_at?: string | null;
   created_at: string;
   media_url?: string | null;
   media_type?: 'image' | 'video' | 'voice' | null;
@@ -121,12 +122,45 @@ export function useMessages(conversationId: string | null) {
       }, (payload) => {
         setMessages(prev => prev.some(m => m.id === (payload.new as Message).id) ? prev : [...prev, payload.new as Message]);
       })
+      // The other person opened the chat: the message row changes to is_read = true, so the sender's
+      // single tick turns into the blue double tick straight away.
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'messages',
+        filter: `conversation_id=eq.${conversationId}`,
+      }, (payload) => {
+        const updated = payload.new as Message;
+        setMessages(prev => prev.map(m => m.id === updated.id ? { ...m, is_read: updated.is_read, read_at: updated.read_at ?? null } : m));
+      })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, [conversationId, fetchMessages]);
 
   return { messages, loading };
+}
+
+/**
+ * Marks the other person's messages in this chat as read, but only while the page is actually on screen.
+ * (A chat left open in a background tab must not show "seen" to the sender.)
+ * Runs again when a new message arrives and when the tab comes back to the front.
+ */
+export function useMarkConversationRead(conversationId: string | null, userId: string | undefined, messageCount: number) {
+  useEffect(() => {
+    if (!conversationId || !userId) return;
+    const mark = () => {
+      if (document.visibilityState !== 'visible') return;
+      fromTable('messages').update({ is_read: true })
+        .eq('conversation_id', conversationId)
+        .neq('sender_id', userId)
+        .eq('is_read', false)
+        .then(() => {});
+    };
+    mark();
+    document.addEventListener('visibilitychange', mark);
+    return () => document.removeEventListener('visibilitychange', mark);
+  }, [conversationId, userId, messageCount]);
 }
 
 export function useUnreadCount() {

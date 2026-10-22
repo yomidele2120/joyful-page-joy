@@ -19,6 +19,7 @@ import { useFlyers } from '@/hooks/useFlyers';
 import { ImageFlyerBanner, ImageFlyerFill } from '@/components/flyers/ImageFlyers';
 import { BrandFlyerBanner, BrandFlyerFill } from '@/components/flyers/BrandFlyerImage';
 import { BRAND_FLYERS } from '@/lib/brandFlyers';
+import BrandMarquee from '@/components/BrandMarquee';
 
 const FEED_PAGE = 20;
 
@@ -75,7 +76,7 @@ export default function Index() {
   }, [visible, feed.length]);
 
   return (
-    <Layout>
+    <Layout flushFooter>
       <HeroCarousel images={photos} />
       <TrustStrip />
 
@@ -164,13 +165,16 @@ export default function Index() {
                   // later products fill any gap a full-width banner leaves.
                   const slot = (i + 1) % 20;
                   const round = Math.floor(i / 20);
+                  // Picture flyers are two columns wide and two rows tall on a phone, so the next products fill the
+                  // space beside them. They need at least 2 more products after them, otherwise they are left out.
+                  const roomBesideFlyer = Math.min(visible, feed.length) - (i + 1) >= 2;
                   if (slot === 6 && flyersReady) {
                     if (feedCards.length) {
                       const u = feedCards[round % feedCards.length];
-                      cells.push(<div key={`fc-${i}`} className="col-span-2 min-h-[260px] sm:col-span-1"><ImageFlyerFill flyer={u} /></div>);
+                      if (roomBesideFlyer) cells.push(<div key={`fc-${i}`} className="col-span-2 row-span-2 min-h-[260px] sm:col-span-1 sm:row-span-1"><ImageFlyerFill flyer={u} /></div>);
                     } else {
                       if (round % 2 === 0) {
-                        cells.push(<div key={`fc-${i}`} className="col-span-2 min-h-[260px] sm:col-span-1"><BrandFlyerFill flyer={BRAND_FLYERS.mysteryDeal} fit="contain" /></div>);
+                        if (roomBesideFlyer) cells.push(<div key={`fc-${i}`} className="col-span-2 row-span-2 min-h-[260px] sm:col-span-1 sm:row-span-1"><BrandFlyerFill flyer={BRAND_FLYERS.mysteryDeal} fit="contain" /></div>);
                       } else {
                         const f = [FLYERS.suppliers, FLYERS.rfq, FLYERS.sell][Math.floor(round / 2) % 3];
                         cells.push(<div key={`fc-${i}`} className="col-span-2 sm:col-span-1"><FlyerCard flyer={f} images={art(f.offset + round * 2, 2)} /></div>);
@@ -206,6 +210,8 @@ export default function Index() {
           </div>
         </section>
       </div>
+
+      <BrandMarquee />
 
       <section className="py-14 md:py-20 bg-foreground dark:bg-black text-background dark:text-white">
         <div className="container max-w-lg text-center">

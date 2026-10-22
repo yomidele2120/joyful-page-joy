@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import { useAuth } from '@/hooks/useAuth';
-import { useMessages, sendMessage, getOrCreateConversation } from '@/hooks/useChat';
+import { useMessages, useMarkConversationRead, sendMessage, getOrCreateConversation } from '@/hooks/useChat';
+import MessageTicks from '@/components/chat/MessageTicks';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -63,15 +64,8 @@ export default function BuyerChat() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Mark messages as read
-  useEffect(() => {
-    if (!conversationId || !user) return;
-    (supabase as any).from('messages').update({ is_read: true })
-      .eq('conversation_id', conversationId)
-      .neq('sender_id', user.id)
-      .eq('is_read', false)
-      .then(() => {});
-  }, [conversationId, user, messages]);
+  // Mark messages as read (only while the page is on screen)
+  useMarkConversationRead(conversationId, user?.id, messages.length);
 
   const handleSend = async () => {
     if (!newMessage.trim() || !conversationId || !user || !vendorUserId) return;
@@ -140,10 +134,11 @@ export default function BuyerChat() {
                   ) : (
                     <p>{m.content}</p>
                   )}
-                  <span className={`text-[10px] mt-1 block ${
-                    m.sender_id === user?.id ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                  <span className={`text-[10px] mt-1 flex items-center gap-1 ${
+                    m.sender_id === user?.id ? 'justify-end text-primary-foreground/70' : 'text-muted-foreground'
                   }`}>
                     {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {m.sender_id === user?.id && <MessageTicks isRead={!!m.is_read} readAt={m.read_at} />}
                   </span>
                 </div>
               </div>

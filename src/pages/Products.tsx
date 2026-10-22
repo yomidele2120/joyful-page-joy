@@ -208,12 +208,18 @@ export default function Products() {
                         const cells: React.ReactNode[] = [<ProductCard key={product.id} {...product} />];
                         // Flyers inside the listing: one card-sized after the 6th product,
                         // one full-width banner after the 12th.
+                        // The picture flyers are two columns wide and two rows tall on a phone, so the next
+                        // products fill the space beside them (no empty gap). That needs at least 2 more products
+                        // after it, otherwise it is left out.
+                        const roomBesideFlyer = pageItems.length - (i + 1) >= 2;
                         if (i === 5 && flyersReady) {
-                          cells.push(feedCards.length
-                            ? <div key="fc" className="col-span-2 min-h-[260px] sm:col-span-1"><ImageFlyerFill flyer={feedCards[(current - 1) % feedCards.length]} /></div>
-                            : current % 2 === 1
-                              ? <div key="fc" className="col-span-2 min-h-[260px] sm:col-span-1"><BrandFlyerFill flyer={BRAND_FLYERS.mysteryDeal} fit="contain" /></div>
-                              : <div key="fc" className="col-span-2 sm:col-span-1"><FlyerCard flyer={FLYERS.rfq} images={pickImages(photos, current * 3, 2)} /></div>);
+                          if (feedCards.length) {
+                            if (roomBesideFlyer) cells.push(<div key="fc" className="col-span-2 row-span-2 min-h-[260px] sm:col-span-1 sm:row-span-1"><ImageFlyerFill flyer={feedCards[(current - 1) % feedCards.length]} /></div>);
+                          } else if (current % 2 === 1) {
+                            if (roomBesideFlyer) cells.push(<div key="fc" className="col-span-2 row-span-2 min-h-[260px] sm:col-span-1 sm:row-span-1"><BrandFlyerFill flyer={BRAND_FLYERS.mysteryDeal} fit="contain" /></div>);
+                          } else {
+                            cells.push(<div key="fc" className="col-span-2 sm:col-span-1"><FlyerCard flyer={FLYERS.rfq} images={pickImages(photos, current * 3, 2)} /></div>);
+                          }
                         }
                         if (i === 11 && flyersReady) {
                           cells.push(feedBanners.length

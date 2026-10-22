@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { useConversations, useMessages, sendMessage, Conversation } from '@/hooks/useChat';
+import { useConversations, useMessages, useMarkConversationRead, sendMessage, Conversation } from '@/hooks/useChat';
+import MessageTicks from '@/components/chat/MessageTicks';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -26,15 +26,8 @@ export default function UserMessages() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Mark messages as read
-  useEffect(() => {
-    if (!activeConvoId || !user) return;
-    (supabase as any).from('messages').update({ is_read: true })
-      .eq('conversation_id', activeConvoId)
-      .neq('sender_id', user.id)
-      .eq('is_read', false)
-      .then(() => {});
-  }, [activeConvoId, user, messages]);
+  // Mark messages as read (only while the page is on screen)
+  useMarkConversationRead(activeConvoId, user?.id, messages.length);
 
   const handleSend = async () => {
     if (!newMessage.trim() || !activeConvoId || !user || !activeReceiverId) return;
@@ -140,10 +133,11 @@ export default function UserMessages() {
                   ) : (
                     <p>{m.content}</p>
                   )}
-                  <span className={`text-[10px] mt-1 block ${
-                    m.sender_id === user?.id ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                  <span className={`text-[10px] mt-1 flex items-center gap-1 ${
+                    m.sender_id === user?.id ? 'justify-end text-primary-foreground/70' : 'text-muted-foreground'
                   }`}>
                     {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {m.sender_id === user?.id && <MessageTicks isRead={!!m.is_read} readAt={m.read_at} />}
                   </span>
                 </div>
               </div>

@@ -6,13 +6,20 @@ import { COMPANY_LINKS, LEGAL_LINKS } from '@/config/business';
 import { useConsent } from '@/contexts/ConsentContext';
 import { useMarketplaceSettings, usePayLaterAvailable } from '@/hooks/useMarketplace';
 
-export default function Footer() {
+export default function Footer({ flush = false }: { flush?: boolean }) {
   const { data: categories } = useCategories();
   const { openPreferences } = useConsent();
   const payLaterOn = usePayLaterAvailable();
   const { data: marketplace } = useMarketplaceSettings();
   return (
-    <footer className="bg-foreground dark:bg-black text-background dark:text-white mt-16">
+    <footer
+      className={`bg-foreground dark:bg-black text-background dark:text-white ${
+        flush
+          // No gap above; a thin line separates it from the section above; bottom room clears the mobile nav bar.
+          ? 'border-t border-background/10 dark:border-white/10 pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-0'
+          : 'mt-16'
+      }`}
+    >
       <div className="container py-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-8 text-sm">
         {/* Brand */}
         <div className="sm:col-span-2 lg:col-span-1">
