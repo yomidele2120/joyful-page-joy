@@ -144,7 +144,8 @@ export function PreorderEditor({ product, onClose, onSaved }: {
     const result = buildPreorderPayload(form, !product.is_preorder);
     if ('error' in result) { toast.error(result.error); return; }
     setSaving(true);
-    const { error } = await supabase.from('products').update(result.data).eq('id', product.id);
+    const { error } = await supabase.from('products')
+      .update(result.data as Database['public']['Tables']['products']['Update']).eq('id', product.id);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
     toast.success('Preorder settings saved');

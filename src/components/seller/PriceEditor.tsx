@@ -16,7 +16,7 @@ export interface PriceEditorProduct {
   compare_at_price: number | null;
   moq: number | null;
   unit: string | null;
-  price_tiers: unknown;
+  price_tiers: Json;
 }
 
 /** Lets a supplier change the price of a product they already listed (price, old price, bulk prices). */
@@ -30,7 +30,7 @@ export function PriceEditor({ product, onClose, onSaved }: {
   const [price, setPrice] = useState(String(product.price));
   const [compare, setCompare] = useState(product.compare_at_price ? String(product.compare_at_price) : '');
   const [tiers, setTiers] = useState<{ min_qty: string; price: string }[]>(() => {
-    const existing = parseTiers(product.price_tiers as Json).map(t => ({ min_qty: String(t.min_qty), price: String(t.price) }));
+    const existing = parseTiers(product.price_tiers).map(t => ({ min_qty: String(t.min_qty), price: String(t.price) }));
     return existing.length ? existing : [{ min_qty: '', price: '' }];
   });
   const [saving, setSaving] = useState(false);

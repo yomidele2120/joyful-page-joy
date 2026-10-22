@@ -50,7 +50,8 @@ function SettingsPanel() {
 
   const save = useMutation({
     mutationFn: async (changes: Record<string, boolean | number>) => {
-      const { error } = await supabase.from('marketplace_settings').update(changes).eq('id', true);
+      const { error } = await supabase.from('marketplace_settings')
+        .update(changes as Database['public']['Tables']['marketplace_settings']['Update']).eq('id', true);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -148,7 +149,8 @@ function ListingsPanel() {
 
   const update = useMutation({
     mutationFn: async ({ id, changes }: { id: string; changes: Record<string, boolean> }) => {
-      const { error } = await supabase.from('products').update(changes).eq('id', id);
+      const { error } = await supabase.from('products')
+        .update(changes as Database['public']['Tables']['products']['Update']).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin-listings'] }); queryClient.invalidateQueries({ queryKey: ['products'] }); },
@@ -262,7 +264,8 @@ function DisputesPanel() {
   });
   const update = useMutation({
     mutationFn: async ({ id, changes }: { id: string; changes: Record<string, string> }) => {
-      const { error } = await supabase.from('disputes').update(changes).eq('id', id);
+      const { error } = await supabase.from('disputes')
+        .update(changes as Database['public']['Tables']['disputes']['Update']).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => { toast.success('Updated'); queryClient.invalidateQueries({ queryKey: ['admin-disputes'] }); },
