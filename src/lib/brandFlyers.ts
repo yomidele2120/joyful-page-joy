@@ -23,6 +23,8 @@ export interface BrandFlyer {
   /** 'contain' shows the whole flyer (never cropped) on a blurred copy of itself. Default is 'cover'.
    *  'contain-sm' crops to fill on phones (using `focus`) and shows the whole flyer from tablet size up. */
   fit?: 'cover' | 'contain' | 'contain-sm';
+  /** Pinned slides stay in the hero slider even when the admin has uploaded enough of their own to hide the built-in ones. */
+  pinned?: boolean;
 }
 
 export const BRAND_FLYERS = {
@@ -32,9 +34,9 @@ export const BRAND_FLYERS = {
   techFlatlay: { id: 'tech-flatlay', src: techFlatlay, alt: 'Tech gadgets and electronics from verified suppliers at I.T Hub Africa', href: '/products' },
   blackFriday: { id: 'black-friday', src: blackFriday, alt: 'Black Friday super sale: up to 59% off smart watches', href: '/products' },
   // Wide 2:1 flyers with text near every edge, so they are shown whole instead of cropped.
-  payLater: { id: 'pay-later', src: payLater, alt: 'Buy now, pay later: get the latest phones and laptops and spread your payments', href: '/pay-later', fit: 'contain' },
-  clothing: { id: 'clothing', src: clothing, alt: 'Adult and children clothing collection: stylish, comfortable, for every generation', href: '/category/fashion', fit: 'contain' },
-  preorderKitchen: { id: 'preorder-kitchen', src: preorderKitchen, alt: 'Preorder kitchen utensils now, before they are out of stock', href: '/preorders', fit: 'contain' },
+  payLater: { id: 'pay-later', src: payLater, alt: 'Buy now, pay later: get the latest phones and laptops and spread your payments', href: '/pay-later', fit: 'contain', pinned: true },
+  clothing: { id: 'clothing', src: clothing, alt: 'Adult and children clothing collection: stylish, comfortable, for every generation', href: '/category/fashion', fit: 'contain', pinned: true },
+  preorderKitchen: { id: 'preorder-kitchen', src: preorderKitchen, alt: 'Preorder kitchen utensils now, before they are out of stock', href: '/preorders', fit: 'contain', pinned: true },
   mysteryDeal: { id: 'mystery-deal', src: mysteryDeal, alt: 'Mystery deal surprise: up to 50% off gadgets', href: '/products' },
 } satisfies Record<string, BrandFlyer>;
 

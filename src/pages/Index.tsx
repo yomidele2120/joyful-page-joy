@@ -18,7 +18,7 @@ import { FLYERS } from '@/lib/flyers';
 import { useFlyers } from '@/hooks/useFlyers';
 import { ImageFlyerBanner, ImageFlyerFill } from '@/components/flyers/ImageFlyers';
 import { BrandFlyerBanner, BrandFlyerFill } from '@/components/flyers/BrandFlyerImage';
-import { BRAND_FLYERS } from '@/lib/brandFlyers';
+import { BRAND_FLYERS, MAKE_MONEY_BADGE } from '@/lib/brandFlyers';
 import BrandMarquee from '@/components/BrandMarquee';
 
 const FEED_PAGE = 20;
@@ -88,7 +88,7 @@ export default function Index() {
           {isVendor ? (
             <ActionTile to="/supplier-dashboard" icon={<Store />} title="Seller dashboard" text="Manage your store" />
           ) : (
-            <ActionTile to="/supplier-signup" icon={<Store />} title="Sell on IT Hub Africa" text="Open your store" />
+            <ActionTile to="/supplier-signup" icon={<Store />} badge={MAKE_MONEY_BADGE} title="Sell on IT Hub Africa" text="Open your store" />
           )}
         </section>
 
@@ -235,10 +235,12 @@ export default function Index() {
   );
 }
 
-function ActionTile({ to, icon, title, text }: { to: string; icon: React.ReactNode; title: string; text: string }) {
+function ActionTile({ to, icon, badge, title, text }: { to: string; icon: React.ReactNode; badge?: { src: string; alt: string }; title: string; text: string }) {
   return (
     <Link to={to} className="flex min-w-0 items-center gap-3 border border-border bg-card px-3 py-3 transition-colors hover:bg-secondary/60 sm:px-4">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary [&_svg]:h-5 [&_svg]:w-5">{icon}</span>
+      {badge
+        ? <img src={badge.src} alt={badge.alt} loading="lazy" className="h-11 w-11 shrink-0" />
+        : <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary [&_svg]:h-5 [&_svg]:w-5">{icon}</span>}
       <span className="min-w-0">
         <span className="block truncate text-sm font-semibold">{title}</span>
         <span className="mt-0.5 block truncate text-xs text-muted-foreground">{text}</span>

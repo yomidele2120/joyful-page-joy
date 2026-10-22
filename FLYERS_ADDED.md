@@ -16,3 +16,10 @@ Notes
 
 Mobile agreement panel (Supplier dashboard): icon and text use the full width with the button underneath on phones; one row on
 desktop. The warning text is now readable in dark mode, and the terms dialog fits the screen.
+
+## Update: pinned slides and home-page badge
+- The Pay later, clothing and preorder flyers are now **pinned** in the hero slider. Before, they were hidden as soon as 3 or more
+  hero flyers were uploaded in Admin > Flyers, which is why they could be missing on a live site that already had uploads.
+  Uploaded flyers still come first; the pinned three follow. Mark any other built-in flyer as pinned with `pinned: true` in `src/lib/brandFlyers.ts`.
+- The "Make Money, be your own boss" badge also sits on the home page "Sell on IT Hub Africa" tile, which uploaded flyers cannot replace.
+  (On the hero side tile it is still replaced when "Hero side tile" flyers are uploaded.)

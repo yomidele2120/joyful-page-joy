@@ -48,8 +48,11 @@ export default function HeroCarousel({ images }: { images: string[] }) {
   const showBuiltIn = U < 3;
 
   const picks = (featured ?? []).filter(p => !!p.image_url).slice(0, 4);
-  const IMG = HERO_IMAGE_SLIDES.length;
-  const builtInCount = showBuiltIn ? IMG + SLIDE_FLYERS.length + (picks.length >= 2 ? 1 : 0) : 0;
+  // The Pay later, clothing and preorder flyers are pinned: they stay in the slider even after the admin has
+  // uploaded 3 or more of their own (which hides the rest of the built-in slides).
+  const imageSlides = showBuiltIn ? HERO_IMAGE_SLIDES : HERO_IMAGE_SLIDES.filter(f => f.pinned);
+  const IMG = imageSlides.length;
+  const builtInCount = IMG + (showBuiltIn ? SLIDE_FLYERS.length + (picks.length >= 2 ? 1 : 0) : 0);
   const total = !ready ? 0 : U + builtInCount;
 
   const go = useCallback((next: number) => total > 0 && setIndex(((next % total) + total) % total), [total]);
@@ -132,7 +135,7 @@ export default function HeroCarousel({ images }: { images: string[] }) {
                 </div>
               ))}
 
-              {showBuiltIn && HERO_IMAGE_SLIDES.map((flyer, i) => (
+              {imageSlides.map((flyer, i) => (
                 <div key={flyer.id} className="h-full w-full shrink-0" aria-hidden={index !== U + i}>
                   <BrandFlyerFill flyer={flyer} tabIndex={index === U + i ? 0 : -1} imgClassName={flyer.focus} fit={flyer.fit} load={seen.has(U + i)} eager={U + i === 0} />
                 </div>
