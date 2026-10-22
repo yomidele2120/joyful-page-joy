@@ -20,6 +20,7 @@ import { ImageFlyerBanner, ImageFlyerFill } from '@/components/flyers/ImageFlyer
 import { BrandFlyerBanner, BrandFlyerFill } from '@/components/flyers/BrandFlyerImage';
 import { BRAND_FLYERS } from '@/lib/brandFlyers';
 import BrandMarquee from '@/components/BrandMarquee';
+import suppliersBanner from '@/assets/brand/suppliers-banner.png.asset.json';
 
 const FEED_PAGE = 20;
 
@@ -161,7 +162,16 @@ export default function Index() {
                         if (roomBesideFlyer) cells.push(<div key={`fc-${i}`} className="col-span-2 min-h-[200px] sm:col-span-1 sm:min-h-[260px]"><BrandFlyerFill flyer={BRAND_FLYERS.mysteryDeal} fit="contain" /></div>);
                       } else {
                         const f = [FLYERS.suppliers, FLYERS.rfq, FLYERS.sell][Math.floor(round / 2) % 3];
-                        cells.push(<div key={`fc-${i}`} className="col-span-2 sm:col-span-1"><FlyerCard flyer={f} images={art(f.offset + round * 2, 2)} /></div>);
+                        if (f === FLYERS.suppliers) {
+                          // Designed suppliers banner replaces the old built-in flyer card; 16:9 keeps it compact on phones.
+                          cells.push(
+                            <Link key={`fc-${i}`} to="/products?tab=suppliers" className="col-span-2 block overflow-hidden sm:col-span-1">
+                              <img src={suppliersBanner.url} alt="Meet trusted suppliers — browse approved sellers" loading="lazy" className="aspect-video w-full object-cover" />
+                            </Link>
+                          );
+                        } else {
+                          cells.push(<div key={`fc-${i}`} className="col-span-2 sm:col-span-1"><FlyerCard flyer={f} images={art(f.offset + round * 2, 2)} /></div>);
+                        }
                       }
                     }
                   }
