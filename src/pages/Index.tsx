@@ -20,7 +20,7 @@ import { ImageFlyerBanner, ImageFlyerFill } from '@/components/flyers/ImageFlyer
 import { BrandFlyerBanner, BrandFlyerFill } from '@/components/flyers/BrandFlyerImage';
 import { BRAND_FLYERS } from '@/lib/brandFlyers';
 import BrandMarquee from '@/components/BrandMarquee';
-import suppliersBanner from '@/assets/brand/suppliers-banner.png.asset.json';
+import suppliersBanner from '@/assets/brand/flyer-suppliers.webp';
 import { StoreVisitSection } from '@/components/StoreVisit';
 
 const FEED_PAGE = 20;
@@ -167,7 +167,7 @@ export default function Index() {
                           // Designed suppliers banner replaces the old built-in flyer card; 16:9 keeps it compact on phones.
                           cells.push(
                             <Link key={`fc-${i}`} to="/products?tab=suppliers" className="col-span-2 block overflow-hidden sm:col-span-1">
-                              <img src={suppliersBanner.url} alt="Meet trusted suppliers — browse approved sellers" loading="lazy" className="aspect-video w-full object-cover" />
+                              <img src={suppliersBanner} alt="Meet trusted suppliers. Browse approved sellers." width={1200} height={675} loading="lazy" decoding="async" className="aspect-video w-full object-cover" />
                             </Link>
                           );
                         } else {

@@ -4,10 +4,10 @@ import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useCategories, useProducts } from '@/hooks/useProducts';
 import { useFlyers } from '@/hooks/useFlyers';
 import { FLYERS } from '@/lib/flyers';
-import { CtaPill, FlyerArt, FlyerTile, TONES, pickImages } from '@/components/flyers/Flyers';
+import { CtaPill, FlyerArt, TONES, pickImages } from '@/components/flyers/Flyers';
 import { ImageFlyerFill } from '@/components/flyers/ImageFlyers';
 import { BrandFlyerFill } from '@/components/flyers/BrandFlyerImage';
-import { HERO_IMAGE_SLIDES, MAKE_MONEY_BADGE } from '@/lib/brandFlyers';
+import { HERO_IMAGE_SLIDES, HERO_SIDE_FLYERS } from '@/lib/brandFlyers';
 
 // Hero = category list | auto-playing flyer slider | two flyer tiles (desktop).
 // On phones the slider comes first and the two tiles sit right under it.
@@ -28,7 +28,8 @@ const AUTOPLAY_MS = 5500;
 const SWIPE_PX = 40;
 const DOTS_ROW = 'h-7'; // the side panels leave this much room at the bottom so every edge lines up with the picture
 const SLIDE_FLYERS = [FLYERS.bulk, FLYERS.rfq, FLYERS.watch];
-const SIDE_DEFAULTS = [FLYERS.sell, FLYERS.deals];
+// The side tiles are 4:3 pictures. On phones they keep that shape; from desktop size up they stretch to the slider's height.
+const SIDE_TILE = 'aspect-[4/3] min-h-[120px] lg:aspect-auto';
 
 export default function HeroCarousel({ images }: { images: string[] }) {
   const { data: categories } = useCategories();
@@ -211,12 +212,12 @@ export default function HeroCarousel({ images }: { images: string[] }) {
         <div className="relative">
         <div className="grid grid-cols-2 gap-3 lg:absolute lg:inset-x-0 lg:bottom-7 lg:top-0 lg:grid-cols-1 lg:grid-rows-2">
           {!ready
-            ? SIDE_DEFAULTS.map(f => <div key={f.id} className="min-h-[120px] animate-pulse bg-secondary" />)
-            : SIDE_DEFAULTS.map((fallback, i) => {
+            ? HERO_SIDE_FLYERS.map(f => <div key={f.id} className={`${SIDE_TILE} animate-pulse bg-secondary`} />)
+            : HERO_SIDE_FLYERS.map((fallback, i) => {
                 const uploaded = uploadedSide[i];
                 return uploaded
                   ? <ImageFlyerFill key={uploaded.id} flyer={uploaded} className="min-h-[120px]" />
-                  : <FlyerTile key={fallback.id} flyer={fallback} images={pickImages(images, fallback.offset, 2)} badge={fallback.id === 'sell' ? MAKE_MONEY_BADGE : undefined} />;
+                  : <BrandFlyerFill key={fallback.id} flyer={fallback} className={SIDE_TILE} />;
               })}
         </div>
         </div>

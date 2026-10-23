@@ -8,6 +8,8 @@ import payLater from '@/assets/brand/flyer-pay-later.webp';
 import clothing from '@/assets/brand/flyer-clothing.webp';
 import preorderKitchen from '@/assets/brand/flyer-preorder-kitchen.webp';
 import suppliers from '@/assets/brand/flyer-suppliers.webp';
+import sellSide from '@/assets/brand/flyer-side-sell.webp';
+import dealsSide from '@/assets/brand/flyer-side-deals.webp';
 import makeMoneyBadge from '@/assets/brand/badge-make-money.webp';
 
 // The IT Hub Africa promo flyers that ship with the site. They are shown in
@@ -40,6 +42,10 @@ export const BRAND_FLYERS = {
   preorderKitchen: { id: 'preorder-kitchen', src: preorderKitchen, alt: 'Preorder kitchen utensils now, before they are out of stock', href: '/preorders', fit: 'contain', pinned: true },
   // 16:9 banner with its headline and button drawn into the picture, so it is shown whole (no text overlay).
   suppliers: { id: 'suppliers', src: suppliers, alt: 'Meet trusted suppliers. Discover quality products from suppliers you can count on. Explore suppliers.', href: '/products?tab=suppliers' },
+  // 4:3 tiles for the two spots beside the hero slider. Headline, subline and button are drawn into the picture,
+  // with everything kept well inside the edges, so they survive the slightly different tile shapes (cover fit).
+  sellSide: { id: 'sell-side', src: sellSide, alt: 'Sell to buyers across Nigeria. List products and receive inquiries. Open your store.', href: '/supplier-signup' },
+  dealsSide: { id: 'deals-side', src: dealsSide, alt: 'Price drops on bulk favourites. Prices reduced by the seller. See the deals.', href: '/products' },
   mysteryDeal: { id: 'mystery-deal', src: mysteryDeal, alt: 'Mystery deal surprise: up to 50% off gadgets', href: '/products' },
 } satisfies Record<string, BrandFlyer>;
 
@@ -48,6 +54,9 @@ export const HERO_IMAGE_SLIDES: BrandFlyer[] = [
   BRAND_FLYERS.elevate, BRAND_FLYERS.payLater, BRAND_FLYERS.clothing,
   BRAND_FLYERS.preorderKitchen, BRAND_FLYERS.techFlatlay, BRAND_FLYERS.blackFriday,
 ];
+
+// The two flyers beside the hero slider, top to bottom (side by side on phones).
+export const HERO_SIDE_FLYERS: BrandFlyer[] = [BRAND_FLYERS.sellSide, BRAND_FLYERS.dealsSide];
 
 /** Small round "Make Money, be your own boss" badge for supplier sign-up spots. */
 export const MAKE_MONEY_BADGE = { src: makeMoneyBadge, alt: 'Make money. Be your own boss.' };
