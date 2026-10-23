@@ -32,3 +32,8 @@ banners instead of plain colour blocks: `src/assets/brand/flyer-side-sell.webp` 
 - The "Make Money, be your own boss" badge is part of the sell banner. Uploading "Hero side tile" flyers in Admin > Flyers still replaces them.
 - Everything important sits well inside the edges, so it is not cut off on phones (2 tiles side by side) or desktop (stacked column).
 - The deals banner shows no percentage or price, because the tile only promises what the page shows: prices the seller has reduced.
+
+## Update: suppliers banner in the product feed
+On tablet and desktop the "Meet trusted suppliers" banner is now two columns wide and as tall as the product cards beside it, so it
+no longer leaves an empty dark gap under it. The whole picture is shown (never cropped) on a soft blurred copy of itself. On phones it
+is unchanged: full width at its own 16:9 shape. Code: the suppliers cell in `src/pages/Index.tsx`.
