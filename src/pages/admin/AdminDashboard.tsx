@@ -3,6 +3,7 @@ import { functionErrorMessage } from '@/lib/functionError';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { removeProducts, removeSummary } from '@/lib/removeProducts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -225,9 +226,13 @@ export default function AdminDashboard() {
   };
 
   const deleteProduct = async (productId: string) => {
-    const { error } = await supabase.from('products').delete().eq('id', productId);
-    if (error) toast.error(error.message);
-    else { toast.success('Product deleted'); queryClient.invalidateQueries({ queryKey: ['admin-products'] }); }
+    if (!window.confirm('Delete this product? If buyers have already ordered it, it is hidden from the shop instead of erased.')) return;
+    try {
+      toast.success(removeSummary(await removeProducts([productId])));
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+    } catch (e: any) {
+      toast.error(e?.message || 'Could not remove the product.');
+    }
   };
 
   const navItems: DashNavItem[] = [

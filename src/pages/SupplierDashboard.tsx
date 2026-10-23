@@ -13,6 +13,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { removeProducts, removeSummary } from '@/lib/removeProducts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { PreorderEditor, PreorderFields, buildPreorderPayload, emptyPreorder, type PreorderForm } from '@/components/seller/PreorderFields';
@@ -94,6 +97,35 @@ export default function SupplierDashboard() {
     scope: 'vendor', vendorId: vendor?.id, page: productPage, search: debouncedProductSearch, enabled: !!vendor?.id && isApproved,
   });
   const products = productData?.items;
+
+  // Tick products to remove several at once. A dialog asks first, and the result is reported honestly:
+  // products buyers have ordered cannot be erased (they are part of the order history), so they are hidden instead.
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const [confirmIds, setConfirmIds] = useState<string[] | null>(null);
+  const [removing, setRemoving] = useState(false);
+  useEffect(() => { setSelected(new Set()); }, [productPage, debouncedProductSearch]);
+  const confirmRemove = async () => {
+    if (!confirmIds?.length) return;
+    setRemoving(true);
+    try {
+      const result = await removeProducts(confirmIds);
+      toast.success(removeSummary(result));
+      // Removing everything on the last page would leave an empty page behind: step back one.
+      if (productPage > 1 && products && confirmIds.length >= products.length) setProductPage(productPage - 1);
+      setSelected(new Set());
+      setConfirmIds(null);
+      queryClient.invalidateQueries({ queryKey: ['vendor-products'] });
+    } catch (e: any) {
+      toast.error(e?.message || 'Could not remove the products. Please try again.');
+    } finally {
+      setRemoving(false);
+    }
+  };
+  const pageIds = (products ?? []).map(p => p.id);
+  const allOnPageSelected = pageIds.length > 0 && pageIds.every(id => selected.has(id));
+  const someOnPageSelected = pageIds.some(id => selected.has(id));
+  const toggleOne = (id: string, on: boolean) => setSelected(prev => { const next = new Set(prev); if (on) next.add(id); else next.delete(id); return next; });
+  const toggleAllOnPage = (on: boolean) => setSelected(on ? new Set(pageIds) : new Set());
 
   // The supplier's total for the overview card (a search in the list must not change it).
   const { data: productCount } = useQuery({
@@ -293,12 +325,24 @@ export default function SupplierDashboard() {
                   aria-label="Search my products"
                 />
               </div>
+              {selected.size > 0 && (
+                <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-secondary px-3 py-2 text-sm">
+                  <span className="font-medium">{selected.size} selected</span>
+                  <Button size="sm" variant="destructive" className="h-8" onClick={() => setConfirmIds(Array.from(selected))}>
+                    <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete selected
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-8" onClick={() => setSelected(new Set())}>Clear</Button>
+                </div>
+              )}
               <div className={`bg-card rounded-xl border border-border overflow-hidden transition-opacity ${productsRefreshing ? 'opacity-60' : ''}`}>
                 {products?.length ? (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead className="bg-secondary">
                         <tr>
+                          <th className="w-10 p-3">
+                            <Checkbox aria-label="Select all products on this page" checked={allOnPageSelected ? true : someOnPageSelected ? 'indeterminate' : false} onCheckedChange={v => toggleAllOnPage(v === true)} />
+                          </th>
                           <th className="text-left p-3 font-heading">Product</th>
                           <th className="text-left p-3 font-heading">Price</th>
                           <th className="text-left p-3 font-heading">Stock</th>
@@ -310,10 +354,24 @@ export default function SupplierDashboard() {
                       <tbody>
                         {products.map(p => (
                           <tr key={p.id} className="border-t border-border">
+                            <td className="w-10 p-3">
+                              <Checkbox aria-label={`Select ${p.name}`} checked={selected.has(p.id)} onCheckedChange={v => toggleOne(p.id, v === true)} />
+                            </td>
                             <td className="p-3">
                               <div className="flex items-center gap-2">
-                                <img src={p.thumb_url || p.image_url || '/placeholder.svg'} alt="" loading="lazy" decoding="async" className="w-8 h-8 rounded object-cover" />
+                                <img src={p.thumb_url || p.image_url || '/placeholder.svg'} alt="" loading="lazy" decoding="async" className={`w-8 h-8 rounded object-cover ${p.is_active === false ? 'opacity-50' : ''}`} />
                                 <span className="font-medium line-clamp-1">{p.name}</span>
+                                {p.is_active === false && (
+                                  <span className="flex shrink-0 items-center gap-1.5">
+                                    <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">Hidden</span>
+                                    <button type="button" className="text-xs font-medium text-primary underline-offset-2 hover:underline"
+                                      onClick={async () => {
+                                        const { error } = await supabase.from('products').update({ is_active: true }).eq('id', p.id);
+                                        if (error) toast.error(error.message);
+                                        else { queryClient.invalidateQueries({ queryKey: ['vendor-products'] }); toast.success('Product is showing in your shop again'); }
+                                      }}>Show</button>
+                                  </span>
+                                )}
                               </div>
                             </td>
                             <td className="p-3">
@@ -347,12 +405,8 @@ export default function SupplierDashboard() {
                               </div>
                             </td>
                             <td className="p-3">
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive"
-                                onClick={async () => {
-                                  await supabase.from('products').delete().eq('id', p.id);
-                                  queryClient.invalidateQueries({ queryKey: ['vendor-products'] });
-                                  toast.success('Product deleted');
-                                }}>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" aria-label={`Delete ${p.name}`}
+                                onClick={() => setConfirmIds([p.id])}>
                                 <Trash2 className="w-3.5 h-3.5" />
                               </Button>
                             </td>
@@ -369,6 +423,24 @@ export default function SupplierDashboard() {
                 )}
               </div>
               <ProductPager page={productPage} pageCount={productData?.pageCount ?? 1} onChange={setProductPage} />
+              <AlertDialog open={!!confirmIds} onOpenChange={open => { if (!open && !removing) setConfirmIds(null); }}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>{confirmIds?.length === 1 ? 'Delete this product?' : `Delete ${confirmIds?.length ?? 0} products?`}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Deleted products are gone for good. A product that buyers have already ordered cannot be erased, because it is part of their
+                      order history. It is hidden from your shop instead, and you can show it again later.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={removing}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction disabled={removing} onClick={e => { e.preventDefault(); confirmRemove(); }}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                      {removing ? 'Deleting...' : 'Delete'}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
               </div>
             )}
 
