@@ -2,7 +2,7 @@ import { BrandLogoPill } from '@/components/BrandLogo';
 import { Link } from 'react-router-dom';
 import { Globe, Mail, MapPin, Phone } from 'lucide-react';
 import { useCategories } from '@/hooks/useProducts';
-import { COMPANY_LINKS, LEGAL_LINKS } from '@/config/business';
+import { BUSINESS, COMPANY_LINKS, LEGAL_LINKS } from '@/config/business';
 import { useConsent } from '@/contexts/ConsentContext';
 import { useMarketplaceSettings, usePayLaterAvailable } from '@/hooks/useMarketplace';
 
@@ -68,24 +68,24 @@ export default function Footer({ flush = false }: { flush?: boolean }) {
             <div className="flex items-start gap-2.5">
               <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
               <address className="not-italic leading-relaxed">
-                Suite 108, Foramot Plaza, Somoye Osundairo,<br />
-                by Polaris Bank, Oremeji,<br />
-                Computer Village, Ikeja, Lagos,
+                {BUSINESS.addressLines.map((line, i) => (
+                  <span key={line}>{line}{i < BUSINESS.addressLines.length - 1 && <br />}</span>
+                ))}
               </address>
             </div>
             <a
-              href="tel:+2348060474393"
+              href={BUSINESS.phoneHref}
               className="flex items-center gap-2.5 min-w-0 hover:text-primary transition-colors"
             >
               <Phone className="w-4 h-4 text-primary shrink-0" />
-              <span className="truncate">+234 806 047 4393</span>
+              <span className="truncate">{BUSINESS.phone}</span>
             </a>
             <a
-              href="mailto:team@ithubafrica.com"
+              href={`mailto:${BUSINESS.email}`}
               className="flex items-center gap-2.5 min-w-0 hover:text-primary transition-colors"
             >
               <Mail className="w-4 h-4 text-primary shrink-0" />
-              <span className="truncate">team@ithubafrica.com</span>
+              <span className="truncate">{BUSINESS.email}</span>
             </a>
             <a
               href="https://www.ithubafrica.com"

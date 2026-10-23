@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   ShoppingCart, Search, User, Menu, Heart, LogOut, Store, Clapperboard, Bell, MessageSquare,
   FileText, ClipboardList, ChevronDown, LayoutGrid, Inbox, Package, Wallet, CalendarClock } from 'lucide-react';
@@ -42,6 +42,13 @@ export default function Navbar() {
   const { count: basketCount } = useInquiryBasket();
   const { user, isAdmin, isVendor, signOut } = useAuth();
   const { data: categories } = useCategories();
+  const { pathname } = useLocation();
+  // Phones: a swipeable row of categories under the search box on the pages where people browse.
+  const showCategoryChips = pathname === '/' || pathname.startsWith('/products') || pathname.startsWith('/category');
+  useEffect(() => {
+    // Bring the chip of the category you are on into view.
+    document.querySelector('[data-chip-active="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest' });
+  }, [pathname, categories]);
   const unreadNotifications = useUnreadNotificationCount();
   const unreadMessages = useUnreadCount();
   // Pay later is linked only while it is genuinely available; preorders while the admin keeps them on.
@@ -221,6 +228,29 @@ export default function Navbar() {
           />
         </div>
       </form>
+
+      {showCategoryChips && !!categories?.length && (
+        <nav aria-label="Categories" className="md:hidden border-t border-border/70">
+          <ul className="flex gap-2 overflow-x-auto px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {[{ id: 'all', name: 'All', to: '/products' }, ...categories.map(c => ({ id: c.id, name: c.name, to: `/category/${c.slug}` }))].map(chip => {
+              const active = chip.to === '/products' ? pathname === '/products' : pathname === chip.to;
+              return (
+                <li key={chip.id} className="shrink-0">
+                  <Link
+                    to={chip.to}
+                    data-chip-active={active}
+                    className={`inline-flex items-center whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors ${
+                      active ? 'bg-primary text-primary-foreground' : 'bg-secondary text-foreground/80 hover:bg-secondary/70'
+                    }`}
+                  >
+                    {chip.name}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      )}
 
       {/* Row 2: categories and primary links (desktop) */}
       <nav className="hidden md:block border-t border-border">

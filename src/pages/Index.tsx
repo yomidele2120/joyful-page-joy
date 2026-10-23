@@ -6,7 +6,7 @@ import HeroCarousel from '@/components/HeroCarousel';
 import TrustStrip from '@/components/TrustStrip';
 import ScrollRow, { ScrollItem } from '@/components/ScrollRow';
 import SupplierCard from '@/components/SupplierCard';
-import ProductCard from '@/components/ProductCard';
+import ProductCard, { ProductCardSkeleton } from '@/components/ProductCard';
 import { useProducts, useSuppliers } from '@/hooks/useProducts';
 import { getMoq } from '@/lib/pricing';
 import { bnplEligibleForPrice, useMarketplaceSettings, usePayLaterAvailable, usePublicFinance } from '@/hooks/useMarketplace';
@@ -21,6 +21,7 @@ import { BrandFlyerBanner, BrandFlyerFill } from '@/components/flyers/BrandFlyer
 import { BRAND_FLYERS } from '@/lib/brandFlyers';
 import BrandMarquee from '@/components/BrandMarquee';
 import suppliersBanner from '@/assets/brand/suppliers-banner.png.asset.json';
+import { StoreVisitSection } from '@/components/StoreVisit';
 
 const FEED_PAGE = 20;
 
@@ -138,7 +139,7 @@ export default function Index() {
           <h2 className="mb-4 font-heading text-xl font-bold sm:text-2xl">You may like</h2>
           {isLoading ? (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-              {Array.from({ length: 10 }).map((_, index) => <div key={index} className="aspect-[3/4] animate-pulse rounded-2xl bg-secondary" />)}
+              {Array.from({ length: 10 }).map((_, index) => <ProductCardSkeleton key={index} />)}
             </div>
           ) : feed.length ? (
             <>
@@ -206,6 +207,8 @@ export default function Index() {
       </div>
 
       <BrandMarquee />
+
+      <StoreVisitSection />
 
       <section className="py-14 md:py-20 bg-foreground dark:bg-black text-background dark:text-white">
         <div className="container max-w-lg text-center">

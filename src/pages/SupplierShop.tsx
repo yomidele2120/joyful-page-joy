@@ -153,8 +153,8 @@ export default function SupplierShop() {
         {activeTab === 'products' ? (
           products.length ? (
             <>
-            <div className="grid grid-cols-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-1.5 sm:gap-3">
-              {products.map(p => <ProductCard key={p.id} id={p.id} name={p.name} slug={p.slug} price={p.price} compare_at_price={p.compare_at_price} image_url={p.image_url} badge={p.badge} brand={p.brand} moq={p.moq} unit={p.unit} price_tiers={p.price_tiers} bnpl_eligible={p.bnpl_eligible} is_preorder={p.is_preorder} preorder_approved={p.preorder_approved} preorder_release_date={p.preorder_release_date} />)}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+              {products.map(p => <ProductCard key={p.id} id={p.id} name={p.name} slug={p.slug} price={p.price} compare_at_price={p.compare_at_price} image_url={p.image_url} thumb_url={p.thumb_url} badge={p.badge} brand={p.brand} moq={p.moq} unit={p.unit} price_tiers={p.price_tiers} bnpl_eligible={p.bnpl_eligible} is_preorder={p.is_preorder} preorder_approved={p.preorder_approved} preorder_release_date={p.preorder_release_date} />)}
             </div>
             <ProductPager
               page={Math.min(page, productPage?.pageCount ?? 1)} pageCount={productPage?.pageCount ?? 1} capped={productPage?.capped}

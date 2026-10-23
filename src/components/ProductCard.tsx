@@ -1,7 +1,8 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { prefetchProduct } from '@/hooks/useProducts';
-import { BadgeCheck } from 'lucide-react';
+import { BadgeCheck, ImageOff } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { formatNaira } from '@/lib/format';
 import { formatMoq, priceRange } from '@/lib/pricing';
@@ -64,16 +65,37 @@ export default function ProductCard({
   const soldOut = typeof stock_quantity === 'number' && stock_quantity <= 0;
   const seller = vendors?.store_name || brand || 'IT Hub Africa seller';
 
+  // Photo states: a soft shimmer while it loads, then it fades in. If the small copy fails we try the full photo,
+  // and if that fails too (or there is no photo) we show a tidy placeholder instead of a broken or blank box.
+  const [src, setSrc] = useState<string | null>(thumb_url || image_url || null);
+  const [loaded, setLoaded] = useState(false);
+  const onImageError = () => {
+    if (src && src === thumb_url && image_url && image_url !== thumb_url) setSrc(image_url);
+    else setSrc(null);
+  };
+
   return (
     <div className="group flex h-full flex-col overflow-hidden rounded-2xl bg-card ring-1 ring-border/50 transition-shadow duration-200 animate-fade-in hover:shadow-lg">
       <Link to={`/product/${slug}`} className="relative m-1.5 block aspect-square overflow-hidden rounded-xl bg-white" onPointerEnter={warm} onFocus={warm} onTouchStart={warm}>
-        <img
-          src={thumb_url || image_url || '/placeholder.svg'}
-          alt={name}
-          decoding="async"
-          className="h-full w-full object-contain p-2 transition-transform duration-300 group-hover:scale-[1.04] sm:p-3"
-          loading="lazy"
-        />
+        {src ? (
+          <>
+            {!loaded && <span aria-hidden="true" className="absolute inset-0 animate-pulse bg-secondary/60" />}
+            <img
+              src={src}
+              alt={name}
+              decoding="async"
+              loading="lazy"
+              onLoad={() => setLoaded(true)}
+              onError={onImageError}
+              className={`h-full w-full object-contain p-2 transition-[opacity,transform] duration-300 group-hover:scale-[1.04] sm:p-3 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+            />
+          </>
+        ) : (
+          <span className="flex h-full w-full flex-col items-center justify-center gap-1 bg-secondary text-muted-foreground">
+            <ImageOff className="h-6 w-6" aria-hidden="true" />
+            <span className="text-[11px]">No photo yet</span>
+          </span>
+        )}
         {badge && (
           <Badge className="absolute left-1.5 top-1.5 rounded-full border-none bg-background/90 px-2 py-0.5 text-[11px] font-medium text-primary shadow-sm">
             {badge}
@@ -108,6 +130,20 @@ export default function ProductCard({
           </span>
           {soldOut && <span className="shrink-0 font-medium text-destructive">Sold out</span>}
         </div>
+      </div>
+    </div>
+  );
+}
+
+/** Grey placeholder shaped like a product card, shown while a list is loading. */
+export function ProductCardSkeleton() {
+  return (
+    <div className="flex h-full flex-col overflow-hidden rounded-2xl bg-card ring-1 ring-border/50" aria-hidden="true">
+      <div className="m-1.5 aspect-square animate-pulse rounded-xl bg-secondary" />
+      <div className="space-y-2 px-2.5 pb-3 pt-1">
+        <div className="h-3 w-4/5 animate-pulse rounded bg-secondary" />
+        <div className="h-3 w-3/5 animate-pulse rounded bg-secondary" />
+        <div className="h-4 w-2/5 animate-pulse rounded bg-secondary" />
       </div>
     </div>
   );

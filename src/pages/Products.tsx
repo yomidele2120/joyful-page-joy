@@ -4,7 +4,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { BadgeCheck, LayoutGrid, List, MessageSquare, Search, Send, SlidersHorizontal, X } from 'lucide-react';
 import { toast } from 'sonner';
 import Layout from '@/components/layout/Layout';
-import ProductCard, { ProductPrice } from '@/components/ProductCard';
+import ProductCard, { ProductCardSkeleton, ProductPrice } from '@/components/ProductCard';
 import SupplierCard from '@/components/SupplierCard';
 import InquiryDialog, { type InquiryDialogTarget } from '@/components/InquiryDialog';
 import { useCategories, useSuppliers, type ProductListRow } from '@/hooks/useProducts';
@@ -198,25 +198,24 @@ export default function Products() {
                 <p className="mb-3 text-sm text-muted-foreground">{isLoading ? 'Loading products...' : `${formatProductCount(total)} product${total === 1 ? '' : 's'}`}</p>
 
                 {isLoading ? (
-                  <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-3 xl:grid-cols-4 sm:gap-3">
-                    {Array.from({ length: 8 }).map((_, i) => <div key={i} className="aspect-[3/4] animate-pulse bg-secondary" />)}
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+                    {Array.from({ length: 8 }).map((_, i) => <ProductCardSkeleton key={i} />)}
                   </div>
                 ) : pageItems.length ? (
                   view === 'grid' ? (
-                    <div className="grid grid-flow-dense grid-cols-4 gap-1.5 sm:grid-cols-3 xl:grid-cols-4 sm:gap-3">
+                    <div className="grid grid-flow-dense grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
                       {pageItems.flatMap((product, i) => {
                         const cells: React.ReactNode[] = [<ProductCard key={product.id} {...product} />];
                         // Flyers inside the listing: one card-sized after the 6th product,
                         // one full-width banner after the 12th.
-                        // The picture flyers are two columns wide and two rows tall on a phone, so the next
-                        // products fill the space beside them (no empty gap). That needs at least 2 more products
-                        // after it, otherwise it is left out.
+                        // The picture flyers are full width on a phone (2 columns). They need at least 2 more products
+                        // after them, otherwise they are left out.
                         const roomBesideFlyer = pageItems.length - (i + 1) >= 2;
                         if (i === 5 && flyersReady) {
                           if (feedCards.length) {
-                            if (roomBesideFlyer) cells.push(<div key="fc" className="col-span-2 row-span-2 min-h-[260px] sm:col-span-1 sm:row-span-1"><ImageFlyerFill flyer={feedCards[(current - 1) % feedCards.length]} /></div>);
+                            if (roomBesideFlyer) cells.push(<div key="fc" className="col-span-2 min-h-[200px] sm:col-span-1 sm:min-h-[260px]"><ImageFlyerFill flyer={feedCards[(current - 1) % feedCards.length]} /></div>);
                           } else if (current % 2 === 1) {
-                            if (roomBesideFlyer) cells.push(<div key="fc" className="col-span-2 row-span-2 min-h-[260px] sm:col-span-1 sm:row-span-1"><BrandFlyerFill flyer={BRAND_FLYERS.mysteryDeal} fit="contain" /></div>);
+                            if (roomBesideFlyer) cells.push(<div key="fc" className="col-span-2 min-h-[200px] sm:col-span-1 sm:min-h-[260px]"><BrandFlyerFill flyer={BRAND_FLYERS.mysteryDeal} fit="contain" /></div>);
                           } else {
                             cells.push(<div key="fc" className="col-span-2 sm:col-span-1"><FlyerCard flyer={FLYERS.rfq} images={pickImages(photos, current * 3, 2)} /></div>);
                           }

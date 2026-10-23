@@ -31,7 +31,7 @@ export default function CategoryPage() {
         ) : (
           <>
             <p className="text-sm text-muted-foreground mb-4">{formatProductCount(total)} products</p>
-            <div className="grid grid-cols-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-1.5 sm:gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
               {products.map(p => <ProductCard key={p.id} {...p} />)}
             </div>
             {(!products.length || unknownCategory) && (

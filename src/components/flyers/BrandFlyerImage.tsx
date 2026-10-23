@@ -5,10 +5,10 @@ import { cn } from '@/lib/utils';
 const focusRing = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
 
 /** A built-in brand flyer at its own proportions, full width. For banners between content. */
-export function BrandFlyerBanner({ flyer, className }: { flyer: BrandFlyer; className?: string }) {
+export function BrandFlyerBanner({ flyer, className, imgClassName }: { flyer: BrandFlyer; className?: string; imgClassName?: string }) {
   return (
     <Link to={flyer.href} aria-label={flyer.alt} className={cn('block overflow-hidden bg-secondary', focusRing, className)}>
-      <img src={flyer.src} alt={flyer.alt} loading="lazy" decoding="async" className="block h-auto w-full" />
+      <img src={flyer.src} alt={flyer.alt} loading="lazy" decoding="async" className={cn('block h-auto w-full', imgClassName)} />
     </Link>
   );
 }

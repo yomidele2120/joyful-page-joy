@@ -7,6 +7,7 @@ import mysteryDeal from '@/assets/brand/card-mystery-deal.jpg';
 import payLater from '@/assets/brand/flyer-pay-later.webp';
 import clothing from '@/assets/brand/flyer-clothing.webp';
 import preorderKitchen from '@/assets/brand/flyer-preorder-kitchen.webp';
+import suppliers from '@/assets/brand/flyer-suppliers.webp';
 import makeMoneyBadge from '@/assets/brand/badge-make-money.webp';
 
 // The IT Hub Africa promo flyers that ship with the site. They are shown in
@@ -37,6 +38,8 @@ export const BRAND_FLYERS = {
   payLater: { id: 'pay-later', src: payLater, alt: 'Buy now, pay later: get the latest phones and laptops and spread your payments', href: '/pay-later', fit: 'contain', pinned: true },
   clothing: { id: 'clothing', src: clothing, alt: 'Adult and children clothing collection: stylish, comfortable, for every generation', href: '/category/fashion', fit: 'contain', pinned: true },
   preorderKitchen: { id: 'preorder-kitchen', src: preorderKitchen, alt: 'Preorder kitchen utensils now, before they are out of stock', href: '/preorders', fit: 'contain', pinned: true },
+  // 16:9 banner with its headline and button drawn into the picture, so it is shown whole (no text overlay).
+  suppliers: { id: 'suppliers', src: suppliers, alt: 'Meet trusted suppliers. Discover quality products from suppliers you can count on. Explore suppliers.', href: '/products?tab=suppliers' },
   mysteryDeal: { id: 'mystery-deal', src: mysteryDeal, alt: 'Mystery deal surprise: up to 50% off gadgets', href: '/products' },
 } satisfies Record<string, BrandFlyer>;
 
