@@ -93,6 +93,16 @@ async function accessibleImage(url: string): Promise<boolean> {
 
 async function enrich(item: Record<string, unknown>, categoryNames: string[]) {
   const name = cleanString(item.source_name, 250);
+  const sourceFields = item.source_fields && typeof item.source_fields === "object" && !Array.isArray(item.source_fields)
+    ? item.source_fields as Record<string, unknown>
+    : {};
+  const sourceSpecs = sourceFields.specs && typeof sourceFields.specs === "object" && !Array.isArray(sourceFields.specs)
+    ? sourceFields.specs as Record<string, unknown>
+    : {};
+  const sourceCategoryName = cleanString(sourceFields.category_name, 120);
+  const matchedSourceCategory = categoryNames.find(category =>
+    category.toLowerCase() === sourceCategoryName.toLowerCase());
+  const suppliedImage = imageUrl(sourceFields.image_url);
   const [shopping, images] = await Promise.all([
     serpSearch("google_shopping", name),
     serpSearch("google_images", name),
@@ -121,15 +131,18 @@ async function enrich(item: Record<string, unknown>, categoryNames: string[]) {
     const candidateAccessible = candidate?.url ? await accessibleImage(candidate.url) : false;
     return {
       normalized_name: name,
-      brand: null,
-      category_name: null,
-      description: null,
-      specs: {},
-      image_url: candidate?.url ?? null,
-      image_status: candidateAccessible ? "uncertain" : "missing",
+      brand: cleanString(sourceFields.brand, 120) || null,
+      category_name: matchedSourceCategory ?? null,
+      description: cleanString(sourceFields.description, 4000) || null,
+      specs: sourceSpecs,
+      image_url: suppliedImage ?? candidate?.url ?? null,
+      image_status: suppliedImage ? "uncertain" : candidateAccessible ? "uncertain" : "missing",
       source_urls: [],
-      review_notes: "No Google Shopping product evidence was found. Verify product identity and any image manually.",
-      raw_data: { evidence: [], identity_confidence: 0, image_match_score: candidate ? titleMatch(name, candidate.title) : 0 },
+      review_notes: [
+        "No Google Shopping product evidence was found. Verify product identity and any image manually.",
+        sourceCategoryName && !matchedSourceCategory ? `CSV category "${sourceCategoryName}" did not match a marketplace category.` : "",
+      ].filter(Boolean).join(" "),
+      raw_data: { evidence: [], identity_confidence: 0, image_match_score: suppliedImage ? 0 : candidate ? titleMatch(name, candidate.title) : 0 },
     };
   }
 
@@ -151,7 +164,13 @@ async function enrich(item: Record<string, unknown>, categoryNames: string[]) {
       contents: [{
         role: "user",
         parts: [{
-          text: JSON.stringify({ product_name: name, allowed_categories: categoryNames, evidence }),
+          text: JSON.stringify({
+            product_name: name,
+            supplied_product_fields: sourceFields,
+            supplied_specifications: sourceSpecs,
+            allowed_categories: categoryNames,
+            evidence,
+          }),
         }],
       }],
       generationConfig: {
@@ -201,9 +220,16 @@ async function enrich(item: Record<string, unknown>, categoryNames: string[]) {
   const categoryName = cleanString(result.category_name, 120);
   const allowedCategory = categoryNames.find(category => category.toLowerCase() === categoryName.toLowerCase());
   const confidence = typeof result.identity_confidence === "number" ? result.identity_confidence : 0;
-  const specs = result.specs && typeof result.specs === "object" && !Array.isArray(result.specs) ? result.specs : {};
+  const generatedSpecs = result.specs && typeof result.specs === "object" && !Array.isArray(result.specs) ? result.specs : {};
+  const specs = { ...generatedSpecs, ...sourceSpecs };
+  const suppliedCategory = cleanString(sourceFields.category_name, 120);
+  const selectedCategory = suppliedCategory || cleanString(result.category_name, 120);
+  const suppliedImageUrl = cleanString(sourceFields.image_url, 2000);
+  const finalImageUrl = suppliedImage ?? chosenImage;
   const reviewNotes = confidence < 0.6
     ? "Low product identity confidence. Verify the model and all specifications against the research sources."
+    : suppliedCategory && !matchedSourceCategory
+      ? `CSV category "${suppliedCategory}" did not match a marketplace category. Select a valid category before publishing.`
     : imageStatus === "uncertain" || imageStatus === "missing"
       ? "Product identity researched, but the image requires manual verification."
       : null;
@@ -211,17 +237,19 @@ async function enrich(item: Record<string, unknown>, categoryNames: string[]) {
   return {
     normalized_name: cleanString(result.normalized_name, 250) || name,
     brand: cleanString(result.brand, 120) || null,
-    category_name: allowedCategory ?? null,
-    description: cleanString(result.description, 4000) || null,
+    category_name: matchedSourceCategory
+      ?? categoryNames.find(category => category.toLowerCase() === selectedCategory.toLowerCase())
+      ?? null,
+    description: cleanString(sourceFields.description, 4000) || cleanString(result.description, 4000) || null,
     specs,
-    image_url: chosenImage,
-    image_status: imageStatus,
+    image_url: finalImageUrl,
+    image_status: suppliedImageUrl ? suppliedImage ? "uncertain" : "missing" : imageStatus,
     source_urls: sourceUrls,
     review_notes: reviewNotes,
     raw_data: {
       evidence,
       identity_confidence: Math.max(0, Math.min(1, confidence)),
-      image_match_score: best ? titleMatch(name, best.title) : 0,
+      image_match_score: suppliedImageUrl ? 0 : best ? titleMatch(name, best.title) : 0,
     },
   };
 }
@@ -261,9 +289,6 @@ Deno.serve(async (req) => {
       if (!Number.isInteger(job.total_rows) || job.total_rows < 1 || job.total_rows > 1000) {
         return json({ error: "Import jobs must contain between 1 and 1,000 product rows." }, 400);
       }
-      if (!Deno.env.get("SERPAPI_API_KEY") || !Deno.env.get("GEMINI_API_KEY")) {
-        return json({ error: "Configure SERPAPI_API_KEY and GEMINI_API_KEY in Supabase Edge Function secrets before processing." }, 500);
-      }
       const { count, error: countError } = await db.from("product_import_items")
         .select("id", { count: "exact", head: true }).eq("job_id", jobId);
       if (countError) throw countError;
@@ -300,6 +325,19 @@ Deno.serve(async (req) => {
           .eq("updated_at", candidate.updated_at).select("*").maybeSingle();
         if (claimError) throw claimError;
         if (!claimed) continue;
+        const duplicateName = cleanString(claimed.source_name, 250).replace(/[\\%_]/g, "\\$&");
+        const { data: existing, error: existingError } = await db.from("products")
+          .select("id").eq("vendor_id", job.vendor_id).ilike("name", duplicateName).limit(1).maybeSingle();
+        if (existingError) throw existingError;
+        if (existing) {
+          const { error } = await db.from("product_import_items").update({
+            status: "skipped",
+            review_notes: `Skipped: a product with this name already exists in the selected vendor shop (${existing.id}).`,
+          }).eq("id", claimed.id).eq("status", "processing");
+          if (error) throw error;
+          processed++;
+          continue;
+        }
         try {
           const enriched = await enrich(claimed, categoryNames);
           const { error } = await db.from("product_import_items").update({ ...enriched, status: "review" }).eq("id", claimed.id);
@@ -322,10 +360,12 @@ Deno.serve(async (req) => {
           || (row.status === "failed" && row.attempt_count < 3)).length;
       const failed = allRows.filter((row: { status: string }) => row.status === "failed").length;
       const reviewed = allRows.filter((row: { status: string }) =>
-        ["review", "approved", "rejected", "published"].includes(row.status)).length;
+        ["review", "approved", "rejected", "published", "skipped"].includes(row.status)).length;
+      const skipped = allRows.filter((row: { status: string }) => row.status === "skipped").length;
       const status = remaining > 0 ? "processing" : failed > 0 ? "failed" : "review";
       const { error: updateJobError } = await db.from("product_import_jobs").update({
-        status, processed_rows: reviewed + failed, success_count: reviewed, failed_count: failed,
+        status, processed_rows: reviewed + failed, success_count: reviewed - skipped,
+        failed_count: failed, skipped_count: skipped,
         error_message: failed ? `${failed} product(s) need retry or manual attention.` : null,
       }).eq("id", jobId);
       if (updateJobError) throw updateJobError;
@@ -375,12 +415,23 @@ Deno.serve(async (req) => {
         image = db.storage.from("product-images").getPublicUrl(path).data.publicUrl;
       }
 
-      const { data: category, error: categoryError } = item.category_name
-        ? await db.from("categories").select("id").eq("name", item.category_name).maybeSingle()
-        : { data: null };
+      const sourceFields = item.source_fields && typeof item.source_fields === "object" && !Array.isArray(item.source_fields)
+        ? item.source_fields as Record<string, unknown>
+        : {};
+      const suppliedCategoryId = cleanString(sourceFields.category_id, 100);
+      if (suppliedCategoryId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(suppliedCategoryId)) {
+        return json({ error: "The CSV category_id must be a valid category UUID." }, 422);
+      }
+      const { data: category, error: categoryError } = suppliedCategoryId
+        ? await db.from("categories").select("id").eq("id", suppliedCategoryId).maybeSingle()
+        : item.category_name
+          ? await db.from("categories").select("id").eq("name", item.category_name).maybeSingle()
+          : { data: null };
       if (categoryError) throw categoryError;
-      if (item.category_name && !category) {
-        return json({ error: `Category "${item.category_name}" is not an exact match for an existing marketplace category.` }, 422);
+      if ((item.category_name || suppliedCategoryId) && !category) {
+        return json({ error: suppliedCategoryId
+          ? "The CSV category_id does not match an existing marketplace category."
+          : `Category "${item.category_name}" is not an exact match for an existing marketplace category.` }, 422);
       }
       const productName = item.normalized_name || item.source_name;
       const slug = `${slugify(productName)}-${item.id.slice(0, 8)}`;
@@ -392,8 +443,30 @@ Deno.serve(async (req) => {
         .select("id").eq("vendor_id", job.vendor_id).ilike("name", escapedName).limit(1).maybeSingle();
       if (duplicateError) throw duplicateError;
       if (duplicate && duplicate.id !== existingProduct?.id) {
-        return json({ error: "A product with this name already exists in this vendor shop. Edit the imported name or reject this duplicate." }, 409);
+        const reason = `Skipped at publish: a product with this name already exists in the selected vendor shop (${duplicate.id}).`;
+        const { error: skipError } = await db.from("product_import_items")
+          .update({ status: "skipped", review_notes: reason })
+          .eq("id", itemId).eq("job_id", jobId).eq("status", "approved");
+        if (skipError) throw skipError;
+        const { data: itemStatuses, error: statusesError } = await db.from("product_import_items")
+          .select("status").eq("job_id", jobId);
+        if (statusesError) throw statusesError;
+        const skippedCount = (itemStatuses ?? []).filter((row: { status: string }) => row.status === "skipped").length;
+        const failedCount = (itemStatuses ?? []).filter((row: { status: string }) => row.status === "failed").length;
+        const successCount = (itemStatuses ?? []).filter((row: { status: string }) =>
+          ["review", "approved", "published", "rejected"].includes(row.status)).length;
+        const processedCount = (itemStatuses ?? []).filter((row: { status: string }) =>
+          !["queued", "processing"].includes(row.status)).length;
+        const { error: updateJobError } = await db.from("product_import_jobs").update({
+          skipped_count: skippedCount,
+          failed_count: failedCount,
+          success_count: successCount,
+          processed_rows: processedCount,
+        }).eq("id", jobId);
+        if (updateJobError) throw updateJobError;
+        return json({ status: "skipped", reason });
       }
+      const stockQuantity = sourceFields.stock_quantity;
       const productData = {
         name: productName,
         slug,
@@ -404,9 +477,12 @@ Deno.serve(async (req) => {
         category_id: category?.id ?? null,
         vendor_id: job.vendor_id,
         brand: item.brand,
-        stock_quantity: 0,
         is_active: true,
         specs: item.specs ?? {},
+        sku: cleanString(sourceFields.sku, 120) || null,
+        stock_quantity: Number.isInteger(stockQuantity)
+          ? stockQuantity
+          : 0,
       };
       let productId = existingProduct?.id;
       if (!productId) {
@@ -424,7 +500,7 @@ Deno.serve(async (req) => {
         .select("status").eq("job_id", jobId);
       if (jobItemsError) throw jobItemsError;
       const terminal = (jobItems ?? []).every((row: { status: string }) =>
-        row.status === "published" || row.status === "rejected");
+        row.status === "published" || row.status === "rejected" || row.status === "skipped");
       if (terminal) {
         const { error: jobUpdateError } = await db.from("product_import_jobs")
           .update({ status: (jobItems ?? []).some((row: { status: string }) => row.status === "published") ? "published" : "rejected" })

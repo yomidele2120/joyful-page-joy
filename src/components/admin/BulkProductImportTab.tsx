@@ -23,6 +23,7 @@ type ImportJob = {
   processed_rows: number;
   success_count: number;
   failed_count: number;
+  skipped_count: number;
   created_at: string;
 };
 type ImportItem = {
@@ -40,6 +41,7 @@ type ImportItem = {
   price: number;
   original_price: number;
   source_urls: string[];
+  source_fields: Json;
   attempt_count: number;
   published_product_id: string | null;
   status: string;
@@ -50,7 +52,8 @@ type ImportItem = {
 const statusLabel = (status: string) => status.replace(/_/g, ' ');
 
 function downloadCsv(job: ImportJob, items: ImportItem[]) {
-  const fields = ['Source Product Name', 'Client Selling Price', 'Enriched Name', 'Brand', 'Category', 'Description', 'Specifications', 'Image URL', 'Image Status', 'Status', 'Review Notes', 'Research Sources'];
+  const specNames = [...new Set(items.flatMap(item => Object.keys(item.specs ?? {})))];
+  const fields = ['Source Product Name', 'Client Selling Price', 'Enriched Name', 'Brand', 'Category', 'Description', 'Image URL', 'Image Status', 'Status', 'Review Notes', 'Research Sources', ...specNames];
   const quote = (value: unknown) => {
     let text = String(value ?? '');
     if (/^[\s]*[=+\-@]/.test(text)) text = `'${text}`;
@@ -58,8 +61,13 @@ function downloadCsv(job: ImportJob, items: ImportItem[]) {
   };
   const rows = items.map(item => [
     item.source_name, item.original_price, item.normalized_name, item.brand, item.category_name,
-    item.description, JSON.stringify(item.specs), item.image_url, item.image_status, item.status, item.review_notes,
-    item.source_urls.join(' | '),
+    item.description, item.image_url, item.image_status, item.status, item.review_notes,
+    item.source_urls.join(' | '), ...specNames.map(name => {
+      const specs = item.specs && typeof item.specs === 'object' && !Array.isArray(item.specs)
+        ? item.specs as Record<string, Json>
+        : {};
+      return specs[name] ?? '';
+    }),
   ]);
   const csv = [fields, ...rows].map(row => row.map(quote).join(',')).join('\r\n');
   const link = document.createElement('a');
@@ -71,24 +79,41 @@ function downloadCsv(job: ImportJob, items: ImportItem[]) {
 }
 
 function downloadExcel(job: ImportJob, items: ImportItem[]) {
-  const rows = items.map(item => ({
-    'Source Product Name': item.source_name,
-    'Client Selling Price': item.original_price,
-    'Enriched Name': item.normalized_name ?? '',
-    Brand: item.brand ?? '',
-    Category: item.category_name ?? '',
-    Description: item.description ?? '',
-    Specifications: JSON.stringify(item.specs),
-    'Image URL': item.image_url ?? '',
-    'Image Status': item.image_status,
-    Status: item.status,
-    'Review Notes': item.review_notes ?? '',
-    'Research Sources': item.source_urls.join(' | '),
-  }));
+  const specNames = [...new Set(items.flatMap(item => Object.keys(item.specs ?? {})))];
+  const rows = items.map(item => {
+    const specs = item.specs && typeof item.specs === 'object' && !Array.isArray(item.specs)
+      ? item.specs as Record<string, Json>
+      : {};
+    return {
+      'Source Product Name': item.source_name,
+      'Client Selling Price': item.original_price,
+      'Enriched Name': item.normalized_name ?? '',
+      Brand: item.brand ?? '',
+      Category: item.category_name ?? '',
+      Description: item.description ?? '',
+      'Image URL': item.image_url ?? '',
+      'Image Status': item.image_status,
+      Status: item.status,
+      'Review Notes': item.review_notes ?? '',
+      'Research Sources': item.source_urls.join(' | '),
+      ...Object.fromEntries(specNames.map(name => [name, specs[name] ?? ''])),
+    };
+  });
   const sheet = XLSX.utils.json_to_sheet(rows);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, sheet, 'Product review');
   XLSX.writeFile(workbook, `${job.file_name.replace(/\.[^.]+$/, '')}-review.xlsx`);
+}
+
+function downloadCsvTemplate() {
+  const headers = ['Product Name', 'Selling Price', 'Brand', 'Category', 'Category ID', 'Description', 'Image URL', 'SKU', 'Stock Quantity', 'Color', 'Storage', 'Size'];
+  const csv = `${headers.map(value => `"${value}"`).join(',')}\r\n`;
+  const objectUrl = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  const link = document.createElement('a');
+  link.href = objectUrl;
+  link.download = 'bulk-product-import-template.csv';
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
 }
 
 export default function BulkProductImportTab({ vendors }: { vendors: Vendor[] }) {
@@ -166,6 +191,16 @@ export default function BulkProductImportTab({ vendors }: { vendors: Vendor[] })
           source_price: row.price,
           price: row.price,
           original_price: row.price,
+          source_fields: {
+            brand: row.brand,
+            category_name: row.categoryName,
+            category_id: row.categoryId,
+            description: row.description,
+            image_url: row.imageUrl,
+            sku: row.sku,
+            stock_quantity: row.stockQuantity,
+            specs: row.specs,
+          },
         }));
         const { error } = await supabase.from('product_import_items').insert(batch);
         if (error) {
@@ -250,8 +285,10 @@ export default function BulkProductImportTab({ vendors }: { vendors: Vendor[] })
 
   const publishItem = async (item: ImportItem) => {
     try {
-      await runAction({ action: 'publish', job_id: item.job_id, item_id: item.id, store_image: storeImage });
-      toast.success('Approved product published to the selected vendor shop.');
+      const result = await runAction({ action: 'publish', job_id: item.job_id, item_id: item.id, store_image: storeImage });
+      toast.success(result.status === 'skipped'
+        ? 'Product skipped because the selected shop already has a matching listing.'
+        : 'Approved product published to the selected vendor shop.');
       await loadItems(selectedJobId);
       await loadJobs();
     } catch (error) {
@@ -275,7 +312,7 @@ export default function BulkProductImportTab({ vendors }: { vendors: Vendor[] })
           <div className="rounded-lg bg-primary/10 p-2 text-primary"><Sparkles className="h-5 w-5" /></div>
           <div>
             <h2 className="font-heading text-lg font-bold">AI product import</h2>
-            <p className="text-sm text-muted-foreground">Upload up to 1,000 product names and client selling prices for one vendor shop. No online prices are imported.</p>
+            <p className="text-sm text-muted-foreground">Upload up to 1,000 products for one vendor shop. Repeated names are accepted; products already listed in that shop are skipped and reported. Client prices are never replaced with online prices.</p>
           </div>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
@@ -289,9 +326,13 @@ export default function BulkProductImportTab({ vendors }: { vendors: Vendor[] })
           <div className="space-y-2">
             <Label htmlFor="bulk-import-file">CSV or Excel file</Label>
             <Input id="bulk-import-file" type="file" accept=".csv,.xlsx,.xls" onChange={event => setFile(event.target.files?.[0] ?? null)} />
+            <Button type="button" variant="link" className="h-auto p-0 text-xs" onClick={downloadCsvTemplate}>Download CSV template</Button>
           </div>
         </div>
-        <p className="text-xs text-muted-foreground">Required headers: <strong>Product Name</strong> and <strong>Selling Price</strong> (also accepts Product/Title and Client Price). Prices must be non-negative and have at most 2 decimals.</p>
+        <div className="space-y-1 text-xs text-muted-foreground">
+          <p>Required: <strong>Product Name</strong> and <strong>Selling Price</strong>. Optional product columns: Brand, Category (name), Category ID, Description, Image URL, SKU, Stock Quantity. Add technical specifications as separate columns, such as Color, Storage, or Size. Leave any optional cell blank to skip that field. Repeated product names are allowed.</p>
+          <p>Prices must be non-negative with at most 2 decimals. Existing products in the selected shop will be skipped, with a reason shown in the review results.</p>
+        </div>
         <Button onClick={createImport} disabled={!file || !vendorId || busy}>
           {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
           Create import job
@@ -325,6 +366,7 @@ export default function BulkProductImportTab({ vendors }: { vendors: Vendor[] })
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1 rounded-lg bg-secondary/60 p-3 text-xs">
             <span>Progress: <strong>{items.filter(item => item.status !== 'queued' && item.status !== 'processing').length}/{job.total_rows}</strong></span>
             {Object.entries(statusCounts).map(([status, count]) => <span key={status} className="capitalize">{statusLabel(status)}: <strong>{count}</strong></span>)}
+            <span>Skipped existing: <strong>{job.skipped_count}</strong></span>
             {processingStopped && <span className="text-amber-700">Paused; resume to continue.</span>}
           </div>
         )}
@@ -443,6 +485,7 @@ function ReviewItem({
       </div>
 
       {item.error_message && <p className="rounded-md bg-destructive/10 p-2 text-xs text-destructive">{item.error_message}</p>}
+      {item.status === 'skipped' && item.review_notes && <p className="rounded-md bg-amber-500/10 p-2 text-xs text-amber-900">{item.review_notes}</p>}
       {item.image_url && <img src={item.image_url} alt="" className="h-32 max-w-full rounded-md border border-border object-contain" loading="lazy" />}
 
       <div className="grid gap-3 md:grid-cols-2">

@@ -1,6 +1,8 @@
 # Admin bulk product import
 
-The importer is available only in the authenticated admin console under **Marketplace → Bulk product import**. Each job targets one vendor shop. It accepts CSV, XLS, or XLSX files with `Product Name` and `Selling Price` columns and up to 1,000 unique products. Client prices are locked for the lifetime of the import; enrichment and online research prices are never used as selling prices.
+The importer is available only in the authenticated admin console under **Marketplace → Bulk product import**. Each job targets one vendor shop. It accepts CSV, XLS, or XLSX files with `Product Name` and `Selling Price` columns and up to 1,000 product rows. Repeated product names in a file are accepted. Products already listed in the selected shop are skipped and reported with a reason. Client prices are locked for the lifetime of the import; enrichment and online research prices are never used as selling prices.
+
+Optional product columns are `Brand`, `Category` (name), `Category ID`, `Description`, `Image URL`, `SKU`, and `Stock Quantity`. Add technical specifications as separate columns, for example `Color`, `Storage`, or `Size`; blank optional cells are ignored. A CSV template is downloadable from the admin upload form. Exported CSVs also put each specification in its own column.
 
 ## Configure server-side credentials
 
@@ -26,9 +28,9 @@ The migration creates the admin-only import/review tables and a public-read `pro
 
 ## Workflow and safety
 
-Create an import job for the chosen shop, then select **Enrich products**. Work is persisted in small batches, so the admin can pause, leave the page, and resume from the saved job. Failed requests are retried up to three times, with an explicit manual retry option. Products remain unpublished in the review queue until an admin edits/reviews them, approves them, and separately chooses **Publish to shop**. Rejected or uncertain products are not published automatically.
+Create an import job for the chosen shop, then select **Enrich products**. Work is persisted in small batches, so the admin can pause, leave the page, and resume from the saved job. Failed requests are retried up to three times, with an explicit manual retry option. Products remain unpublished in the review queue until an admin edits/reviews them, approves them, and separately chooses **Publish to shop**. Rejected or uncertain products are not published automatically. If a repeated row is published after an earlier matching row, it is skipped and reported rather than creating a duplicate listing.
 
-The export buttons produce CSV and Excel review copies. Product images are taken only from SerpApi results; inaccessible or weakly matched images are labeled for manual verification. Specifications and description claims are generated from the gathered search evidence, which is linked on each review card.
+The export buttons produce CSV and Excel review copies, including skipped rows and skip reasons. Uploaded specification-column values are retained alongside AI-enriched facts and take precedence when keys overlap. Product images are taken only from SerpApi results or an explicitly supplied CSV image URL; inaccessible or weakly matched images are labeled for manual verification. Specifications and description claims are generated from the gathered search evidence, which is linked on each review card.
 
 ## Validation
 

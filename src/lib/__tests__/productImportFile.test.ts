@@ -24,6 +24,30 @@ describe('parseProductImportFile', () => {
     expect(parsed.rows.map(row => row.price)).toEqual(testRows.map(([, price]) => price));
   });
 
+  it('accepts repeated products, optional product columns, and separate specification columns', async () => {
+    const csv = [
+      'Product Name,Selling Price,Brand,Category,Description,SKU,Stock,Color,Storage',
+      'Phone Model A,125.50,Acme,Phones,Sample description,PHONE-A,8,Black,128GB',
+      'Phone Model A,125.50,Acme,Phones,,PHONE-A,0,White,256GB',
+    ].join('\r\n');
+    const parsed = await parseProductImportFile(fileFromBytes('products.csv', new TextEncoder().encode(csv)));
+    expect(parsed.rows).toHaveLength(2);
+    expect(parsed.rows[0]).toMatchObject({
+      name: 'Phone Model A',
+      price: 125.5,
+      brand: 'Acme',
+      categoryName: 'Phones',
+      description: 'Sample description',
+      sku: 'PHONE-A',
+      stockQuantity: 8,
+      specs: { Color: 'Black', Storage: '128GB' },
+    });
+    expect(parsed.rows[1]).toMatchObject({
+      name: 'Phone Model A',
+      specs: { Color: 'White', Storage: '256GB' },
+    });
+  });
+
   it('parses 10 Excel rows and preserves each client selling price', async () => {
     const sheet = XLSX.utils.aoa_to_sheet([['Product Name', 'Selling Price'], ...testRows]);
     const workbook = XLSX.utils.book_new();

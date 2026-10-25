@@ -560,6 +560,7 @@ export type Database = {
           file_name: string
           id: string
           processed_rows: number
+          skipped_count: number
           source_type: string
           status: string
           success_count: number
@@ -575,6 +576,7 @@ export type Database = {
           file_name: string
           id?: string
           processed_rows?: number
+          skipped_count?: number
           source_type?: string
           status?: string
           success_count?: number
@@ -590,6 +592,7 @@ export type Database = {
           file_name?: string
           id?: string
           processed_rows?: number
+          skipped_count?: number
           source_type?: string
           status?: string
           success_count?: number
@@ -627,6 +630,7 @@ export type Database = {
           review_notes: string | null
           source_name: string
           source_price: number | null
+          source_fields: Json
           source_urls: Json
           specs: Json
           status: string
@@ -651,6 +655,7 @@ export type Database = {
           review_notes?: string | null
           source_name: string
           source_price?: number | null
+          source_fields?: Json
           source_urls?: Json
           specs?: Json
           status?: string
@@ -675,6 +680,7 @@ export type Database = {
           review_notes?: string | null
           source_name?: string
           source_price?: number | null
+          source_fields?: Json
           source_urls?: Json
           specs?: Json
           status?: string

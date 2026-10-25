@@ -1,8 +1,25 @@
 import * as XLSX from 'xlsx';
 
-export type ProductImportRow = { name: string; price: number };
+export type ProductImportRow = {
+  name: string;
+  price: number;
+  brand: string | null;
+  categoryName: string | null;
+  categoryId: string | null;
+  description: string | null;
+  imageUrl: string | null;
+  sku: string | null;
+  stockQuantity: number | null;
+  specs: Record<string, string>;
+};
 
 const normalizedHeader = (value: unknown) => String(value ?? '').trim().toLowerCase().replace(/[\s_-]+/g, '');
+const knownHeaders = new Set([
+  'name', 'product', 'productname', 'title', 'price', 'sellingprice', 'clientprice',
+  'clientsellingprice', 'brand', 'category', 'categoryname', 'description',
+  'categoryid', 'image', 'imageurl', 'sku', 'stock', 'stockquantity', 'quantity',
+  'vendorid', 'isactive', 'isfeatured', 'badge', 'createdat', 'updatedat',
+]);
 
 export async function parseProductImportFile(file: File): Promise<{
   rows: ProductImportRow[];
@@ -22,7 +39,6 @@ export async function parseProductImportFile(file: File): Promise<{
   }
 
   const rows: ProductImportRow[] = [];
-  const seen = new Set<string>();
   for (let index = 1; index < data.length; index++) {
     const row = data[index];
     const name = String(row[nameIndex] ?? '').trim();
@@ -36,10 +52,37 @@ export async function parseProductImportFile(file: File): Promise<{
     if (!Number.isFinite(price) || price > 9999999999.99) {
       throw new Error(`Row ${index + 1}: client selling price is outside the supported range.`);
     }
-    const key = name.toLowerCase().replace(/\s+/g, ' ');
-    if (seen.has(key)) throw new Error(`Row ${index + 1}: "${name}" appears more than once in this file.`);
-    seen.add(key);
-    rows.push({ name, price });
+    const valueFor = (aliases: string[]) => {
+      const column = headers.findIndex(header => aliases.includes(header));
+      const value = column < 0 ? '' : String(row[column] ?? '').trim();
+      return value || null;
+    };
+    const stockValue = valueFor(['stock', 'stockquantity', 'quantity']);
+    let stockQuantity: number | null = null;
+    if (stockValue !== null) {
+      if (!/^\d+$/.test(stockValue) || Number(stockValue) > 2147483647) {
+        throw new Error(`Row ${index + 1}: stock quantity must be a non-negative whole number.`);
+      }
+      stockQuantity = Number(stockValue);
+    }
+    const specs: Record<string, string> = {};
+    headers.forEach((header, column) => {
+      const specName = String(data[0][column] ?? '').trim();
+      const value = String(row[column] ?? '').trim();
+      if (header && !knownHeaders.has(header) && specName && value) specs[specName] = value;
+    });
+    rows.push({
+      name,
+      price,
+      brand: valueFor(['brand']),
+      categoryName: valueFor(['category', 'categoryname']),
+      categoryId: valueFor(['categoryid']),
+      description: valueFor(['description']),
+      imageUrl: valueFor(['image', 'imageurl']),
+      sku: valueFor(['sku']),
+      stockQuantity,
+      specs,
+    });
   }
   if (!rows.length) throw new Error('No product rows were found.');
   if (rows.length > 1000) throw new Error('A single upload can contain at most 1,000 products.');
