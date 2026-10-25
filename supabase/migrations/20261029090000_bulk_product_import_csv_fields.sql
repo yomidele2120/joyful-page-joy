@@ -10,3 +10,5 @@ alter table public.product_import_items add constraint product_import_items_stat
 
 comment on column public.product_import_items.source_fields is
   'Optional product-format fields and separate CSV specification columns supplied by the admin.';
+
+notify pgrst, 'reload schema';

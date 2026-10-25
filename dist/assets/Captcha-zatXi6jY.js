@@ -1,1 +1,0 @@
-import{r as e}from"./index-D2WrvUMx.js";const a=void 0;function d(){const[o,s]=e.useState(null),[c,r]=e.useState(0),n=!!a;e.useCallback(t=>s(t),[]);const u=e.useCallback(()=>{s(null),r(t=>t+1)},[]);return{required:n,token:o??void 0,ready:!n,reset:u,widget:null}}export{d as u};

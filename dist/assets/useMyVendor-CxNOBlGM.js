@@ -1,0 +1,1 @@
+import{u as a,O as n,v as u}from"./index-CqJHEHUJ.js";function d(){const{user:e,isVendor:s}=a();return n({queryKey:["my-vendor",e==null?void 0:e.id],queryFn:async()=>{const{data:o,error:r}=await u.from("vendors").select("id, user_id, store_name, logo_url, is_approved").eq("user_id",e.id).maybeSingle();if(r)throw r;return o},enabled:!!e&&s})}export{d as u};
