@@ -31,6 +31,7 @@ import FinanceTab from '@/components/admin/FinanceTab';
 import OrderOpsTab from '@/components/admin/OrderOpsTab';
 import SupplierCommissionTab from '@/components/admin/SupplierCommissionTab';
 import AnalyticsTab from '@/components/admin/AnalyticsTab';
+import BulkProductImportTab from '@/components/admin/BulkProductImportTab';
 import { ExportButton } from '@/components/admin/analyticsUi';
 import ProductPager from '@/components/ProductPager';
 import { useManagedProducts, MANAGE_PAGE_SIZE, MAX_MANAGE_PAGES } from '@/hooks/useManagedProducts';
@@ -243,6 +244,7 @@ export default function AdminDashboard() {
     { key: 'suppliers', label: 'Suppliers', icon: Store, badge: pendingVendors.length, group: 'Marketplace' },
     { key: 'products', label: 'Products', icon: Package, group: 'Marketplace' },
     { key: 'add-product', label: 'Add product', icon: Plus, group: 'Marketplace' },
+    { key: 'bulk-import', label: 'Bulk product import', icon: FileText, group: 'Marketplace' },
     { key: 'categories', label: 'Categories', icon: Layers, group: 'Marketplace' },
     { key: 'flyers', label: 'Flyers', icon: Megaphone, group: 'Marketplace' },
     { key: 'marketplace', label: 'Pay later, preorders and support', icon: Wallet, group: 'Marketplace' },
@@ -596,6 +598,7 @@ export default function AdminDashboard() {
 
         {/* Categories */}
         {activeTab === 'traffic' && <TrafficTab />}
+        {activeTab === 'bulk-import' && <BulkProductImportTab vendors={vendors ?? []} />}
         {activeTab === 'flyers' && <FlyersTab />}
         {activeTab === 'marketplace' && <MarketplaceAdminTab />}
 

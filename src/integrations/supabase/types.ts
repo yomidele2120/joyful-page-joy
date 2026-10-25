@@ -551,6 +551,152 @@ export type Database = {
         }
         Relationships: []
       }
+      product_import_jobs: {
+        Row: {
+          admin_user_id: string | null
+          created_at: string
+          error_message: string | null
+          failed_count: number
+          file_name: string
+          id: string
+          processed_rows: number
+          source_type: string
+          status: string
+          success_count: number
+          total_rows: number
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          admin_user_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          failed_count?: number
+          file_name: string
+          id?: string
+          processed_rows?: number
+          source_type?: string
+          status?: string
+          success_count?: number
+          total_rows?: number
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          admin_user_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          failed_count?: number
+          file_name?: string
+          id?: string
+          processed_rows?: number
+          source_type?: string
+          status?: string
+          success_count?: number
+          total_rows?: number
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_import_jobs_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_import_items: {
+        Row: {
+          attempt_count: number
+          brand: string | null
+          category_name: string | null
+          created_at: string
+          description: string | null
+          error_message: string | null
+          id: string
+          image_status: string
+          image_url: string | null
+          job_id: string
+          normalized_name: string | null
+          original_price: number
+          price: number
+          published_product_id: string | null
+          raw_data: Json
+          review_notes: string | null
+          source_name: string
+          source_price: number | null
+          source_urls: Json
+          specs: Json
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          brand?: string | null
+          category_name?: string | null
+          created_at?: string
+          description?: string | null
+          error_message?: string | null
+          id?: string
+          image_status?: string
+          image_url?: string | null
+          job_id: string
+          normalized_name?: string | null
+          original_price: number
+          price: number
+          published_product_id?: string | null
+          raw_data?: Json
+          review_notes?: string | null
+          source_name: string
+          source_price?: number | null
+          source_urls?: Json
+          specs?: Json
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          brand?: string | null
+          category_name?: string | null
+          created_at?: string
+          description?: string | null
+          error_message?: string | null
+          id?: string
+          image_status?: string
+          image_url?: string | null
+          job_id?: string
+          normalized_name?: string | null
+          original_price?: number
+          price?: number
+          published_product_id?: string | null
+          raw_data?: Json
+          review_notes?: string | null
+          source_name?: string
+          source_price?: number | null
+          source_urls?: Json
+          specs?: Json
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_import_items_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "product_import_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_import_items_published_product_id_fkey"
+            columns: ["published_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string

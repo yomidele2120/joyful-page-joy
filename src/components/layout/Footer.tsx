@@ -13,10 +13,10 @@ export default function Footer({ flush = false }: { flush?: boolean }) {
   const { data: marketplace } = useMarketplaceSettings();
   return (
     <footer
-      className={`bg-foreground dark:bg-black text-background dark:text-white ${
+      className={`bg-[#0b1220] text-white ${
         flush
           // No gap above; a thin line separates it from the section above; bottom room clears the mobile nav bar.
-          ? 'border-t border-background/10 dark:border-white/10 pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-0'
+          ? 'border-t border-white/10 pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-0'
           : 'mt-16'
       }`}
     >
@@ -26,16 +26,16 @@ export default function Footer({ flush = false }: { flush?: boolean }) {
           <Link to="/" aria-label="IT Hub Africa home" className="mb-4 inline-block">
             <BrandLogoPill logoClassName="h-10" />
           </Link>
-          <p className="text-background/60 dark:text-white/60 leading-relaxed max-w-xs">
+          <p className="text-white/60 leading-relaxed max-w-xs">
             Buy, Sell, and Grow With Confidence. Nigeria's trusted online marketplace.
           </p>
         </div>
 
         {/* Buyers */}
-        <div className="border-t border-background/10 dark:border-white/10 pt-6 sm:border-0 sm:pt-0">
-          <h4 className="font-heading font-semibold text-background dark:text-white mb-3">For Buyers</h4>
-          <div className="flex flex-col gap-2.5 text-background/80 dark:text-white/80">
-            <Link to="/products" className="hover:text-primary transition-colors">All Products</Link>
+        <div className="border-t border-white/10 pt-6 sm:border-0 sm:pt-0">
+          <h4 className="font-heading font-semibold text-white mb-3">Quick Links</h4>
+          <div className="flex flex-col gap-2.5 text-white/80">
+            <Link to="/products" className="text-white/80 hover:text-primary transition-colors">All Products</Link>
             <Link to="/products?tab=suppliers" className="hover:text-primary transition-colors">Find Suppliers</Link>
             <Link to="/rfq/new" className="hover:text-primary transition-colors">Request for Quotation</Link>
             {payLaterOn && <Link to="/pay-later" className="hover:text-primary transition-colors">Pay Later</Link>}
@@ -50,9 +50,9 @@ export default function Footer({ flush = false }: { flush?: boolean }) {
         </div>
 
         {/* Suppliers & account */}
-        <div className="border-t border-background/10 dark:border-white/10 pt-6 sm:border-0 sm:pt-0">
-          <h4 className="font-heading font-semibold text-background dark:text-white mb-3">Suppliers &amp; Account</h4>
-          <div className="flex flex-col gap-2.5 text-background/80 dark:text-white/80">
+        <div className="border-t border-white/10 pt-6 sm:border-0 sm:pt-0">
+          <h4 className="font-heading font-semibold text-white mb-3">Suppliers &amp; Account</h4>
+          <div className="flex flex-col gap-2.5 text-white/80">
             <Link to="/supplier-signup" className="hover:text-primary transition-colors">Become a Supplier</Link>
             <Link to="/suppliers-login" className="hover:text-primary transition-colors">Supplier Login</Link>
             <Link to="/users-login" className="hover:text-primary transition-colors">My Account</Link>
@@ -62,9 +62,9 @@ export default function Footer({ flush = false }: { flush?: boolean }) {
         </div>
 
         {/* Contact */}
-        <div className="border-t border-background/10 dark:border-white/10 pt-6 sm:border-0 sm:pt-0">
-          <h4 className="font-heading font-semibold text-background dark:text-white mb-3">Contact</h4>
-          <div className="flex flex-col gap-3 text-background/80 dark:text-white/80">
+        <div className="border-t border-white/10 pt-6 sm:border-0 sm:pt-0">
+          <h4 className="font-heading font-semibold text-white mb-3">Contact</h4>
+          <div className="flex flex-col gap-3 text-white/80">
             <div className="flex items-start gap-2.5">
               <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
               <address className="not-italic leading-relaxed">
@@ -100,8 +100,8 @@ export default function Footer({ flush = false }: { flush?: boolean }) {
         </div>
       </div>
 
-      <nav aria-label="Policies and company" className="border-t border-background/10 dark:border-white/10 py-5">
-        <ul className="container flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-background/70 dark:text-white/70">
+      <nav aria-label="Policies and company" className="border-t border-white/10 py-5">
+        <ul className="container flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-white/70">
           {[...LEGAL_LINKS, ...COMPANY_LINKS].map(link => (
             <li key={link.to}><Link to={link.to} className="hover:text-primary transition-colors">{link.label}</Link></li>
           ))}
@@ -109,8 +109,8 @@ export default function Footer({ flush = false }: { flush?: boolean }) {
         </ul>
       </nav>
 
-      <div className="border-t border-background/10 dark:border-white/10 py-4 px-6">
-        <p className="text-center text-xs text-background/40 dark:text-white/40">
+      <div className="border-t border-white/10 py-4 px-6">
+        <p className="text-center text-xs text-white/40">
           © {new Date().getFullYear()} IT Hub Africa. All rights reserved.
         </p>
       </div>
