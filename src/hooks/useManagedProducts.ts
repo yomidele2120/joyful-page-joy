@@ -27,12 +27,12 @@ const COLUMNS =
   'is_preorder, preorder_approved, preorder_status, preorder_release_date, preorder_delivery_estimate, ' +
   'preorder_quantity_limit, preorder_max_per_order, preorder_terms, categories(name), vendors(store_name)';
 
-export function useManagedProducts(opts: { page: number; search?: string; vendorId?: string; enabled?: boolean; scope: 'admin' | 'vendor' }) {
+export function useManagedProducts(opts: { page: number; search?: string; vendorId?: string; enabled?: boolean; scope: 'admin' | 'vendor'; photo?: 'all' | 'with' | 'without' }) {
   const page = Math.min(Math.max(1, opts.page), MAX_MANAGE_PAGES);
   const term = cleanLike(opts.search ?? '');
   return useQuery({
     // The first key part is what the dashboards invalidate after an edit.
-    queryKey: [opts.scope === 'admin' ? 'admin-products' : 'vendor-products', opts.vendorId ?? 'all', page, term],
+    queryKey: [opts.scope === 'admin' ? 'admin-products' : 'vendor-products', opts.vendorId ?? 'all', page, term, opts.photo ?? 'all'],
     enabled: opts.enabled !== false && (opts.scope === 'admin' || !!opts.vendorId),
     placeholderData: keepPreviousData,
     staleTime: 30_000,
@@ -41,6 +41,9 @@ export function useManagedProducts(opts: { page: number; search?: string; vendor
       let q: any = (supabase as any).from('products').select(COLUMNS, { count: 'estimated' });
       if (opts.vendorId) q = q.eq('vendor_id', opts.vendorId);
       if (term) q = q.ilike('name', `%${term}%`);
+      // Filter by photo: only products that have one, or only those that have none (so a supplier can find and fix them).
+      if (opts.photo === 'without') q = q.or('image_url.is.null,image_url.eq.');
+      if (opts.photo === 'with') q = q.not('image_url', 'is', null).neq('image_url', '');
       const { data, error, count } = await q
         .order('created_at', { ascending: false }).order('id', { ascending: false })
         .range(from, from + MANAGE_PAGE_SIZE - 1);

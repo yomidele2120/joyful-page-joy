@@ -21,6 +21,7 @@ import { toast } from 'sonner';
 import { PreorderEditor, PreorderFields, buildPreorderPayload, emptyPreorder, type PreorderForm } from '@/components/seller/PreorderFields';
 import SellerDisputes from '@/components/seller/SellerDisputes';
 import { PriceEditor } from '@/components/seller/PriceEditor';
+import { ProductEditor } from '@/components/seller/ProductEditor';
 import { functionErrorMessage } from '@/lib/functionError';
 import { BANKS, BANK_PLACEHOLDER, isValidAccountNumber } from '@/lib/banks';
 import { formatNaira } from '@/lib/format';
@@ -44,6 +45,8 @@ export default function SupplierDashboard() {
   const [activeTab, setActiveTab] = useTabParam('overview', ['overview', 'products', 'videos', 'orders', 'disputes', 'add-product', 'shop-settings']);
   const [preorderProduct, setPreorderProduct] = useState<any>(null);
   const [priceProduct, setPriceProduct] = useState<any>(null);
+  const [editProductId, setEditProductId] = useState<string | null>(null);
+  const [photoFilter, setPhotoFilter] = useState<'all' | 'with' | 'without'>('all');
   const autoCompose = searchParams.get('compose') === '1';
 
   const { data: vendor, isLoading: vendorLoading } = useQuery({
@@ -94,7 +97,7 @@ export default function SupplierDashboard() {
   const [productSearch, setProductSearch] = useState('');
   const debouncedProductSearch = useDebouncedValue(productSearch.trim(), 350);
   const { data: productData, isPlaceholderData: productsRefreshing } = useManagedProducts({
-    scope: 'vendor', vendorId: vendor?.id, page: productPage, search: debouncedProductSearch, enabled: !!vendor?.id && isApproved,
+    scope: 'vendor', vendorId: vendor?.id, page: productPage, search: debouncedProductSearch, photo: photoFilter, enabled: !!vendor?.id && isApproved,
   });
   const products = productData?.items;
 
@@ -103,7 +106,7 @@ export default function SupplierDashboard() {
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [confirmIds, setConfirmIds] = useState<string[] | null>(null);
   const [removing, setRemoving] = useState(false);
-  useEffect(() => { setSelected(new Set()); }, [productPage, debouncedProductSearch]);
+  useEffect(() => { setSelected(new Set()); }, [productPage, debouncedProductSearch, photoFilter]);
   const confirmRemove = async () => {
     if (!confirmIds?.length) return;
     setRemoving(true);
@@ -317,13 +320,23 @@ export default function SupplierDashboard() {
               <div className="space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h2 className="font-heading font-bold">My products{productData ? ` (${formatProductCount(productData.total)})` : ''}</h2>
-                <Input
-                  value={productSearch}
-                  onChange={e => { setProductSearch(e.target.value); setProductPage(1); }}
-                  placeholder="Search my products"
-                  className="max-w-xs"
-                  aria-label="Search my products"
-                />
+                <div className="flex flex-wrap items-center gap-3">
+                  <Select value={photoFilter} onValueChange={v => { setPhotoFilter(v as 'all' | 'with' | 'without'); setProductPage(1); }}>
+                    <SelectTrigger className="w-44" aria-label="Filter products by photo"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All products</SelectItem>
+                      <SelectItem value="with">With photos</SelectItem>
+                      <SelectItem value="without">Without photos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    value={productSearch}
+                    onChange={e => { setProductSearch(e.target.value); setProductPage(1); }}
+                    placeholder="Search my products"
+                    className="max-w-xs"
+                    aria-label="Search my products"
+                  />
+                </div>
               </div>
               {selected.size > 0 && (
                 <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-secondary px-3 py-2 text-sm">
@@ -361,6 +374,12 @@ export default function SupplierDashboard() {
                               <div className="flex items-center gap-2">
                                 <img src={p.thumb_url || p.image_url || '/placeholder.svg'} alt="" loading="lazy" decoding="async" className={`w-8 h-8 rounded object-cover ${p.is_active === false ? 'opacity-50' : ''}`} />
                                 <span className="font-medium line-clamp-1">{p.name}</span>
+                                {!p.image_url && !p.thumb_url && (
+                                  <button type="button" onClick={() => setEditProductId(p.id)}
+                                    className="shrink-0 rounded bg-destructive/10 px-1.5 py-0.5 text-[11px] font-medium text-destructive hover:bg-destructive/20">
+                                    No photo
+                                  </button>
+                                )}
                                 {p.is_active === false && (
                                   <span className="flex shrink-0 items-center gap-1.5">
                                     <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">Hidden</span>
@@ -405,10 +424,15 @@ export default function SupplierDashboard() {
                               </div>
                             </td>
                             <td className="p-3">
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" aria-label={`Delete ${p.name}`}
-                                onClick={() => setConfirmIds([p.id])}>
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </Button>
+                              <div className="flex items-center gap-1">
+                                <Button variant="outline" size="sm" className="h-7 px-2 text-xs" aria-label={`Edit ${p.name}`} onClick={() => setEditProductId(p.id)}>
+                                  <Pencil className="mr-1 h-3.5 w-3.5" /> Edit
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" aria-label={`Delete ${p.name}`}
+                                  onClick={() => setConfirmIds([p.id])}>
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -417,8 +441,8 @@ export default function SupplierDashboard() {
                   </div>
                 ) : (
                   <div className="p-8 text-center">
-                    <p className="text-muted-foreground mb-4">{debouncedProductSearch ? 'No products match that search.' : 'No products yet.'}</p>
-                    {!debouncedProductSearch && <Button onClick={() => setActiveTab('add-product')}><Plus className="w-4 h-4 mr-1" /> Add Product</Button>}
+                    <p className="text-muted-foreground mb-4">{debouncedProductSearch ? 'No products match that search.' : photoFilter === 'without' ? 'Every product has a photo.' : photoFilter === 'with' ? 'No products have photos yet.' : 'No products yet.'}</p>
+                    {!debouncedProductSearch && photoFilter === 'all' && <Button onClick={() => setActiveTab('add-product')}><Plus className="w-4 h-4 mr-1" /> Add Product</Button>}
                   </div>
                 )}
               </div>
@@ -468,6 +492,13 @@ export default function SupplierDashboard() {
               }} />
             )}
 
+            {editProductId && (
+              <ProductEditor
+                productId={editProductId}
+                onClose={() => setEditProductId(null)}
+                onSaved={() => { setEditProductId(null); queryClient.invalidateQueries({ queryKey: ['vendor-products'] }); }}
+              />
+            )}
             {priceProduct && (
               <PriceEditor
                 product={priceProduct}
