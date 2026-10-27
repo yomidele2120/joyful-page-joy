@@ -42,3 +42,21 @@ export function BrandFlyerFill({ flyer, className, imgClassName, tabIndex, fit =
     </Link>
   );
 }
+
+/**
+ * A built-in 16:9 flyer for the product grids.
+ *  Phone: the full row at its own 16:9 shape, so it stays compact (about 190px tall instead of a tall square card).
+ *  Tablet and up: two columns wide and as tall as the row of products beside it (at least 260px), with the whole
+ *  picture shown (never cropped) on a blurred copy of itself, so no gap is left under it.
+ */
+export function BrandFlyerFeedCard({ flyer, className }: { flyer: BrandFlyer; className?: string }) {
+  return (
+    <Link to={flyer.href} aria-label={flyer.alt} style={flyer.bg ? { backgroundColor: flyer.bg } : undefined}
+      className={cn('col-span-2 block overflow-hidden bg-secondary sm:relative sm:min-h-[260px]', focusRing, className)}>
+      <img src={flyer.src} alt="" aria-hidden="true" loading="lazy" decoding="async"
+        className="hidden scale-110 object-cover opacity-90 blur-2xl sm:absolute sm:inset-0 sm:block sm:h-full sm:w-full" />
+      <img src={flyer.src} alt={flyer.alt} width={1600} height={900} loading="lazy" decoding="async"
+        className="aspect-video w-full object-cover sm:absolute sm:inset-0 sm:aspect-auto sm:h-full sm:object-contain" />
+    </Link>
+  );
+}

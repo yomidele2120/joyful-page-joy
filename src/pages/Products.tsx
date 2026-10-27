@@ -20,11 +20,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { formatMoq, getMoq } from '@/lib/pricing';
-import { FlyerCard, pickImages } from '@/components/flyers/Flyers';
-import { FLYERS } from '@/lib/flyers';
 import { useFlyers } from '@/hooks/useFlyers';
 import { ImageFlyerBanner, ImageFlyerFill } from '@/components/flyers/ImageFlyers';
-import { BrandFlyerBanner, BrandFlyerFill } from '@/components/flyers/BrandFlyerImage';
+import { BrandFlyerBanner, BrandFlyerFeedCard, BrandFlyerFill } from '@/components/flyers/BrandFlyerImage';
 import { BRAND_FLYERS } from '@/lib/brandFlyers';
 
 interface Filters {
@@ -91,7 +89,6 @@ export default function Products() {
   const { ready: flyersReady, forPlacement } = useFlyers();
   const feedBanners = forPlacement('feed_banner');
   const feedCards = forPlacement('feed_card');
-  const photos = useMemo(() => pageItems.map(p => p.image_url).filter((u): u is string => !!u), [pageItems]);
   const activeFilterCount =
     (filters.category !== 'all' ? 1 : 0) + (filters.minPrice || filters.maxPrice ? 1 : 0) + (filters.maxMoq ? 1 : 0) +
     (filters.verifiedOnly ? 1 : 0) + (filters.inStockOnly ? 1 : 0);
@@ -217,7 +214,7 @@ export default function Products() {
                           } else if (current % 2 === 1) {
                             if (roomBesideFlyer) cells.push(<div key="fc" className="col-span-2 min-h-[200px] sm:col-span-1 sm:min-h-[260px]"><BrandFlyerFill flyer={BRAND_FLYERS.mysteryDeal} fit="contain" /></div>);
                           } else {
-                            cells.push(<div key="fc" className="col-span-2 sm:col-span-1"><FlyerCard flyer={FLYERS.rfq} images={pickImages(photos, current * 3, 2)} /></div>);
+                            cells.push(<BrandFlyerFeedCard key="fc" flyer={BRAND_FLYERS.rfq} />);
                           }
                         }
                         if (i === 11 && flyersReady) {

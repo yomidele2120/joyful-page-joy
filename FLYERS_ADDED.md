@@ -37,3 +37,15 @@ banners instead of plain colour blocks: `src/assets/brand/flyer-side-sell.webp` 
 On tablet and desktop the "Meet trusted suppliers" banner is now two columns wide and as tall as the product cards beside it, so it
 no longer leaves an empty dark gap under it. The whole picture is shown (never cropped) on a soft blurred copy of itself. On phones it
 is unchanged: full width at its own 16:9 shape. Code: the suppliers cell in `src/pages/Index.tsx`.
+
+## Update: designed banners replace the tall square flyer cards in the product grids
+The old "card" flyers (a square picture plus text, two columns wide on a phone, so very tall) are replaced by designed 16:9 banners:
+- `flyer-rfq.webp`  "Can't find it? We'll get it for you" -> `/rfq/new`  (Products page, and the home feed)
+- `flyer-sell.webp` "Sell to buyers across Nigeria"        -> `/supplier-signup` (home feed)
+- `flyer-suppliers.webp` (already a banner) now uses the same component.
+They are shown by `BrandFlyerFeedCard` (src/components/flyers/BrandFlyerImage.tsx):
+- Phone: full row at 16:9, about 190px tall.
+- Tablet / desktop: two columns wide and as tall as the row of products beside it, whole picture shown on a blurred copy of itself.
+Unchanged on purpose: admin-uploaded flyers (Admin > Flyers always win), the compact generated banners (`FlyerBanner`, ~104px),
+the wide "seamless payment" banners, and the mystery-deal card (200px tall).
+To change the picture, replace the .webp file (keep 16:9, about 1600x900). Wording is drawn into the picture.

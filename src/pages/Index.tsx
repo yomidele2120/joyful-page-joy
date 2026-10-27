@@ -13,14 +13,13 @@ import { bnplEligibleForPrice, useMarketplaceSettings, usePayLaterAvailable, use
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { FlyerBanner, FlyerCard, pickImages } from '@/components/flyers/Flyers';
+import { FlyerBanner, pickImages } from '@/components/flyers/Flyers';
 import { FLYERS } from '@/lib/flyers';
 import { useFlyers } from '@/hooks/useFlyers';
 import { ImageFlyerBanner, ImageFlyerFill } from '@/components/flyers/ImageFlyers';
-import { BrandFlyerBanner, BrandFlyerFill } from '@/components/flyers/BrandFlyerImage';
+import { BrandFlyerBanner, BrandFlyerFeedCard, BrandFlyerFill } from '@/components/flyers/BrandFlyerImage';
 import { BRAND_FLYERS } from '@/lib/brandFlyers';
 import BrandMarquee from '@/components/BrandMarquee';
-import suppliersBanner from '@/assets/brand/flyer-suppliers.webp';
 import { StoreVisitSection } from '@/components/StoreVisit';
 
 const FEED_PAGE = 20;
@@ -162,21 +161,9 @@ export default function Index() {
                       if (round % 2 === 0) {
                         if (roomBesideFlyer) cells.push(<div key={`fc-${i}`} className="col-span-2 min-h-[200px] sm:col-span-1 sm:min-h-[260px]"><BrandFlyerFill flyer={BRAND_FLYERS.mysteryDeal} fit="contain" /></div>);
                       } else {
-                        const f = [FLYERS.suppliers, FLYERS.rfq, FLYERS.sell][Math.floor(round / 2) % 3];
-                        if (f === FLYERS.suppliers) {
-                          // Designed suppliers banner replaces the old built-in flyer card.
-                          // Phone: full width at its own 16:9 shape, so it stays compact.
-                          // Tablet and desktop: two columns wide and as tall as the row of product cards beside it, so no gap is left
-                          // under it. The whole picture is shown (never cropped) on a blurred copy of itself.
-                          cells.push(
-                            <Link key={`fc-${i}`} to="/products?tab=suppliers" className="col-span-2 block overflow-hidden sm:relative sm:min-h-[260px] sm:bg-[#e0eaf6]">
-                              <img src={suppliersBanner} alt="" aria-hidden="true" loading="lazy" decoding="async" className="hidden scale-110 object-cover opacity-90 blur-2xl sm:absolute sm:inset-0 sm:block sm:h-full sm:w-full" />
-                              <img src={suppliersBanner} alt="Meet trusted suppliers. Browse approved sellers." width={1200} height={675} loading="lazy" decoding="async" className="aspect-video w-full object-cover sm:absolute sm:inset-0 sm:aspect-auto sm:h-full sm:object-contain" />
-                            </Link>
-                          );
-                        } else {
-                          cells.push(<div key={`fc-${i}`} className="col-span-2 sm:col-span-1"><FlyerCard flyer={f} images={art(f.offset + round * 2, 2)} /></div>);
-                        }
+                        // Designed 16:9 banners (suppliers / "can't find it" / sell). Compact on a phone, row-height on desktop.
+                        const feedBanner = [BRAND_FLYERS.suppliers, BRAND_FLYERS.rfq, BRAND_FLYERS.sell][Math.floor(round / 2) % 3];
+                        cells.push(<BrandFlyerFeedCard key={`fc-${i}`} flyer={feedBanner} />);
                       }
                     }
                   }

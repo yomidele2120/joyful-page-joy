@@ -9,6 +9,8 @@ import clothing from '@/assets/brand/flyer-clothing.webp';
 import preorderKitchen from '@/assets/brand/flyer-preorder-kitchen.webp';
 import suppliers from '@/assets/brand/flyer-suppliers.webp';
 import sellSide from '@/assets/brand/flyer-side-sell.webp';
+import rfq from '@/assets/brand/flyer-rfq.webp';
+import sell from '@/assets/brand/flyer-sell.webp';
 import dealsSide from '@/assets/brand/flyer-side-deals.webp';
 import makeMoneyBadge from '@/assets/brand/badge-make-money.webp';
 
@@ -26,6 +28,8 @@ export interface BrandFlyer {
   /** 'contain' shows the whole flyer (never cropped) on a blurred copy of itself. Default is 'cover'.
    *  'contain-sm' crops to fill on phones (using `focus`) and shows the whole flyer from tablet size up. */
   fit?: 'cover' | 'contain' | 'contain-sm';
+  /** Colour behind the picture (matches its edges) for the blurred backdrop used in the product grids. */
+  bg?: string;
   /** Pinned slides stay in the hero slider even when the admin has uploaded enough of their own to hide the built-in ones. */
   pinned?: boolean;
 }
@@ -41,7 +45,10 @@ export const BRAND_FLYERS = {
   clothing: { id: 'clothing', src: clothing, alt: 'Adult and children clothing collection: stylish, comfortable, for every generation', href: '/category/fashion', fit: 'contain', pinned: true },
   preorderKitchen: { id: 'preorder-kitchen', src: preorderKitchen, alt: 'Preorder kitchen utensils now, before they are out of stock', href: '/preorders', fit: 'contain', pinned: true },
   // 16:9 banner with its headline and button drawn into the picture, so it is shown whole (no text overlay).
-  suppliers: { id: 'suppliers', src: suppliers, alt: 'Meet trusted suppliers. Discover quality products from suppliers you can count on. Explore suppliers.', href: '/products?tab=suppliers' },
+  suppliers: { id: 'suppliers', src: suppliers, alt: 'Meet trusted suppliers. Discover quality products from suppliers you can count on. Explore suppliers.', href: '/products?tab=suppliers', bg: '#e0eaf6' },
+  // Dark 16:9 banners for the product grids (they replace the old tall square cards).
+  rfq: { id: 'rfq', src: rfq, alt: 'Can’t find it? We’ll get it for you. Tell us what you need and we’ll source it from trusted suppliers. Post a request.', href: '/rfq/new', bg: '#0b1626' },
+  sell: { id: 'sell', src: sell, alt: 'Sell to buyers across Nigeria. Open your store, list your products and start receiving inquiries from buyers. Open your store.', href: '/supplier-signup', bg: '#0b1626' },
   // 4:3 tiles for the two spots beside the hero slider. Headline, subline and button are drawn into the picture,
   // with everything kept well inside the edges, so they survive the slightly different tile shapes (cover fit).
   sellSide: { id: 'sell-side', src: sellSide, alt: 'Sell to buyers across Nigeria. List products and receive inquiries. Open your store.', href: '/supplier-signup' },
