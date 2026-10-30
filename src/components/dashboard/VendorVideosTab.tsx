@@ -12,6 +12,7 @@ import MediaPicker, { type PickedMedia } from '@/components/media/MediaPicker';
 import PostsPerformanceChart from '@/components/dashboard/PostsPerformanceChart';
 import { supabase } from '@/integrations/supabase/client';
 import { captureVideoThumbnail } from '@/lib/videoThumbnail';
+import { compressVideo } from '@/lib/videoCompress';
 import { compressImage, MAX_VIDEO_MB } from '@/lib/mediaProcessing';
 import { uploadToCloudflareStream, StreamNotConfiguredError } from '@/lib/cloudflareStream';
 import { useVendorPosts, useVendorFollowerCount } from '@/hooks/usePosts';
@@ -72,9 +73,18 @@ export default function VendorVideosTab({ vendorId, products, autoOpenComposer }
   };
 
   const publishVideo = async (item: PickedMedia) => {
-    const file = item.file;
+    // Shrink big phone videos first (up to 720p) so they upload fast on mobile data.
+    setStatusText('Optimising video... keep this screen open');
+    setProgress(3);
+    const file = await compressVideo(item.file, (fraction) => {
+      setProgress(3 + Math.round(fraction * 47));
+      setStatusText(`Optimising video... ${Math.round(fraction * 100)}% (keep this screen open)`);
+    });
+    if (file.size > MAX_VIDEO_MB * 1024 * 1024) {
+      throw new Error(`This video is still over ${MAX_VIDEO_MB}MB. Please pick a shorter one.`);
+    }
     setStatusText('Uploading video...');
-    setProgress(20);
+    setProgress(55);
 
     // Cloudflare Stream first (adaptive HLS off a CDN), falling back to a
     // direct storage upload when Stream isn't configured.
@@ -264,7 +274,7 @@ export default function VendorVideosTab({ vendorId, products, autoOpenComposer }
 
           <div className="overflow-y-auto p-4 space-y-3">
             <p className="text-xs text-muted-foreground">
-              Share up to 10 photos as a swipeable carousel, or one short vertical video (under {MAX_VIDEO_MB}MB).
+              Share up to 10 photos as a swipeable carousel, or one short vertical video. Large videos are shrunk automatically.
             </p>
 
             {media.length === 0 ? (

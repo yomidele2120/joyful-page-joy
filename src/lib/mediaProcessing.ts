@@ -3,7 +3,8 @@
 // mobile data, while still looking sharp on large screens.
 
 export const MAX_IMAGE_MB = 15;
-export const MAX_VIDEO_MB = 60;
+export const MAX_VIDEO_MB = 60;          // the most that is uploaded, after shrinking
+export const MAX_VIDEO_INPUT_MB = 500;   // the most a seller can pick; it is shrunk to fit before upload
 export const MAX_IMAGES_PER_POST = 10;
 export const MAX_VIDEO_DURATION_SECONDS = 90;
 
@@ -20,7 +21,7 @@ export function validateMediaFile(file: File): string | null {
   const isVideo = file.type.startsWith('video/');
   if (!isImage && !isVideo) return 'Unsupported file type';
   if (isImage && file.size > MAX_IMAGE_MB * 1024 * 1024) return `Images must be under ${MAX_IMAGE_MB}MB`;
-  if (isVideo && file.size > MAX_VIDEO_MB * 1024 * 1024) return `Videos must be under ${MAX_VIDEO_MB}MB`;
+  if (isVideo && file.size > MAX_VIDEO_INPUT_MB * 1024 * 1024) return `Videos must be under ${MAX_VIDEO_INPUT_MB}MB`;
   return null;
 }
 

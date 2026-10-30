@@ -25,10 +25,25 @@ export async function uploadToCloudflareStream(file: File): Promise<StreamUpload
   );
 
   if (error || !data?.uploadURL || !data.uid) {
-    if (data?.error === 'not_configured') {
-      throw new StreamNotConfiguredError('Cloudflare Stream is not configured');
+    // supabase-js hands back `data: null` whenever the function answers with a non-2xx status, and only
+    // the generic message "Edge Function returned a non-2xx status code". The real reason (and the
+    // status) is in the response body, so read it from there.
+    let status = 0;
+    let reason = data?.error;
+    const res = (error as { context?: unknown } | null)?.context;
+    if (res instanceof Response) {
+      status = res.status;
+      try { reason = ((await res.clone().json()) as { error?: string })?.error ?? reason; } catch { /* not JSON */ }
     }
-    throw new Error(data?.error || error?.message || 'Could not start video upload');
+
+    // The seller is genuinely not allowed to post: say so plainly instead of trying another route.
+    if (status === 401 || status === 403) {
+      throw new Error(reason || 'You are not allowed to post videos');
+    }
+    // Anything else (Stream not set up yet, the function not deployed, Cloudflare unreachable or
+    // rejecting the token) must not stop a seller from posting: use the direct storage upload instead.
+    console.warn('Cloudflare Stream unavailable, using direct upload:', status, reason ?? error?.message);
+    throw new StreamNotConfiguredError(reason || 'Cloudflare Stream is unavailable');
   }
 
   const form = new FormData();
