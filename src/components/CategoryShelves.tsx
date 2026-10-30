@@ -33,7 +33,7 @@ function ShelfRow({ shelf, verified }: { shelf: CategoryShelf; verified: boolean
 
   return (
     <div ref={ref} className="min-h-[1px]">
-      <ScrollRow eyebrow="Shop category" title={shelf.name} linkTo={`/category/${shelf.slug}`}>
+      <ScrollRow title={shelf.name} linkTo={`/category/${shelf.slug}`}>
         {!near || isLoading
           ? Array.from({ length: 6 }).map((_, i) => <ScrollItem key={i}><ProductCardSkeleton /></ScrollItem>)
           : (products ?? []).map(p => <ScrollItem key={p.id}><ProductCard {...p} /></ScrollItem>)}
