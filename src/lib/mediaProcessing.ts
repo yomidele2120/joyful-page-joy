@@ -3,7 +3,7 @@
 // mobile data, while still looking sharp on large screens.
 
 export const MAX_IMAGE_MB = 15;
-export const MAX_VIDEO_MB = 60;          // the most that is uploaded, after shrinking
+export const MAX_VIDEO_MB = 45;          // stay below Supabase's default 50MB upload limit
 export const MAX_VIDEO_INPUT_MB = 500;   // the most a seller can pick; it is shrunk to fit before upload
 export const MAX_IMAGES_PER_POST = 10;
 export const MAX_VIDEO_DURATION_SECONDS = 90;

@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 
 export interface PickedMedia {
   id: string;
+  uploadId: string;
   file: File;
   kind: 'image' | 'video';
   preview: string;
@@ -216,6 +217,7 @@ export default function MediaPicker({
         }
         picked.push({
           id: item.id,
+          uploadId: crypto.randomUUID(),
           file,
           kind: item.kind,
           preview: item.preview || (item.kind === 'image' ? URL.createObjectURL(file) : ''),

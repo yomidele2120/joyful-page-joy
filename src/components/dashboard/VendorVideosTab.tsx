@@ -15,7 +15,7 @@ import { captureVideoThumbnail } from '@/lib/videoThumbnail';
 import { compressVideo } from '@/lib/videoCompress';
 import { compressImage, MAX_VIDEO_MB } from '@/lib/mediaProcessing';
 import { clearPostDraft, loadPostDraft, savePostDraft } from '@/lib/postDraft';
-import { uploadToCloudflareStream, StreamUnavailableError } from '@/lib/cloudflareStream';
+import { uploadPostVideo } from '@/lib/postVideoUpload';
 import { useVendorPosts, useVendorFollowerCount } from '@/hooks/usePosts';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -151,32 +151,23 @@ export default function VendorVideosTab({ vendorId, products, autoOpenComposer }
     setStatusText('Uploading video...');
     setProgress(55);
 
-    // Cloudflare Stream first (adaptive HLS off a CDN), falling back to a
-    // direct storage upload when Stream isn't configured.
-    try {
-      const result = await uploadToCloudflareStream(file);
-      setProgress(80);
-      const { error } = await supabase.from('posts').insert({
-        vendor_id: vendorId,
-        media_type: 'video',
-        video_url: result.hlsUrl,
-        hls_url: result.hlsUrl,
-        stream_uid: result.uid,
-        thumbnail_url: result.thumbnailUrl,
-        caption: caption.trim() || null,
-        product_id: productId || null,
-      });
-      if (error) throw error;
-      return;
-    } catch (streamErr) {
-      if (!(streamErr instanceof StreamUnavailableError)) throw streamErr;
-    }
-
     const ext = file.name.split('.').pop() || 'mp4';
-    const path = `${vendorId}/${Date.now()}.${ext}`;
-    const { error: uploadError } = await supabase.storage.from('post-videos').upload(path, file);
-    if (uploadError) throw uploadError;
-    setProgress(70);
+    const path = `${vendorId}/videos/${item.uploadId}.${ext}`;
+    const fileName = `${item.uploadId}.${ext}`;
+    const { data: existingFiles, error: listError } = await supabase.storage
+      .from('post-videos')
+      .list(`${vendorId}/videos`, { search: fileName, limit: 1 });
+    if (listError) throw listError;
+    if (!existingFiles?.some((entry) => entry.name === fileName)) {
+      await uploadPostVideo(file, path, (fraction) => {
+        const percent = Math.round(fraction * 100);
+        setProgress(55 + Math.round(fraction * 30));
+        setStatusText(`Uploading video... ${percent}%`);
+      });
+    } else {
+      setProgress(85);
+      setStatusText('Video already uploaded. Publishing post...');
+    }
 
     const { data: publicUrlData } = supabase.storage.from('post-videos').getPublicUrl(path);
 
@@ -198,6 +189,7 @@ export default function VendorVideosTab({ vendorId, products, autoOpenComposer }
     }
 
     setProgress(90);
+    setStatusText('Publishing video post...');
     const { error: insertError } = await supabase.from('posts').insert({
       vendor_id: vendorId,
       media_type: 'video',

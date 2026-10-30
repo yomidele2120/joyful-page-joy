@@ -2,6 +2,7 @@ import type { PickedMedia } from '@/components/media/MediaPicker';
 
 interface StoredMedia {
   id: string;
+  uploadId: string;
   file: Blob;
   fileName: string;
   fileType: string;
@@ -84,6 +85,7 @@ export async function loadPostDraft(vendorId: string): Promise<PostDraft | null>
       });
       return {
         id: item.id,
+        uploadId: item.uploadId || crypto.randomUUID(),
         file,
         kind: item.kind,
         preview: item.preview || (item.kind === 'image' ? URL.createObjectURL(file) : ''),
@@ -103,6 +105,7 @@ export async function savePostDraft(vendorId: string, draft: PostDraft): Promise
     productId: draft.productId,
     media: draft.media.map((item) => ({
       id: item.id,
+      uploadId: item.uploadId,
       file: item.file,
       fileName: item.file.name,
       fileType: item.file.type,
