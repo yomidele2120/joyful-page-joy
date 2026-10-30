@@ -14,7 +14,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { captureVideoThumbnail } from '@/lib/videoThumbnail';
 import { compressVideo } from '@/lib/videoCompress';
 import { compressImage, MAX_VIDEO_MB } from '@/lib/mediaProcessing';
-import { uploadToCloudflareStream, StreamNotConfiguredError } from '@/lib/cloudflareStream';
+import { clearPostDraft, loadPostDraft, savePostDraft } from '@/lib/postDraft';
+import { uploadToCloudflareStream, StreamUnavailableError } from '@/lib/cloudflareStream';
 import { useVendorPosts, useVendorFollowerCount } from '@/hooks/usePosts';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -45,8 +46,70 @@ export default function VendorVideosTab({ vendorId, products, autoOpenComposer }
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [statusText, setStatusText] = useState('');
+  const [draftLoadedVendorId, setDraftLoadedVendorId] = useState<string | null>(null);
+  const [draftSaved, setDraftSaved] = useState(false);
+  const [draftSaveError, setDraftSaveError] = useState('');
 
   const isVideoPost = media[0]?.kind === 'video';
+
+  useEffect(() => {
+    let cancelled = false;
+    setDraftLoadedVendorId(null);
+    setMedia([]);
+    setCaption('');
+    setProductId('');
+
+    void loadPostDraft(vendorId).then((draft) => {
+      if (cancelled) return;
+      if (draft) {
+        setMedia(draft.media);
+        setCaption(draft.caption);
+        setProductId(draft.productId);
+        if (draft.media.length) {
+          setComposerOpen(true);
+          toast.info('Your saved post draft was restored');
+        }
+      }
+      setDraftLoadedVendorId(vendorId);
+    }).catch((error: unknown) => {
+      if (cancelled) return;
+      setDraftSaveError(error instanceof Error ? error.message : 'Could not restore your saved post draft');
+      setDraftLoadedVendorId(vendorId);
+    });
+
+    return () => { cancelled = true; };
+  }, [vendorId]);
+
+  useEffect(() => {
+    if (draftLoadedVendorId !== vendorId) return;
+
+    const hasDraft = media.length > 0 || caption.length > 0 || productId.length > 0;
+    setDraftSaved(false);
+
+    if (!hasDraft) {
+      void clearPostDraft(vendorId).catch((error: unknown) => {
+        setDraftSaveError(error instanceof Error ? error.message : 'Could not clear the saved post draft');
+      });
+      return;
+    }
+
+    let active = true;
+    const timeout = window.setTimeout(() => {
+      void savePostDraft(vendorId, { media, caption, productId }).then(() => {
+        if (active) {
+          setDraftSaveError('');
+          setDraftSaved(true);
+        }
+      }).catch((error: unknown) => {
+        if (active) setDraftSaveError(error instanceof Error ? error.message : 'Could not save your post draft');
+      });
+    }, 300);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timeout);
+    };
+  }, [vendorId, draftLoadedVendorId, media, caption, productId]);
 
   const move = (index: number, direction: -1 | 1) => {
     setMedia((prev) => {
@@ -73,13 +136,15 @@ export default function VendorVideosTab({ vendorId, products, autoOpenComposer }
   };
 
   const publishVideo = async (item: PickedMedia) => {
-    // Shrink big phone videos first (up to 720p) so they upload fast on mobile data.
-    setStatusText('Optimising video... keep this screen open');
-    setProgress(3);
-    const file = await compressVideo(item.file, (fraction) => {
-      setProgress(3 + Math.round(fraction * 47));
-      setStatusText(`Optimising video... ${Math.round(fraction * 100)}% (keep this screen open)`);
-    });
+    let file = item.file;
+    if (file.size > MAX_VIDEO_MB * 1024 * 1024) {
+      setStatusText('Optimising video...');
+      setProgress(3);
+      file = await compressVideo(item.file, (fraction) => {
+        setProgress(3 + Math.round(fraction * 47));
+        setStatusText(`Optimising video... ${Math.round(fraction * 100)}%`);
+      });
+    }
     if (file.size > MAX_VIDEO_MB * 1024 * 1024) {
       throw new Error(`This video is still over ${MAX_VIDEO_MB}MB. Please pick a shorter one.`);
     }
@@ -104,7 +169,7 @@ export default function VendorVideosTab({ vendorId, products, autoOpenComposer }
       if (error) throw error;
       return;
     } catch (streamErr) {
-      if (!(streamErr instanceof StreamNotConfiguredError)) throw streamErr;
+      if (!(streamErr instanceof StreamUnavailableError)) throw streamErr;
     }
 
     const ext = file.name.split('.').pop() || 'mp4';
@@ -274,7 +339,7 @@ export default function VendorVideosTab({ vendorId, products, autoOpenComposer }
 
           <div className="overflow-y-auto p-4 space-y-3">
             <p className="text-xs text-muted-foreground">
-              Share up to 10 photos as a swipeable carousel, or one short vertical video. Large videos are shrunk automatically.
+              Share up to 10 photos as a swipeable carousel, or one short vertical video. Your draft is saved on this device. If the app closes during an upload, reopen this page and tap Publish to retry.
             </p>
 
             {media.length === 0 ? (
@@ -365,6 +430,12 @@ export default function VendorVideosTab({ vendorId, products, autoOpenComposer }
                 <Progress value={progress} className="h-1.5" />
                 <p className="text-xs text-muted-foreground">{statusText}</p>
               </div>
+            )}
+
+            {(draftSaved || draftSaveError) && (
+              <p className={cn('text-xs', draftSaveError ? 'text-destructive' : 'text-muted-foreground')}>
+                {draftSaveError || 'Draft saved on this device'}
+              </p>
             )}
 
             <Button onClick={handlePublish} disabled={!media.length || uploading} className="w-full">

@@ -6,14 +6,13 @@ export interface StreamUploadResult {
   thumbnailUrl: string;
 }
 
-export class StreamNotConfiguredError extends Error {}
+export class StreamUnavailableError extends Error {}
 
 // Uploads a video file straight to Cloudflare Stream (browser -> Cloudflare,
 // never through our own server) so it comes back transcoded into adaptive
 // HLS renditions and served off Cloudflare's CDN. If Stream hasn't been
-// configured (no API credentials set as Supabase secrets yet), this throws
-// StreamNotConfiguredError so the caller can fall back to a direct Supabase
-// Storage upload instead of failing outright.
+// configured or temporarily unavailable, this throws StreamUnavailableError
+// so the caller can fall back to a direct Supabase Storage upload.
 export async function uploadToCloudflareStream(file: File): Promise<StreamUploadResult> {
   const { data: session } = await supabase.auth.getSession();
   const accessToken = session.session?.access_token;
@@ -43,15 +42,20 @@ export async function uploadToCloudflareStream(file: File): Promise<StreamUpload
     // Anything else (Stream not set up yet, the function not deployed, Cloudflare unreachable or
     // rejecting the token) must not stop a seller from posting: use the direct storage upload instead.
     console.warn('Cloudflare Stream unavailable, using direct upload:', status, reason ?? error?.message);
-    throw new StreamNotConfiguredError(reason || 'Cloudflare Stream is unavailable');
+    throw new StreamUnavailableError(reason || 'Cloudflare Stream is unavailable');
   }
 
   const form = new FormData();
   form.append('file', file);
 
-  const uploadRes = await fetch(data.uploadURL, { method: 'POST', body: form });
+  let uploadRes: Response;
+  try {
+    uploadRes = await fetch(data.uploadURL, { method: 'POST', body: form });
+  } catch {
+    throw new StreamUnavailableError('Could not connect to Cloudflare Stream');
+  }
   if (!uploadRes.ok) {
-    throw new Error('Video upload to Cloudflare failed. Please try again.');
+    throw new StreamUnavailableError(`Cloudflare Stream upload failed (HTTP ${uploadRes.status})`);
   }
 
   const uid = data.uid;
