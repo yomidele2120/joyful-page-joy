@@ -21,6 +21,7 @@ import { BrandFlyerBanner, BrandFlyerFeedCard, BrandFlyerFill } from '@/componen
 import { BRAND_FLYERS } from '@/lib/brandFlyers';
 import BrandMarquee from '@/components/BrandMarquee';
 import { StoreVisitSection } from '@/components/StoreVisit';
+import CategoryShelves from '@/components/CategoryShelves';
 
 const FEED_PAGE = 20;
 
@@ -133,6 +134,9 @@ export default function Index() {
             {newest.map(p => <ScrollItem key={p.id}><ProductCard {...p} /></ScrollItem>)}
           </ScrollRow>
         )}
+
+        {/* One row per category that has products (loads each row as it scrolls into view) */}
+        <CategoryShelves />
 
         <section className="mt-9 sm:mt-12">
           <h2 className="mb-4 font-heading text-xl font-bold sm:text-2xl">You may like</h2>
