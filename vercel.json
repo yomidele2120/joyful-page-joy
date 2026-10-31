@@ -1,6 +1,22 @@
 {
   "rewrites": [
     {
+      "source": "/feed",
+      "has": [
+        {
+          "type": "query",
+          "key": "post",
+          "value": "(?<id>[0-9a-fA-F-]{36})"
+        },
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(?i).*(facebookexternalhit|facebot|whatsapp|twitterbot|telegrambot|slackbot|linkedinbot|discordbot|pinterest|skypeuripreview|googlebot|bingbot|applebot|redditbot|embedly|vkshare|viber).*"
+        }
+      ],
+      "destination": "/api/share?id=:id"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

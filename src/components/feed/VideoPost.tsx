@@ -13,6 +13,7 @@ import { useToggleLike, useToggleFollow, useIsFollowing, useRecordView, type Fee
 import { useReportContent } from '@/hooks/useReports';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { sharePost } from '@/lib/shareLinks';
 
 interface VideoPostProps {
   post: FeedPost;
@@ -51,17 +52,9 @@ export default function VideoPost({ post, isActive, isLiked, onOpenComments }: V
   };
 
   const handleShare = async () => {
-    const url = `${window.location.origin}/shop/${post.vendor_id}?post=${post.id}`;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: post.vendors?.store_name ?? 'Check this out', url });
-        return;
-      } catch {
-        // user cancelled share — fall through to clipboard copy
-      }
-    }
-    await navigator.clipboard.writeText(url);
-    toast.success('Link copied');
+    const result = await sharePost({ id: post.id, vendorName: post.vendors?.store_name, caption: post.caption });
+    if (result === 'copied') toast.success('Link copied. Paste it anywhere to share this video.');
+    else if (result === 'failed') toast.error('Could not share. Copy the link from your browser address bar.');
   };
 
   const handleReport = (reason: string) => {
@@ -152,7 +145,7 @@ export default function VideoPost({ post, isActive, isLiked, onOpenComments }: V
           <span className="text-xs">{post.comments_count}</span>
         </button>
 
-        <button onClick={handleShare} className="flex flex-col items-center gap-1 text-white">
+        <button onClick={handleShare} aria-label="Share this video" className="flex flex-col items-center gap-1 text-white">
           <Share2 className="w-7 h-7" />
           <span className="text-xs">Share</span>
         </button>

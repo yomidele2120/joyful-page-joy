@@ -1,5 +1,8 @@
 // @vitest-environment node
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+// The queue talks to Supabase through the shared client: swap in the fake server defined below.
+vi.mock('@/integrations/supabase/client', () => ({ supabase: (globalThis as any).__fakeSupabase }));
 
 // The whole journey of a video with a fake server standing in for Supabase and Cloudflare:
 // pick -> upload (cut off) -> app closed -> reopened -> resumes -> optimised on the server -> live.

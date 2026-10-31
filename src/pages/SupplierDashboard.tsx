@@ -141,15 +141,6 @@ export default function SupplierDashboard() {
   });
 
   // The short list used to tag a product in a video post: the 100 newest (a post can also be made without one).
-  const { data: pickableProducts } = useQuery({
-    queryKey: ['vendor-products-pick', vendor?.id],
-    queryFn: async () => {
-      const { data } = await supabase.from('products').select('id, name').eq('vendor_id', vendor!.id).order('created_at', { ascending: false }).limit(100);
-      return data || [];
-    },
-    enabled: !!vendor?.id && isApproved && activeTab === 'videos',
-  });
-
   const { data: orders } = useQuery({
     queryKey: ['vendor-orders', vendor?.id],
     queryFn: async () => {
@@ -478,7 +469,6 @@ export default function SupplierDashboard() {
             {activeTab === 'videos' && (
               <VendorVideosTab
                 vendorId={vendor.id}
-                products={pickableProducts ?? []}
                 autoOpenComposer={autoCompose}
               />
             )}

@@ -50,6 +50,8 @@ export default function VideoFeed({ hashtag, search, postId, following }: VideoF
       emptyMessage={
         following
           ? "You haven't connected with any shops yet — hit Connect on a vendor's profile to see their updates here."
+          : postId
+          ? "This video is no longer available. It may have been removed by the shop."
           : hashtag
             ? `No videos tagged #${hashtag} yet.`
             : "Vendors haven't posted any videos. Check back soon."

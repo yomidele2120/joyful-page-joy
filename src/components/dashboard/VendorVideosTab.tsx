@@ -1,17 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   Film, Trash2, Upload, Loader2, Eye, Heart, MessageCircle, Users,
-  ImagePlus, X, ArrowLeft, ArrowRight, AlertCircle, Images, Plus, Clock,
+  ImagePlus, X, ArrowLeft, ArrowRight, AlertCircle, Images, Plus, Clock, Share2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import ProductLinkPicker from '@/components/dashboard/ProductLinkPicker';
 import { Progress } from '@/components/ui/progress';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import MediaPicker, { type PickedMedia } from '@/components/media/MediaPicker';
 import PostsPerformanceChart from '@/components/dashboard/PostsPerformanceChart';
 import { supabase } from '@/integrations/supabase/client';
 import { compressImage } from '@/lib/mediaProcessing';
+import { sharePost } from '@/lib/shareLinks';
 import { videoUploadQueue } from '@/lib/videoUploadQueue';
 import { deleteDraft, getDraft, putDraft, type DraftItem } from '@/lib/uploadStore';
 import VideoUploadStatus from '@/components/dashboard/VideoUploadStatus';
@@ -23,11 +24,10 @@ import { cn } from '@/lib/utils';
 
 interface VendorVideosTabProps {
   vendorId: string;
-  products: { id: string; name: string }[];
   autoOpenComposer?: boolean;
 }
 
-export default function VendorVideosTab({ vendorId, products, autoOpenComposer }: VendorVideosTabProps) {
+export default function VendorVideosTab({ vendorId, autoOpenComposer }: VendorVideosTabProps) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { data: posts, isLoading } = useVendorPosts(vendorId);
@@ -256,9 +256,23 @@ export default function VendorVideosTab({ vendorId, products, autoOpenComposer }
               )}
               <div className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-xs p-2 flex justify-between items-center">
                 <span>{post.likes_count} likes</span>
-                <button onClick={() => handleDeletePost(post.id, queryClient, vendorId)} className="text-white/80 hover:text-white">
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                <span className="flex items-center gap-3">
+                  {(!post.processing_status || post.processing_status === 'ready') && (
+                    <button
+                      onClick={async () => {
+                        const r = await sharePost({ id: post.id, caption: post.caption });
+                        if (r === 'copied') toast.success('Link copied. Paste it anywhere to share this post.');
+                        else if (r === 'failed') toast.error('Could not copy the link');
+                      }}
+                      aria-label="Share this post" className="text-white/80 hover:text-white"
+                    >
+                      <Share2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  <button onClick={() => handleDeletePost(post.id, queryClient, vendorId)} aria-label="Delete this post" className="text-white/80 hover:text-white">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </span>
               </div>
             </div>
           ))}
@@ -348,16 +362,7 @@ export default function VendorVideosTab({ vendorId, products, autoOpenComposer }
               rows={2}
             />
 
-            <Select value={productId} onValueChange={setProductId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Link a product (optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                {products.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <ProductLinkPicker vendorId={vendorId} value={productId} onChange={setProductId} />
 
             {uploading && (
               <div className="space-y-1">
