@@ -12,6 +12,7 @@ import CookieConsent from "@/components/CookieConsent";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ScrollToTop from "@/components/ScrollToTop";
 import Tracker from "@/components/Tracker";
+import VideoUploadResumer from "@/components/VideoUploadResumer";
 import Index from "./pages/Index";
 import { lazyPage } from "@/lib/lazyPage";
 import { persistQueryCache, restoreQueryCache } from "@/lib/queryPersist";
@@ -108,6 +109,7 @@ const App = () => (
             <ScrollToTop />
             <CookieConsent />
             <Tracker />
+            <VideoUploadResumer />
             <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/" element={<Index />} />

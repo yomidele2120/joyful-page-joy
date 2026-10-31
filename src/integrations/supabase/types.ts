@@ -1266,6 +1266,7 @@ export type Database = {
           caption: string | null
           comments_count: number
           created_at: string
+          duration_seconds: number | null
           hashtags: string[]
           hls_url: string | null
           id: string
@@ -1273,6 +1274,8 @@ export type Database = {
           is_active: boolean
           likes_count: number
           media_type: string
+          processing_error: string | null
+          processing_status: string
           product_id: string | null
           stream_uid: string | null
           thumbnail_url: string | null
@@ -1285,6 +1288,7 @@ export type Database = {
           caption?: string | null
           comments_count?: number
           created_at?: string
+          duration_seconds?: number | null
           hashtags?: string[]
           hls_url?: string | null
           id?: string
@@ -1292,6 +1296,8 @@ export type Database = {
           is_active?: boolean
           likes_count?: number
           media_type?: string
+          processing_error?: string | null
+          processing_status?: string
           product_id?: string | null
           stream_uid?: string | null
           thumbnail_url?: string | null
@@ -1304,6 +1310,7 @@ export type Database = {
           caption?: string | null
           comments_count?: number
           created_at?: string
+          duration_seconds?: number | null
           hashtags?: string[]
           hls_url?: string | null
           id?: string
@@ -1311,6 +1318,8 @@ export type Database = {
           is_active?: boolean
           likes_count?: number
           media_type?: string
+          processing_error?: string | null
+          processing_status?: string
           product_id?: string | null
           stream_uid?: string | null
           thumbnail_url?: string | null

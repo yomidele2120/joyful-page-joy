@@ -38,3 +38,9 @@ verify_jwt = false
 
 [functions.bulk-product-import]
 verify_jwt = false
+
+[functions.stream-webhook]
+verify_jwt = false
+
+[functions.check-stream-post]
+verify_jwt = false

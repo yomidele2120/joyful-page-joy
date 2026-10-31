@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Film, Trash2, Upload, Loader2, Eye, Heart, MessageCircle, Users,
-  ImagePlus, X, ArrowLeft, ArrowRight, AlertCircle, Images, Plus,
+  ImagePlus, X, ArrowLeft, ArrowRight, AlertCircle, Images, Plus, Clock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,11 +11,11 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/u
 import MediaPicker, { type PickedMedia } from '@/components/media/MediaPicker';
 import PostsPerformanceChart from '@/components/dashboard/PostsPerformanceChart';
 import { supabase } from '@/integrations/supabase/client';
-import { captureVideoThumbnail } from '@/lib/videoThumbnail';
-import { compressVideo } from '@/lib/videoCompress';
-import { compressImage, MAX_VIDEO_MB } from '@/lib/mediaProcessing';
-import { clearPostDraft, loadPostDraft, savePostDraft } from '@/lib/postDraft';
-import { uploadPostVideo } from '@/lib/postVideoUpload';
+import { compressImage } from '@/lib/mediaProcessing';
+import { videoUploadQueue } from '@/lib/videoUploadQueue';
+import { deleteDraft, getDraft, putDraft, type DraftItem } from '@/lib/uploadStore';
+import VideoUploadStatus from '@/components/dashboard/VideoUploadStatus';
+import { useAuth } from '@/hooks/useAuth';
 import { useVendorPosts, useVendorFollowerCount } from '@/hooks/usePosts';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -29,6 +29,7 @@ interface VendorVideosTabProps {
 
 export default function VendorVideosTab({ vendorId, products, autoOpenComposer }: VendorVideosTabProps) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const { data: posts, isLoading } = useVendorPosts(vendorId);
   const { data: followerCount } = useVendorFollowerCount(vendorId);
 
@@ -46,70 +47,51 @@ export default function VendorVideosTab({ vendorId, products, autoOpenComposer }
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [statusText, setStatusText] = useState('');
-  const [draftLoadedVendorId, setDraftLoadedVendorId] = useState<string | null>(null);
-  const [draftSaved, setDraftSaved] = useState(false);
-  const [draftSaveError, setDraftSaveError] = useState('');
 
   const isVideoPost = media[0]?.kind === 'video';
 
+  // ---- Unfinished post is kept on the phone -------------------------------------------------------------
+  // Pick a video, switch to another app or close the browser, come back later: it is all still here.
+  const draftKey = `composer:${vendorId}`;
+  const draftReady = useRef(false);
+
   useEffect(() => {
     let cancelled = false;
-    setDraftLoadedVendorId(null);
-    setMedia([]);
-    setCaption('');
-    setProductId('');
-
-    void loadPostDraft(vendorId).then((draft) => {
-      if (cancelled) return;
-      if (draft) {
-        setMedia(draft.media);
+    (async () => {
+      try {
+        const draft = await getDraft(draftKey);
+        if (cancelled || !draft || (!draft.items.length && !draft.caption)) return;
+        setMedia(draft.items.map((it): PickedMedia => {
+          const file = new File([it.blob], it.name, { type: it.type, lastModified: it.lastModified });
+          return {
+            id: it.id, file, kind: it.kind, duration: it.duration,
+            preview: it.kind === 'image' ? URL.createObjectURL(file) : it.poster ?? '',
+          };
+        }));
         setCaption(draft.caption);
         setProductId(draft.productId);
-        if (draft.media.length) {
-          setComposerOpen(true);
-          toast.info('Your saved post draft was restored');
-        }
+        setComposerOpen(true);
+        toast.info('Your unfinished post was restored');
+      } catch { /* storage unavailable: start fresh */ } finally {
+        draftReady.current = true;
       }
-      setDraftLoadedVendorId(vendorId);
-    }).catch((error: unknown) => {
-      if (cancelled) return;
-      setDraftSaveError(error instanceof Error ? error.message : 'Could not restore your saved post draft');
-      setDraftLoadedVendorId(vendorId);
-    });
-
+    })();
     return () => { cancelled = true; };
-  }, [vendorId]);
+  }, [draftKey]);
 
   useEffect(() => {
-    if (draftLoadedVendorId !== vendorId) return;
-
-    const hasDraft = media.length > 0 || caption.length > 0 || productId.length > 0;
-    setDraftSaved(false);
-
-    if (!hasDraft) {
-      void clearPostDraft(vendorId).catch((error: unknown) => {
-        setDraftSaveError(error instanceof Error ? error.message : 'Could not clear the saved post draft');
-      });
-      return;
-    }
-
-    let active = true;
-    const timeout = window.setTimeout(() => {
-      void savePostDraft(vendorId, { media, caption, productId }).then(() => {
-        if (active) {
-          setDraftSaveError('');
-          setDraftSaved(true);
-        }
-      }).catch((error: unknown) => {
-        if (active) setDraftSaveError(error instanceof Error ? error.message : 'Could not save your post draft');
-      });
-    }, 300);
-
-    return () => {
-      active = false;
-      window.clearTimeout(timeout);
-    };
-  }, [vendorId, draftLoadedVendorId, media, caption, productId]);
+    if (!draftReady.current) return;
+    const timer = setTimeout(() => {
+      if (!media.length && !caption.trim() && !productId) { void deleteDraft(draftKey); return; }
+      const items: DraftItem[] = media.map(m => ({
+        id: m.id, kind: m.kind, blob: m.file, name: m.file.name, type: m.file.type,
+        lastModified: m.file.lastModified, poster: m.kind === 'video' ? m.preview : null, duration: m.duration,
+      }));
+      // No room on the phone: the post still works, it just will not be there after a restart.
+      putDraft({ key: draftKey, items, caption, productId, savedAt: Date.now() }).catch(() => undefined);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [media, caption, productId, draftKey]);
 
   const move = (index: number, direction: -1 | 1) => {
     setMedia((prev) => {
@@ -124,6 +106,7 @@ export default function VendorVideosTab({ vendorId, products, autoOpenComposer }
   const removeAt = (id: string) => setMedia((prev) => prev.filter((m) => m.id !== id));
 
   const resetForm = () => {
+    void deleteDraft(draftKey);
     setMedia([]);
     setFailedIds([]);
     setCaption('');
@@ -135,70 +118,15 @@ export default function VendorVideosTab({ vendorId, products, autoOpenComposer }
     queryClient.invalidateQueries({ queryKey: ['posts-feed'] });
   };
 
+  // A video is not uploaded from this screen any more. It is handed to the upload queue (lib/videoUploadQueue.ts),
+  // which keeps it safe on the phone, uploads it in a way that can resume, and lets the server publish it once it
+  // is optimised. So the seller can leave this page, close the app, or lose signal without losing the post.
   const publishVideo = async (item: PickedMedia) => {
-    let file = item.file;
-    if (file.size > MAX_VIDEO_MB * 1024 * 1024) {
-      setStatusText('Optimising video...');
-      setProgress(3);
-      file = await compressVideo(item.file, (fraction) => {
-        setProgress(3 + Math.round(fraction * 47));
-        setStatusText(`Optimising video... ${Math.round(fraction * 100)}%`);
-      });
-    }
-    if (file.size > MAX_VIDEO_MB * 1024 * 1024) {
-      throw new Error(`This video is still over ${MAX_VIDEO_MB}MB. Please pick a shorter one.`);
-    }
-    setStatusText('Uploading video...');
-    setProgress(55);
-
-    const ext = file.name.split('.').pop() || 'mp4';
-    const path = `${vendorId}/videos/${item.uploadId}.${ext}`;
-    const fileName = `${item.uploadId}.${ext}`;
-    const { data: existingFiles, error: listError } = await supabase.storage
-      .from('post-videos')
-      .list(`${vendorId}/videos`, { search: fileName, limit: 1 });
-    if (listError) throw listError;
-    if (!existingFiles?.some((entry) => entry.name === fileName)) {
-      await uploadPostVideo(file, path, (fraction) => {
-        const percent = Math.round(fraction * 100);
-        setProgress(55 + Math.round(fraction * 30));
-        setStatusText(`Uploading video... ${percent}%`);
-      });
-    } else {
-      setProgress(85);
-      setStatusText('Video already uploaded. Publishing post...');
-    }
-
-    const { data: publicUrlData } = supabase.storage.from('post-videos').getPublicUrl(path);
-
-    // Best-effort poster frame — a failure here never blocks the post.
-    let thumbnailUrl: string | null = null;
-    try {
-      const thumbBlob = await captureVideoThumbnail(file);
-      if (thumbBlob) {
-        const thumbPath = `${vendorId}/${Date.now()}-thumb.jpg`;
-        const { error: thumbError } = await supabase.storage
-          .from('post-videos')
-          .upload(thumbPath, thumbBlob, { contentType: 'image/jpeg' });
-        if (!thumbError) {
-          thumbnailUrl = supabase.storage.from('post-videos').getPublicUrl(thumbPath).data.publicUrl;
-        }
-      }
-    } catch {
-      // non-fatal
-    }
-
-    setProgress(90);
-    setStatusText('Publishing video post...');
-    const { error: insertError } = await supabase.from('posts').insert({
-      vendor_id: vendorId,
-      media_type: 'video',
-      video_url: publicUrlData.publicUrl,
-      thumbnail_url: thumbnailUrl,
-      caption: caption.trim() || null,
-      product_id: productId || null,
+    if (!user) throw new Error('Sign in to post videos');
+    await videoUploadQueue.enqueue({
+      userId: user.id, vendorId, file: item.file, caption: caption.trim(), productId: productId || null, poster: item.preview || null,
     });
-    if (insertError) throw insertError;
+    toast.success('Saved. Your video is uploading in the background, you can leave this page.');
   };
 
   const publishImages = async (items: PickedMedia[]) => {
@@ -252,11 +180,13 @@ export default function VendorVideosTab({ vendorId, products, autoOpenComposer }
     setUploading(true);
     setFailedIds([]);
     try {
-      if (isVideoPost) await publishVideo(media[0]);
-      else await publishImages(media);
-
-      setProgress(100);
-      toast.success('Posted to the feed');
+      if (isVideoPost) {
+        await publishVideo(media[0]);
+      } else {
+        await publishImages(media);
+        setProgress(100);
+        toast.success('Posted to the feed');
+      }
       resetForm();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Upload failed');
@@ -275,6 +205,8 @@ export default function VendorVideosTab({ vendorId, products, autoOpenComposer }
         <MiniStat icon={<MessageCircle className="w-4 h-4" />} label="Comments" value={sumField(posts, 'comments_count')} />
         <MiniStat icon={<Users className="w-4 h-4" />} label="Shoppers" value={followerCount ?? 0} />
       </div>
+
+      <VideoUploadStatus />
 
       <PostsPerformanceChart posts={posts} />
 
@@ -307,6 +239,16 @@ export default function VendorVideosTab({ vendorId, products, autoOpenComposer }
               ) : (
                 <Images className="w-6 h-6 absolute inset-0 m-auto text-muted-foreground" />
               )}
+              {post.processing_status && post.processing_status !== 'ready' && (
+                <div className="absolute inset-x-0 top-0 flex items-center gap-1 bg-black/70 px-2 py-1 text-[10px] font-medium text-white">
+                  {post.processing_status === 'failed'
+                    ? <><AlertCircle className="h-3 w-3 text-red-300" /> Not posted</>
+                    : <><Clock className="h-3 w-3" /> {post.processing_status === 'uploading' ? 'Uploading' : 'Optimising'}</>}
+                </div>
+              )}
+              {post.processing_status === 'failed' && post.processing_error && (
+                <p className="absolute inset-x-0 top-6 bg-red-950/80 p-2 text-[10px] leading-snug text-red-100">{post.processing_error}</p>
+              )}
               {post.media_type === 'images' && (post.image_urls?.length ?? 0) > 1 && (
                 <span className="absolute top-1.5 right-1.5 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] text-white">
                   1/{post.image_urls.length}
@@ -331,7 +273,7 @@ export default function VendorVideosTab({ vendorId, products, autoOpenComposer }
 
           <div className="overflow-y-auto p-4 space-y-3">
             <p className="text-xs text-muted-foreground">
-              Share up to 10 photos as a swipeable carousel, or one short vertical video. Your draft is saved on this device. If the app closes during an upload, reopen this page and tap Publish to retry.
+              Share up to 10 photos as a swipeable carousel, or one short vertical video. Videos are optimised on our servers, so once one has uploaded you can close the app and it will post by itself.
             </p>
 
             {media.length === 0 ? (
@@ -422,12 +364,6 @@ export default function VendorVideosTab({ vendorId, products, autoOpenComposer }
                 <Progress value={progress} className="h-1.5" />
                 <p className="text-xs text-muted-foreground">{statusText}</p>
               </div>
-            )}
-
-            {(draftSaved || draftSaveError) && (
-              <p className={cn('text-xs', draftSaveError ? 'text-destructive' : 'text-muted-foreground')}>
-                {draftSaveError || 'Draft saved on this device'}
-              </p>
             )}
 
             <Button onClick={handlePublish} disabled={!media.length || uploading} className="w-full">
