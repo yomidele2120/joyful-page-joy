@@ -1,3 +1,5 @@
+import { imgSrc } from '@/lib/images';
+import { cloudinarySrcSet } from '@/lib/cloudinaryUrl';
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -89,6 +91,9 @@ export default function ProductDetail() {
 
   const gallery = [...new Set([product.image_url, ...(product.images || [])].filter((image): image is string => !!image))];
   const selectedImage = gallery[activeImage] || '/placeholder.svg';
+  // Cloudinary photos are sent at the size this screen needs (plus a sharper copy for big/high-density screens); other links are untouched.
+  const mainSrc = imgSrc(selectedImage, 'gallery') ?? selectedImage;
+  const mainSrcSet = cloudinarySrcSet(selectedImage, [480, 800, 1200, 1600]);
   const vendor = product.vendors;
 
   const moq = getMoq(product);
@@ -192,7 +197,7 @@ export default function ProductDetail() {
               {showVideo && product.video_url ? (
                 <video src={product.video_url} controls autoPlay className="h-full w-full bg-black object-contain" />
               ) : (
-                <img src={selectedImage} alt={product.name} className="h-full w-full object-contain p-3 sm:p-8" />
+                <img src={mainSrc} srcSet={mainSrcSet} sizes="(min-width: 1024px) 50vw, 100vw" alt={product.name} decoding="async" className="h-full w-full object-contain p-3 sm:p-8" />
               )}
               {product.badge && <Badge className="absolute left-3 top-3 rounded-sm border-none bg-primary/10 text-primary">{product.badge}</Badge>}
             </div>
@@ -218,7 +223,7 @@ export default function ProductDetail() {
                     aria-pressed={!showVideo && activeImage === index}
                     className={`h-16 w-16 shrink-0 overflow-hidden rounded-md border bg-white p-1 sm:h-20 sm:w-20 ${!showVideo && activeImage === index ? 'border-primary ring-1 ring-primary' : 'border-border'}`}
                   >
-                    <img src={image} alt="" className="h-full w-full object-contain" />
+                    <img src={imgSrc(image, 'thumb') ?? image} alt="" loading="lazy" decoding="async" className="h-full w-full object-contain" />
                   </button>
                 ))}
               </div>

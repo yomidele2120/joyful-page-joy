@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { cloudinaryConfigured, uploadProductImage } from "../_shared/cloudinary.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -406,13 +407,20 @@ Deno.serve(async (req) => {
         }
         const bytes = new Uint8Array(await response.arrayBuffer());
         if (bytes.byteLength > 10 * 1024 * 1024) return json({ error: "The selected image exceeds the 10 MB storage limit." }, 413);
-        const extension = type.split("/")[1] === "jpeg" ? "jpg" : type.split("/")[1];
-        const path = `${job.vendor_id}/${item.id}.${extension}`;
-        const { error: uploadError } = await db.storage.from("product-images").upload(path, bytes, {
-          contentType: type, upsert: true,
-        });
-        if (uploadError) throw uploadError;
-        image = db.storage.from("product-images").getPublicUrl(path).data.publicUrl;
+        if (cloudinaryConfigured()) {
+          // Default: new product photos go to Cloudinary (resized and optimised on delivery).
+          const stored = await uploadProductImage(bytes, type, job.vendor_id, `import-${item.id}`);
+          image = stored.url;
+        } else {
+          // Only used until the Cloudinary secrets are set on this function.
+          const extension = type.split("/")[1] === "jpeg" ? "jpg" : type.split("/")[1];
+          const path = `${job.vendor_id}/${item.id}.${extension}`;
+          const { error: uploadError } = await db.storage.from("product-images").upload(path, bytes, {
+            contentType: type, upsert: true,
+          });
+          if (uploadError) throw uploadError;
+          image = db.storage.from("product-images").getPublicUrl(path).data.publicUrl;
+        }
       }
 
       const sourceFields = item.source_fields && typeof item.source_fields === "object" && !Array.isArray(item.source_fields)

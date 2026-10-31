@@ -1,3 +1,4 @@
+import { imgSrc } from '@/lib/images';
 import { Link } from 'react-router-dom';
 import { formatNaira } from '@/lib/format';
 import { formatMoq } from '@/lib/pricing';
@@ -21,7 +22,7 @@ export default function ProductChatCard({ product, dark = false }: { product: Ch
         dark ? 'border-primary-foreground/30 bg-primary-foreground/10' : 'border-border bg-background'
       }`}
     >
-      <img src={product.image_url || '/placeholder.svg'} alt="" className="h-12 w-12 shrink-0 rounded-md bg-white object-contain" />
+      <img src={imgSrc(product.image_url, 'thumb') || '/placeholder.svg'} loading="lazy" alt="" className="h-12 w-12 shrink-0 rounded-md bg-white object-contain" />
       <span className="min-w-0">
         <span className="block truncate text-xs font-semibold">{product.name}</span>
         <span className="block text-xs">{formatNaira(product.price)}</span>

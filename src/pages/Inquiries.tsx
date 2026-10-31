@@ -1,3 +1,4 @@
+import { imgSrc } from '@/lib/images';
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ClipboardList, Inbox, Loader2, MessageSquare, Send, Trash2 } from 'lucide-react';
@@ -66,7 +67,7 @@ function InquiryCard({ inquiry, children }: { inquiry: InquiryRow; children?: Re
   return (
     <div className="rounded-lg border border-border bg-card p-4">
       <div className="flex items-start gap-3">
-        <img src={inquiry.products?.image_url || '/placeholder.svg'} alt="" className="h-14 w-14 shrink-0 rounded-md bg-white object-contain" />
+        <img src={imgSrc(inquiry.products?.image_url, 'thumb') || '/placeholder.svg'} loading="lazy" alt="" className="h-14 w-14 shrink-0 rounded-md bg-white object-contain" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             {inquiry.products ? (
@@ -192,7 +193,7 @@ function BasketPanel() {
     <div className="mt-4 space-y-3">
       {basket.items.map(item => (
         <div key={item.product_id} className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
-          <img src={item.image_url || '/placeholder.svg'} alt="" className="h-14 w-14 shrink-0 rounded-md bg-white object-contain" />
+          <img src={imgSrc(item.image_url, 'thumb') || '/placeholder.svg'} loading="lazy" alt="" className="h-14 w-14 shrink-0 rounded-md bg-white object-contain" />
           <div className="min-w-0 flex-1">
             <Link to={`/product/${item.slug}`} className="block truncate text-sm font-semibold hover:text-primary">{item.name}</Link>
             <p className="truncate text-xs text-muted-foreground">{item.vendor_name || 'Supplier'} - MOQ {item.moq}</p>

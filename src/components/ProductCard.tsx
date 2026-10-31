@@ -5,6 +5,7 @@ import { prefetchProduct } from '@/hooks/useProducts';
 import { BadgeCheck, ImageOff } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { formatNaira } from '@/lib/format';
+import { listImage } from '@/lib/images';
 import { formatMoq, priceRange } from '@/lib/pricing';
 import type { Json } from '@/integrations/supabase/types';
 import { PayLaterBadge, PreorderBadge } from '@/components/ProductBadges';
@@ -67,10 +68,10 @@ export default function ProductCard({
 
   // Photo states: a soft shimmer while it loads, then it fades in. If the small copy fails we try the full photo,
   // and if that fails too (or there is no photo) we show a tidy placeholder instead of a broken or blank box.
-  const [src, setSrc] = useState<string | null>(thumb_url || image_url || null);
+  const [src, setSrc] = useState<string | null>(listImage({ thumb_url, image_url }));
   const [loaded, setLoaded] = useState(false);
   const onImageError = () => {
-    if (src && src === thumb_url && image_url && image_url !== thumb_url) setSrc(image_url);
+    if (src && image_url && src !== image_url) setSrc(image_url);
     else setSrc(null);
   };
 

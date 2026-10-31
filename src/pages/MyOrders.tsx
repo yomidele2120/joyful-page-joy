@@ -1,3 +1,4 @@
+import { imgSrc } from '@/lib/images';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -171,7 +172,7 @@ export default function MyOrders() {
                   <ul className="divide-y divide-border">
                     {order.order_items.map((item, i) => (
                       <li key={i} className="flex gap-3 p-3">
-                        <img src={item.products?.image_url || '/placeholder.svg'} alt="" className="h-14 w-14 shrink-0 bg-white object-contain" />
+                        <img src={imgSrc(item.products?.image_url, 'thumb') || '/placeholder.svg'} loading="lazy" alt="" className="h-14 w-14 shrink-0 bg-white object-contain" />
                         <div className="min-w-0 flex-1 text-sm">
                           {item.products ? <Link to={`/product/${item.products.slug}`} className="line-clamp-2 font-medium hover:text-primary">{item.products.name}</Link> : <span>Product no longer listed</span>}
                           <p className="text-xs text-muted-foreground">

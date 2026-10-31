@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
 import { compressImage } from '@/lib/mediaProcessing';
-import { makeThumbnail } from '@/lib/images';
+import { uploadProductImages, deleteCloudinaryImages } from '@/lib/cloudinary';
 import { MAX_PRICE_TIERS, parseSpecs, parseTiers, validatePriceEdit } from '@/lib/pricing';
 import { useCategories } from '@/hooks/useProducts';
 import { Button } from '@/components/ui/button';
@@ -126,25 +126,18 @@ function EditorForm({ product, onClose, onSaved }: { product: any; onClose: () =
     specs.forEach(s => { if (s.key.trim() && s.value.trim()) specsObject[s.key.trim()] = s.value.trim(); });
 
     setSaving(true);
+    let uploaded: { url: string; publicId: string }[] = [];
     try {
-      // 1. Upload the new photos (shrunk to 1200 px first, like when adding a product).
-      const stamp = Date.now();
-      const upload = async (blob: Blob, ext: string, label: string) => {
-        const path = `${product.vendor_id}/products/${stamp}-${label}.${ext}`;
-        const { error } = await supabase.storage.from('vendor-assets').upload(path, blob, { contentType: blob.type || 'image/jpeg', cacheControl: '31536000' });
-        if (error) throw new Error(error.message);
-        return supabase.storage.from('vendor-assets').getPublicUrl(path).data.publicUrl;
-      };
-      const urls = await Promise.all(photos.map(async (p, i) => {
-        if (!p.file) return p.url;
-        const blob = await compressImage(p.file, 1200, 0.82);
-        const ext = blob.type === 'image/jpeg' ? 'jpg' : (p.file.name.split('.').pop() || 'jpg').toLowerCase();
-        return upload(blob, ext, String(i));
-      }));
+      // 1. Upload the new photos to Cloudinary (shrunk to 1200 px first, like when adding a product).
+      //    If any upload fails we stop here: nothing is saved and the old photos stay as they were.
+      const newFiles = photos.filter(p => p.file);
+      const blobs = await Promise.all(newFiles.map(p => compressImage(p.file as File, 1200, 0.82)));
+      uploaded = await uploadProductImages(product.vendor_id, blobs);
+      let next = 0;
+      const urls = photos.map(p => (p.file ? uploaded[next++].url : p.url));
 
-      // 2. The first photo is the main one. Cards show a small copy of it: make one for a new main photo,
-      //    clear it when another existing photo became the main one (cards then use the full photo until
-      //    scripts/backfill-thumbnails.mjs makes the small copy), and leave it alone when the main photo is unchanged.
+      // 2. The first photo is the main one. Cloudinary makes the card-sized copy on demand, so no separate thumbnail is stored
+      //    for Cloudinary photos. For an old (Supabase/external) main photo the existing small copy is kept while it is still the main photo.
       const newMain = urls[0] ?? null;
       const update: Record<string, unknown> = {
         name, brand: form.brand.trim() || null, category_id: form.category_id || null,
@@ -154,19 +147,20 @@ function EditorForm({ product, onClose, onSaved }: { product: any; onClose: () =
         price_tiers: priced.value.price_tiers as unknown as Json,
         image_url: newMain, images: urls.slice(1), is_active: form.is_active,
       };
-      if (newMain !== (product.image_url ?? null)) {
-        const mainFile = photos[0]?.file;
-        const thumb = mainFile ? await makeThumbnail(mainFile).catch(() => null) : null;
-        update.thumb_url = thumb ? await upload(thumb, 'jpg', 'thumb').catch(() => null) : null;
-      }
+      if (newMain !== (product.image_url ?? null)) update.thumb_url = null;
 
       // 3. Save. The database silently skips rows you may not change, so check that one was updated.
       const { data, error } = await (supabase as any).from('products').update(update).eq('id', product.id).select('id');
       if (error) throw new Error(error.message);
       if (!data?.length) throw new Error('Could not save. You can only edit your own products.');
+      // 4. The row is saved: now remove Cloudinary photos it no longer uses (deleted or replaced). Old Supabase photos are never touched.
+      const kept = new Set(urls);
+      void deleteCloudinaryImages([product.image_url, ...(product.images ?? [])].filter((u): u is string => !!u && !kept.has(u)));
       toast.success('Product updated');
       onSaved();
     } catch (e: any) {
+      // Saving failed after some photos were uploaded: they are not used anywhere, so remove them again.
+      if (uploaded.length) void deleteCloudinaryImages(uploaded.map(u => u.url));
       toast.error(e?.message || 'Could not save. Nothing was changed, please try again.');
     } finally {
       setSaving(false);

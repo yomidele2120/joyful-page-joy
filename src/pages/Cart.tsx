@@ -1,3 +1,4 @@
+import { imgSrc } from '@/lib/images';
 import { Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import { useCart, unitPrice } from '@/contexts/CartContext';
@@ -38,7 +39,7 @@ export default function Cart() {
             )}
             {items.map(item => (
               <div key={item.id} className="flex gap-4 bg-card p-4 rounded-lg card-shadow">
-                <img src={item.image_url || '/placeholder.svg'} alt={item.name} className="w-20 h-20 rounded-md object-cover bg-secondary" />
+                <img src={imgSrc(item.image_url, 'thumb') || '/placeholder.svg'} loading="lazy" alt={item.name} className="w-20 h-20 rounded-md object-cover bg-secondary" />
                 <div className="flex-1 min-w-0">
                   <Link to={`/product/${item.slug}`} className="font-heading font-semibold text-sm hover:text-primary line-clamp-2">{item.name}</Link>
                   {item.is_preorder && <PreorderBadge date={item.preorder_release_date} className="mt-1" />}

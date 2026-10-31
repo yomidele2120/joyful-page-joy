@@ -1,3 +1,4 @@
+import { imgSrc } from '@/lib/images';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -225,7 +226,7 @@ export default function UserDashboard() {
                 </div>
                 {order.order_items?.map((item: any) => (
                   <div key={item.id} className="flex items-center gap-3 border-b border-border px-4 py-2.5 last:border-b-0">
-                    <img src={item.products?.image_url || '/placeholder.svg'} alt={item.products?.name} className="h-11 w-11 rounded-md bg-white object-cover" />
+                    <img src={imgSrc(item.products?.image_url, 'thumb') || '/placeholder.svg'} loading="lazy" alt={item.products?.name} className="h-11 w-11 rounded-md bg-white object-cover" />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">{item.products?.name}</p>
                       <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
@@ -251,7 +252,7 @@ export default function UserDashboard() {
           <div className="grid grid-cols-1 gap-4 min-[480px]:grid-cols-2 xl:grid-cols-3">
             {wishlist?.map((item: any) => (
               <Panel key={item.id}>
-                <img src={item.products?.image_url || '/placeholder.svg'} alt={item.products?.name} className="mb-3 h-40 w-full rounded-lg bg-white object-contain" />
+                <img src={imgSrc(item.products?.image_url, 'card') || '/placeholder.svg'} loading="lazy" alt={item.products?.name} className="mb-3 h-40 w-full rounded-lg bg-white object-contain" />
                 <h3 className="mb-1 line-clamp-2 text-sm font-medium">{item.products?.name}</h3>
                 <p className="mb-3 font-bold text-primary">{formatNaira(item.products?.price)}</p>
                 <div className="flex gap-2">

@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { compressImage } from '@/lib/mediaProcessing';
-import { makeThumbnail } from '@/lib/images';
+import { uploadProductImages, deleteCloudinaryImages, type UploadedImage } from '@/lib/cloudinary';
 import ProductPager from '@/components/ProductPager';
 import { useManagedProducts } from '@/hooks/useManagedProducts';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
@@ -535,27 +535,9 @@ function SupplierAddProduct({ vendorId, categories, onSuccess }: { vendorId: str
     const preorderResult = buildPreorderPayload(preorder, true);
     if ('error' in preorderResult) { toast.error(preorderResult.error); return; }
     setLoading(true);
-    // Phone photos are several MB. Shrink them first (1200 px is plenty for a
-    // product card) and upload them all at the same time instead of one by one.
-    const uploadPhoto = async (file: File, name: string): Promise<string | null> => {
-      const blob = await compressImage(file, 1200, 0.82);
-      const ext = blob.type === 'image/jpeg' ? 'jpg' : (file.name.split('.').pop() || 'jpg').toLowerCase();
-      const path = `${vendorId}/products/${name}.${ext}`;
-      const { error } = await supabase.storage.from('vendor-assets').upload(path, blob, { contentType: blob.type || file.type, cacheControl: '31536000' });
-      return error ? null : supabase.storage.from('vendor-assets').getPublicUrl(path).data.publicUrl;
-    };
-    const stamp = Date.now();
-    const mainUpload = imageFile ? uploadPhoto(imageFile, `${stamp}`) : Promise.resolve(null);
-    // A small copy for product cards and lists (about 400 px). If it fails, cards simply use the full photo.
-    const thumbUpload: Promise<string | null> = imageFile
-      ? makeThumbnail(imageFile).then(async blob => {
-          if (!blob) return null;
-          const path = `${vendorId}/products/${stamp}_thumb.jpg`;
-          const { error } = await supabase.storage.from('vendor-assets').upload(path, blob, { contentType: 'image/jpeg', cacheControl: '31536000' });
-          return error ? null : supabase.storage.from('vendor-assets').getPublicUrl(path).data.publicUrl;
-        }).catch(() => null)
-      : Promise.resolve(null);
-    const extraUploads = Promise.all(extraImages.map((file, i) => uploadPhoto(file, `${stamp}-${i + 1}`)));
+    // Phone photos are several MB. Shrink them first (1200 px is plenty; Cloudinary makes the smaller sizes on demand),
+    // then send them all to Cloudinary together. Nothing is saved unless every photo uploaded.
+    const photoFiles = [...(imageFile ? [imageFile] : []), ...extraImages];
     // B2B fields: MOQ, quantity price breaks and specifications
     const moq = Math.max(1, Math.floor(Number(form.moq)) || 1);
     const priceTiers = tiers
@@ -574,9 +556,18 @@ function SupplierAddProduct({ vendorId, categories, onSuccess }: { vendorId: str
     const specsObject: Record<string, string> = {};
     specs.forEach(sp => { if (sp.key.trim() && sp.value.trim()) specsObject[sp.key.trim()] = sp.value.trim(); });
 
-    const [mainUrl, extraResults, thumbUrl] = await Promise.all([mainUpload, extraUploads, thumbUpload]);
+    let uploaded: UploadedImage[] = [];
+    try {
+      const blobs = await Promise.all(photoFiles.map(f => compressImage(f, 1200, 0.82)));
+      uploaded = await uploadProductImages(vendorId, blobs);
+    } catch (err: any) {
+      setLoading(false);
+      toast.error(`${err?.message || 'Could not upload the photos.'} Nothing was saved. Please try again.`);
+      return;
+    }
+    const mainUrl = imageFile ? uploaded[0]?.url ?? null : null;
+    const extraUrls = uploaded.slice(imageFile ? 1 : 0).map(u => u.url);
     const imageUrl = mainUrl ?? form.image_url;
-    const extraUrls = extraResults.filter((u): u is string => !!u);
 
     const slug = form.name.toLowerCase().replace(/[^\w ]+/g, '').replace(/ +/g, '-') + '-' + Date.now();
     const { error } = await supabase.from('products').insert({
@@ -586,13 +577,16 @@ function SupplierAddProduct({ vendorId, categories, onSuccess }: { vendorId: str
       compare_at_price: form.compare_at_price ? Number(form.compare_at_price) : null,
       category_id: form.category_id || null, brand: form.brand || null,
       stock_quantity: Number(form.stock_quantity), description: form.description || null,
-      image_url: imageUrl || null, thumb_url: mainUrl ? thumbUrl : null, badge: form.badge || null, bnpl_eligible: form.bnpl_eligible,
+      image_url: imageUrl || null, thumb_url: null, badge: form.badge || null, bnpl_eligible: form.bnpl_eligible,
       vendor_id: vendorId, is_active: true,
       ...preorderResult.data,
     });
     setLoading(false);
-    if (error) toast.error(error.message);
-    else { toast.success('Product added!'); onSuccess(); }
+    if (error) {
+      // The product was not saved, so the photos we just uploaded are not used anywhere: remove them.
+      void deleteCloudinaryImages(uploaded.map(u => u.url));
+      toast.error(error.message);
+    } else { toast.success('Product added!'); onSuccess(); }
   };
 
   return (
