@@ -1,4 +1,4 @@
-// Browser side of the Cloudinary upload. The API secret never reaches the browser: this asks our own /api/cloudinary-sign
+// Browser side of the Cloudinary upload. The API secret never reaches the browser: this asks our own /api/cloudinary
 // for a short-lived signature, then sends the photo straight to Cloudinary. Deleting also goes through our server.
 import { supabase } from '@/integrations/supabase/client';
 import { isCloudinaryUrl } from '@/lib/cloudinaryUrl';
@@ -61,7 +61,7 @@ async function sendToCloudinary(file: Blob, slot: Slot): Promise<UploadedImage> 
 export async function uploadProductImages(vendorId: string, files: Blob[]): Promise<UploadedImage[]> {
   if (!files.length) return [];
   files.forEach(validateImageFile);
-  const getSlots = () => api<{ slots: Slot[] }>('/api/cloudinary-sign', { vendor_id: vendorId, count: files.length }).then(r => r.slots);
+  const getSlots = () => api<{ slots: Slot[] }>('/api/cloudinary', { action: 'sign', vendor_id: vendorId, count: files.length }).then(r => r.slots);
   let slots = await getSlots();
   return Promise.all(files.map(async (file, i) => {
     let slot = slots[i];
@@ -87,6 +87,6 @@ export async function uploadProductImages(vendorId: string, files: Blob[]): Prom
 export async function deleteCloudinaryImages(urls: (string | null | undefined)[]): Promise<void> {
   const list = [...new Set(urls.filter((u): u is string => !!u && isCloudinaryUrl(u)))];
   if (!list.length) return;
-  try { await api('/api/cloudinary-delete', { urls: list }); }
+  try { await api('/api/cloudinary', { action: 'delete', urls: list }); }
   catch (e) { console.warn('Could not remove old photos from Cloudinary', e); }
 }

@@ -4,7 +4,7 @@ New product photos are stored and delivered by Cloudinary. Supabase keeps the da
 only the photo **links**. Old Supabase and external links keep working, so the site runs on a mix until you migrate.
 
 ## How it works
-- **Upload** (Add product, Edit product): the browser shrinks each photo to 1200 px, asks `/api/cloudinary-sign` for a short-lived signature
+- **Upload** (Add product, Edit product): the browser shrinks each photo to 1200 px, asks `/api/cloudinary` (action `sign`) for a short-lived signature
   (the server checks the Supabase sign-in and that the caller owns the vendor folder), then sends the photo straight to Cloudinary.
   If any photo fails, nothing is saved and the vendor sees an error and can retry.
 - **Where files live:** `marketplace/vendors/<vendor id>/products/<name>`. The folder is what proves ownership.
@@ -13,7 +13,7 @@ only the photo **links**. Old Supabase and external links keep working, so the s
   written for Cloudinary photos (cards get a 400 px copy on demand).
 - **Display:** `src/lib/cloudinaryUrl.ts` adds `f_auto,q_auto,w_…,c_limit,dpr_auto` to Cloudinary links only: cards 400 px, product
   page 1000 px with a srcset, small lists 160 px. Supabase and external links are returned unchanged.
-- **Delete / replace:** the product is saved first; then `/api/cloudinary-delete` removes the photos it no longer uses. It refuses photos
+- **Delete / replace:** the product is saved first; then `/api/cloudinary` (action `delete`) removes the photos it no longer uses. It refuses photos
   that are not in the caller's vendor folder (admins may delete any) and photos any product still references. Old Supabase files are never deleted.
 - **Bulk import** (admin): stores chosen images on Cloudinary when the secrets below exist on the edge function; otherwise it keeps the old behaviour.
 
@@ -27,6 +27,12 @@ only the photo **links**. Old Supabase and external links keep working, so the s
 5. Cloudinary > Settings > Security: leave "Strict transformations" **off** (the site requests resized copies by URL), and optionally restrict
    "Allowed fetch domains" as you like. Optional: set a monthly usage alert.
 6. No database migration is needed.
+
+Check your keys locally (Node 20.6+, add the three CLOUDINARY_* lines to `.env` first):
+```
+npm install
+node --env-file=.env scripts/test-cloudinary.mjs
+```
 
 `/api/*` only runs on Vercel (or `vercel dev`); plain `npm run dev` cannot upload photos.
 
