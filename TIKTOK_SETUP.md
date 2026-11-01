@@ -14,8 +14,14 @@ video grid. Buyers watch them with TikTok's own player (loaded only when tapped)
 - **Covers:** TikTok cover links expire, so when Cloudinary is configured on the function the cover is copied to
   `marketplace/vendors/<vendor>/tiktok/<video id>` and that permanent link is saved. Without Cloudinary the TikTok link is used and the refresh job renews it.
 
-## Switched off by default
-The seller TikTok panel is hidden until you set `VITE_TIKTOK_ENABLED=true` on Vercel and redeploy (do this last, after the steps below). Until then nothing TikTok-related is visible, the TikTok migrations and function do not need to be deployed, and the rest of the site is unaffected.
+## Do the database part now, switch it on later
+1. **Now:** run the three SQL files in order (or the single combined file `TIKTOK_run_in_sql_editor.sql`): `20261101090000_tiktok_integration.sql`,
+   `20261102090000_tiktok_auto_import.sql`, `20261104090000_tiktok_feature_switch.sql`. Deploy the website. Nothing changes for anyone: sellers see no TikTok panel,
+   and the server refuses TikTok actions, because the admin switch is **off** by default.
+2. **When you are ready:** finish the TikTok developer app and add the keys (steps below). Then open **Admin > Marketplace > Sections and rules > TikTok for sellers**.
+   It says whether the keys are found on the server; once they are, switch **Allow sellers to connect TikTok** on. Approved sellers then see the TikTok panel in
+   Dashboard > Videos straight away, with no redeploy. Switching it off hides the panel again and stops new connecting and choosing; videos already shown stay,
+   and a connected seller can still disconnect.
 
 ## Setup, in this order
 1. **TikTok developer app** (developers.tiktok.com > Manage apps > Connect an app). Add the products **Login Kit** and **Display API**.
@@ -23,15 +29,16 @@ The seller TikTok panel is hidden until you set `VITE_TIKTOK_ENABLED=true` on Ve
    - Scopes: `user.info.basic` and `video.list`.
    - Submit the app for review (TikTok asks for app details, a privacy policy and terms URL, and a short demo video of the flow). Your site already has
      `/privacy-policy` and `/terms`. Until it is approved, TikTok normally lets only accounts you add as test users connect. Check the portal for the current rules.
-2. **Run the migrations** in the Supabase SQL editor (or `supabase db push`), in this order: `20261101090000_tiktok_integration.sql`, then `20261102090000_tiktok_auto_import.sql`.
+2. **Run the migrations** (already done if you did the step above).
 3. **Secrets**, then deploy:
    ```
    supabase secrets set TIKTOK_CLIENT_KEY=... TIKTOK_CLIENT_SECRET=... TIKTOK_REDIRECT_URI=https://techubafrica-nu.vercel.app/tiktok/callback TIKTOK_CRON_SECRET=<a long random string>
    supabase functions deploy tiktok
    ```
    `TIKTOK_REDIRECT_URI` must be identical to the one in the TikTok portal. For permanent covers also set the three `CLOUDINARY_*` secrets on this function (see CLOUDINARY_SETUP.md).
-4. **Deploy the website** (`vercel --prod`).
-5. **Scheduled refresh (optional but recommended).** TikTok access tokens last 24 hours and are renewed automatically when used; this job also adds new videos for sellers in automatic mode, updates titles/covers and removes
+4. **Deploy the website** (`vercel --prod`) if you have not since the code update.
+5. **Switch it on** in the admin dashboard (see above).
+6. **Scheduled refresh (optional but recommended).** TikTok access tokens last 24 hours and are renewed automatically when used; this job also adds new videos for sellers in automatic mode, updates titles/covers and removes
    videos a seller deleted on TikTok. Enable the `pg_cron` and `pg_net` extensions (Database > Extensions), then run once, replacing the secret:
    ```sql
    select cron.schedule('tiktok-sync', '0 * * * *', $$

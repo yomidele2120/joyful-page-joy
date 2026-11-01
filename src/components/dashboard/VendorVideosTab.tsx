@@ -17,6 +17,7 @@ import { videoUploadQueue } from '@/lib/videoUploadQueue';
 import { deleteDraft, getDraft, putDraft, type DraftItem } from '@/lib/uploadStore';
 import VideoUploadStatus from '@/components/dashboard/VideoUploadStatus';
 import TikTokConnect from '@/components/dashboard/TikTokConnect';
+import { useTikTokEnabled } from '@/hooks/useTikTokEnabled';
 import { useAuth } from '@/hooks/useAuth';
 import { useVendorPosts, useVendorFollowerCount } from '@/hooks/usePosts';
 import { useQueryClient } from '@tanstack/react-query';
@@ -33,6 +34,9 @@ export default function VendorVideosTab({ vendorId, autoOpenComposer }: VendorVi
   const { user } = useAuth();
   const { data: posts, isLoading } = useVendorPosts(vendorId);
   const { data: followerCount } = useVendorFollowerCount(vendorId);
+  const { data: tiktokEnabled } = useTikTokEnabled();
+  // If TikTok is switched off later, a seller who is already connected can still reach Disconnect.
+  const hasTikTokPosts = !!posts?.some(p => p.media_type === 'tiktok');
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
@@ -209,8 +213,8 @@ export default function VendorVideosTab({ vendorId, autoOpenComposer }: VendorVi
 
       <VideoUploadStatus />
 
-      {/* Hidden until TikTok is set up (see TIKTOK_SETUP.md): set VITE_TIKTOK_ENABLED=true on Vercel, then redeploy. */}
-      {import.meta.env.VITE_TIKTOK_ENABLED === 'true' && <TikTokConnect vendorId={vendorId} />}
+      {/* Shown only after an admin switches TikTok on (Admin > Marketplace > Sections and rules). */}
+      {(tiktokEnabled || hasTikTokPosts) && <TikTokConnect vendorId={vendorId} switchedOn={!!tiktokEnabled} />}
 
       <PostsPerformanceChart posts={posts} />
 

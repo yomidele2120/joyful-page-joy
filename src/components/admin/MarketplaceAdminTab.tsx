@@ -14,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 import { formatNaira } from '@/lib/format';
 import { formatLongDate } from '@/hooks/useMarketplace';
+import { useTikTokEnabled } from '@/hooks/useTikTokEnabled';
 
 const card = 'rounded-lg bg-card p-5 card-shadow';
 
@@ -33,6 +34,44 @@ export default function MarketplaceAdminTab() {
       <TabsContent value="disputes"><DisputesPanel /></TabsContent>
       <TabsContent value="requests"><RequestsPanel /></TabsContent>
     </Tabs>
+  );
+}
+
+// ------------------------------------------------------------ TikTok for sellers (on/off)
+function TikTokSwitch() {
+  const queryClient = useQueryClient();
+  const { data: enabled } = useTikTokEnabled();
+  const { data: configured, isLoading: checking } = useQuery({
+    queryKey: ['tiktok-configured'],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke('tiktok', { body: { action: 'config_status' } });
+      if (error || data?.error) return false;
+      return data?.configured === true;
+    },
+  });
+  const toggle = useMutation({
+    mutationFn: async (value: boolean) => {
+      const { data, error } = await (supabase as any).from('marketplace_settings').update({ tiktok_enabled: value }).eq('id', true).select('tiktok_enabled');
+      if (error) throw error;
+      if (!data?.length) throw new Error('Could not save. Run the TikTok database update first.');
+    },
+    onSuccess: (_d, value) => { toast.success(value ? 'TikTok is on. Sellers can now connect.' : 'TikTok is off.'); queryClient.invalidateQueries({ queryKey: ['tiktok-enabled'] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  return (
+    <section className={card}>
+      <h2 className="font-heading text-lg font-bold">TikTok for sellers</h2>
+      <p className="mt-1 text-xs text-muted-foreground">Lets approved sellers connect their TikTok account and show their videos in their shop and the feed. Sellers see nothing until this is on.</p>
+      <div className="mt-3 flex items-center justify-between gap-4 border-t border-border pt-3">
+        <div>
+          <Label htmlFor="s-tiktok" className="font-medium">Allow sellers to connect TikTok</Label>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {checking ? 'Checking the TikTok keys…' : configured ? 'TikTok keys are set up on the server.' : 'The TikTok keys are not set up on the server yet, so this cannot be switched on. See TIKTOK_SETUP.md.'}
+          </p>
+        </div>
+        <Switch id="s-tiktok" checked={enabled === true} disabled={toggle.isPending || (!configured && enabled !== true)} onCheckedChange={v => toggle.mutate(v)} />
+      </div>
+    </section>
   );
 }
 
@@ -107,6 +146,8 @@ function SettingsPanel() {
           </div>
         </div>
       </section>
+
+      <TikTokSwitch />
 
       <section className={card}>
         <h2 className="font-heading text-lg font-bold">Category visibility</h2>

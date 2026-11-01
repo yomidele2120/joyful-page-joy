@@ -22,7 +22,7 @@ async function call<T = any>(body: Record<string, unknown>): Promise<T> {
   return data as T;
 }
 
-export default function TikTokConnect({ vendorId }: { vendorId: string }) {
+export default function TikTokConnect({ vendorId, switchedOn = true }: { vendorId: string; switchedOn?: boolean }) {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<'start' | 'sync' | 'disconnect' | 'auto' | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -72,6 +72,8 @@ export default function TikTokConnect({ vendorId }: { vendorId: string }) {
   };
 
   if (isLoading) return null;
+  // Switched off by the admin: nothing new can be connected or chosen. A connected seller can still disconnect.
+  if (!switchedOn && !conn) return null;
 
   return (
     <div className="rounded-lg bg-card p-4 card-shadow">
@@ -86,10 +88,12 @@ export default function TikTokConnect({ vendorId }: { vendorId: string }) {
             </p>
           )}
         </div>
-        {!conn && <Button size="sm" onClick={connect} disabled={busy === 'start'}>{busy === 'start' ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Play className="mr-1.5 h-4 w-4" />}Connect TikTok</Button>}
+        {!conn && switchedOn && <Button size="sm" onClick={connect} disabled={busy === 'start'}>{busy === 'start' ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Play className="mr-1.5 h-4 w-4" />}Connect TikTok</Button>}
       </div>
 
-      {conn?.needs_reconnect && (
+      {!switchedOn && conn && <p className="mt-3 rounded-md bg-secondary p-2.5 text-sm text-muted-foreground">TikTok is paused for now. Your TikTok videos stay visible, but you cannot add or change them until it is switched back on.</p>}
+
+      {switchedOn && conn?.needs_reconnect && (
         <div className="mt-3 flex items-start gap-2 rounded-md bg-destructive/10 p-2.5 text-sm text-destructive">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>Your TikTok connection needs to be renewed. Your videos stay visible, but they will not update until you connect again.</span>
@@ -98,18 +102,20 @@ export default function TikTokConnect({ vendorId }: { vendorId: string }) {
 
       {conn && (
         <div className="mt-3 flex flex-wrap gap-2">
-          {conn.needs_reconnect
+          {switchedOn && (conn.needs_reconnect
             ? <Button size="sm" onClick={connect} disabled={busy === 'start'}>{busy === 'start' && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}Connect again</Button>
-            : <Button size="sm" onClick={() => setPickerOpen(true)}>Choose videos</Button>}
-          <Button size="sm" variant="outline" onClick={sync} disabled={busy !== null || conn.needs_reconnect}>
-            {busy === 'sync' ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-1.5 h-4 w-4" />}Refresh
-          </Button>
+            : <Button size="sm" onClick={() => setPickerOpen(true)}>Choose videos</Button>)}
+          {switchedOn && (
+            <Button size="sm" variant="outline" onClick={sync} disabled={busy !== null || conn.needs_reconnect}>
+              {busy === 'sync' ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-1.5 h-4 w-4" />}Refresh
+            </Button>
+          )}
           <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setConfirmDisconnect(true)} disabled={busy !== null}>
             <Unplug className="mr-1.5 h-4 w-4" />Disconnect
           </Button>
         </div>
       )}
-      {conn && !conn.needs_reconnect && (
+      {switchedOn && conn && !conn.needs_reconnect && (
         <label className="mt-3 flex items-start justify-between gap-3 rounded-md border p-3">
           <span className="text-sm">
             <span className="block font-medium">Automatically show new TikTok videos</span>

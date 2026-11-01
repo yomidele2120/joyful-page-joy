@@ -9,6 +9,7 @@ import { cloudinaryConfigured, uploadRemoteImage } from "../_shared/cloudinary.t
 //   select       { video_ids }            show these videos in the shop and feed (stored as posts, media_type 'tiktok')
 //   unselect     { video_ids }            stop showing them (their feed posts are deleted)
 //   sync                                  refresh titles/covers of chosen videos; remove ones deleted on TikTok; add new ones when auto mode is on
+//   config_status                         (admins) are the TikTok keys set on the server? { configured }
 //   set_auto     { enabled }              turn "automatically show my new TikTok videos" on or off
 //   disconnect                            revoke access at TikTok and remove tokens + every TikTok post of this vendor
 //   sync_all     (header x-cron-secret)   same as sync for every connected vendor (scheduled, see TIKTOK_SETUP.md)
@@ -338,7 +339,14 @@ async function actionDisconnect(db: ReturnType<typeof admin>, vendorId: string) 
   return { disconnected: true };
 }
 
+/** The admin switch (Admin > Marketplace > Sections and rules). Everything except disconnect needs it on. */
+async function tiktokEnabled(db: ReturnType<typeof admin>): Promise<boolean> {
+  const { data } = await db.from("marketplace_settings").select("tiktok_enabled").eq("id", true).maybeSingle();
+  return data?.tiktok_enabled === true;
+}
+
 async function actionSyncAll(db: ReturnType<typeof admin>) {
+  if (!(await tiktokEnabled(db))) return { skipped: "TikTok is switched off" };
   const { data: conns } = await db.from("vendor_tiktok_connections").select("vendor_id").eq("needs_reconnect", false).order("last_synced_at", { ascending: true, nullsFirst: true }).limit(500);
   let ok = 0, failed = 0;
   for (const c of conns ?? []) {
@@ -367,8 +375,17 @@ serve(async (req) => {
     if (!authHeader) throw new UserError("Unauthorized", 401);
     const { data: { user }, error: userError } = await db.auth.getUser(authHeader.replace(/^Bearer\s+/i, ""));
     if (userError || !user) throw new UserError("Unauthorized", 401);
+
+    if (action === "config_status") { // for the admin switch: only says whether the keys exist, never the keys
+      const { data: isAdmin } = await db.rpc("has_role", { _user_id: user.id, _role: "admin" });
+      if (isAdmin !== true) throw new UserError("Forbidden", 403);
+      return json({ configured: !!(Deno.env.get("TIKTOK_CLIENT_KEY") && Deno.env.get("TIKTOK_CLIENT_SECRET") && Deno.env.get("TIKTOK_REDIRECT_URI")) });
+    }
+
     const { data: vendor } = await db.from("vendors").select("id, is_approved").eq("user_id", user.id).maybeSingle();
     if (!vendor || !vendor.is_approved) throw new UserError("Only approved sellers can connect TikTok.", 403);
+
+    if (action !== "disconnect" && !(await tiktokEnabled(db))) throw new UserError("TikTok is not available yet.", 403);
 
     switch (action) {
       case "start": return json(await actionStart(db, vendor.id));
