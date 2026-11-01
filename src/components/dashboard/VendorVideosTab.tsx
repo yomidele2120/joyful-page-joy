@@ -16,6 +16,7 @@ import { sharePost } from '@/lib/shareLinks';
 import { videoUploadQueue } from '@/lib/videoUploadQueue';
 import { deleteDraft, getDraft, putDraft, type DraftItem } from '@/lib/uploadStore';
 import VideoUploadStatus from '@/components/dashboard/VideoUploadStatus';
+import TikTokConnect from '@/components/dashboard/TikTokConnect';
 import { useAuth } from '@/hooks/useAuth';
 import { useVendorPosts, useVendorFollowerCount } from '@/hooks/usePosts';
 import { useQueryClient } from '@tanstack/react-query';
@@ -208,6 +209,9 @@ export default function VendorVideosTab({ vendorId, autoOpenComposer }: VendorVi
 
       <VideoUploadStatus />
 
+      {/* Hidden until TikTok is set up (see TIKTOK_SETUP.md): set VITE_TIKTOK_ENABLED=true on Vercel, then redeploy. */}
+      {import.meta.env.VITE_TIKTOK_ENABLED === 'true' && <TikTokConnect vendorId={vendorId} />}
+
       <PostsPerformanceChart posts={posts} />
 
       <div className="flex items-center justify-between">
@@ -248,6 +252,9 @@ export default function VendorVideosTab({ vendorId, autoOpenComposer }: VendorVi
               )}
               {post.processing_status === 'failed' && post.processing_error && (
                 <p className="absolute inset-x-0 top-6 bg-red-950/80 p-2 text-[10px] leading-snug text-red-100">{post.processing_error}</p>
+              )}
+              {post.media_type === 'tiktok' && (
+                <span className="absolute top-1.5 right-1.5 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] text-white">TikTok</span>
               )}
               {post.media_type === 'images' && (post.image_urls?.length ?? 0) > 1 && (
                 <span className="absolute top-1.5 right-1.5 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] text-white">

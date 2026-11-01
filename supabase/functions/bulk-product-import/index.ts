@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { cloudinaryConfigured, uploadProductImage } from "../_shared/cloudinary.ts";
+import { cloudinaryConfigured, uploadProductImage, uploadRemoteImage } from "../_shared/cloudinary.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -421,6 +421,12 @@ Deno.serve(async (req) => {
           if (uploadError) throw uploadError;
           image = db.storage.from("product-images").getPublicUrl(path).data.publicUrl;
         }
+      }
+
+      // Not asked to store it? When Cloudinary is set up we still keep a copy (Cloudinary downloads it itself), so the picture
+      // survives if the source site removes it. If that fails the original link is used, as before.
+      if (!storeImage && image && cloudinaryConfigured() && !image.startsWith("https://res.cloudinary.com/")) {
+        try { image = (await uploadRemoteImage(image, job.vendor_id, "products", `import-${item.id}`)).url; } catch { /* keep the original link */ }
       }
 
       const sourceFields = item.source_fields && typeof item.source_fields === "object" && !Array.isArray(item.source_fields)

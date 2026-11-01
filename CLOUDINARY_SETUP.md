@@ -52,6 +52,29 @@ ONLY_PRODUCT=<product id> node scripts/migrate-images-to-cloudinary.mjs   # one 
   `scripts/cloudinary-migration-state.json` is the resume file (keep it between runs).
 - Once the shop looks right, you may later empty the old Supabase bucket yourself to free storage.
 
+## Keep a copy of borrowed and old pictures automatically
+Goal: if a picture's original website removes it, your shop still has it.
+- **New products (automatic, no setup beyond the Cloudinary keys):** a pasted image link in "Add product" (seller and admin) and bulk-import pictures are copied to
+  Cloudinary when the product is saved. If a copy fails, the original link is kept and the product still saves.
+- **Pictures already on the site, once:** run the migration script above (`scripts/migrate-images-to-cloudinary.mjs`). It handles every product, extras included.
+- **Everything else, continuously (CSV imports, anything added another way):** a scheduled sweep copies up to 20 products per run.
+  1. Run `supabase/migrations/20261103090000_image_mirror.sql` in the Supabase SQL editor.
+  2. `supabase secrets set IMAGE_MIRROR_CRON_SECRET=<long random string> CLOUDINARY_CLOUD_NAME=... CLOUDINARY_API_KEY=... CLOUDINARY_API_SECRET=...`
+     then `supabase functions deploy mirror-product-images`.
+  3. Enable the `pg_cron` and `pg_net` extensions, then run once (put your secret in):
+     ```sql
+     select cron.schedule('mirror-product-images', '*/10 * * * *', $$
+       select net.http_post(
+         url := 'https://cgyzhkeliomwxwrpmnlh.supabase.co/functions/v1/mirror-product-images',
+         headers := '{"Content-Type":"application/json","x-cron-secret":"PUT_IMAGE_MIRROR_CRON_SECRET_HERE"}'::jsonb,
+         body := '{}'::jsonb
+       ) $$);
+     ```
+  A product changes only when all its pictures were copied; the write is skipped if the product was edited meanwhile. Pictures that cannot be copied
+  (the source is already gone) are remembered in `image_mirror_failures` and retried up to 5 times; see them with `select * from image_mirror_failures;`.
+  The sweep looks at products whose main picture is not on Cloudinary yet. Products whose main picture is already there but an extra picture is not are covered by the one-time script.
+- A copy is only possible while the original still exists, so run the one-time script soon.
+
 ## Known limits
 - The rate limit on the API routes is per server instance (best effort). Cloudinary's own account limits are the hard stop.
 - Deleting a whole product (supplier or admin delete) does not remove its Cloudinary photos yet, same as before with Supabase Storage.

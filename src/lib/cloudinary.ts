@@ -90,3 +90,19 @@ export async function deleteCloudinaryImages(urls: (string | null | undefined)[]
   try { await api('/api/cloudinary', { action: 'delete', urls: list }); }
   catch (e) { console.warn('Could not remove old photos from Cloudinary', e); }
 }
+
+/**
+ * Saves a copy of images that are hosted elsewhere (borrowed links, old Supabase links) in Cloudinary, so they survive if the
+ * original site removes them. Returns the Cloudinary link for each, or the ORIGINAL link when it could not be copied: a product
+ * is never blocked or left without a picture because of this.
+ */
+export async function mirrorExternalImages(vendorId: string | null, urls: (string | null | undefined)[]): Promise<Record<string, string>> {
+  const todo = [...new Set(urls.filter((u): u is string => !!u && /^https:\/\//i.test(u) && !isCloudinaryUrl(u)))].slice(0, 12);
+  const out: Record<string, string> = {};
+  if (!todo.length) return out;
+  try {
+    const { results } = await api<{ results: { url: string; mirrored: string | null }[] }>('/api/cloudinary', { action: 'mirror', ...(vendorId ? { vendor_id: vendorId } : {}), urls: todo });
+    for (const r of results) if (r.mirrored) out[r.url] = r.mirrored;
+  } catch (e) { console.warn('Could not save a copy of the image to Cloudinary', e); }
+  return out;
+}

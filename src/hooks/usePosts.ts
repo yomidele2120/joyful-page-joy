@@ -12,7 +12,8 @@ export interface FeedPost {
   video_url: string | null;
   hls_url: string | null;
   thumbnail_url: string | null;
-  media_type: 'video' | 'images';
+  media_type: 'video' | 'images' | 'tiktok';
+  tiktok_embed_url?: string | null;
   image_urls: string[];
   caption: string | null;
   hashtags: string[];

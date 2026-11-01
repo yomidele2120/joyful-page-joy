@@ -179,6 +179,7 @@ export default function SupplierShop() {
                     {post.media_type === 'images' ? <Images className="w-6 h-6" /> : <Film className="w-6 h-6" />}
                   </div>
                 )}
+                {post.media_type === 'tiktok' && <span className="absolute right-1 top-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] text-white">TikTok</span>}
                 <div className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[11px] px-2 py-1 flex items-center gap-1">
                   <Heart className="w-3 h-3" /> {post.likes_count}
                 </div>

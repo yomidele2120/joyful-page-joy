@@ -1,5 +1,6 @@
 // POST /api/cloudinary   { action: 'sign', vendor_id, count }  ->  { slots: [...] }
 //                        { action: 'delete', urls: [...] }     ->  { deleted, skipped }
+//                        { action: 'mirror', urls: [...] }     ->  { results: [{ url, mirrored }] }  copies borrowed https images into Cloudinary
 // Self-contained on purpose (no relative imports, no SDK): only node:crypto and fetch, so it cannot fail to resolve on Vercel.
 // Secrets come from Vercel env vars CLOUDINARY_CLOUD_NAME / CLOUDINARY_API_KEY / CLOUDINARY_API_SECRET and never leave the server.
 import { createHash, randomBytes } from 'node:crypto';
@@ -89,6 +90,7 @@ export default async function handler(req: Req, res: Res) {
     const body = (typeof req.body === 'string' ? safeParse(req.body) : req.body) as Record<string, unknown> | null;
     if (body?.action === 'sign') return sign(res, c, caller, body);
     if (body?.action === 'delete') return del(res, c, caller, body);
+    if (body?.action === 'mirror') return mirror(res, c, caller, body);
     return res.status(400).json({ error: 'Unknown action.' });
   } catch (e) {
     console.error('cloudinary api error', e instanceof Error ? e.message : e); // never log secrets
@@ -137,6 +139,34 @@ async function del(res: Res, c: NonNullable<ReturnType<typeof cld>>, caller: Cal
     } catch { skipped.push({ url, reason: 'delete failed' }); }
   }
   return res.status(200).json({ deleted, skipped });
+}
+
+// Saves a copy of images that live on other websites (or the old Supabase bucket) in the caller's own Cloudinary folder.
+// Cloudinary downloads the picture itself, so this server never fetches arbitrary addresses. A failure just returns null for that image
+// and the caller keeps the original link: a product is never blocked by a slow or dead source.
+async function mirror(res: Res, c: NonNullable<ReturnType<typeof cld>>, caller: Caller, body: Record<string, unknown>) {
+  const vendorId = caller.isAdmin && isUuid(body.vendor_id) ? body.vendor_id : caller.vendorId ?? (caller.isAdmin ? 'platform' : null);
+  if (!vendorId) return res.status(403).json({ error: 'You can only save photos for your own store.' });
+  if (rateLimited(`mirror:${caller.userId}`, 60)) return res.status(429).json({ error: 'Too many requests. Try again shortly.' });
+  const urls = Array.isArray(body.urls) ? [...new Set((body.urls as unknown[]).filter((u): u is string => typeof u === 'string'))].slice(0, 12) : [];
+  if (!urls.length) return res.status(400).json({ error: 'No images given.' });
+
+  const results = await Promise.all(urls.map(async (url) => {
+    let u: URL; try { u = new URL(url); } catch { return { url, mirrored: null }; }
+    if (u.protocol !== 'https:' || u.hostname === 'res.cloudinary.com' || url.length > 2000) return { url, mirrored: null };
+    const public_id = `${ROOT}/${vendorId}/products/m${sha1(url).slice(0, 20)}`; // same source link -> same file, so no duplicates
+    const timestamp = Math.round(Date.now() / 1000);
+    const signature = sha1(`allowed_formats=${FORMATS}&public_id=${public_id}&timestamp=${timestamp}${c.secret}`);
+    const form = new FormData();
+    form.append('file', url); form.append('api_key', c.key); form.append('timestamp', String(timestamp));
+    form.append('signature', signature); form.append('public_id', public_id); form.append('allowed_formats', FORMATS);
+    try {
+      const r = await fetch(`https://api.cloudinary.com/v1_1/${c.name}/image/upload`, { method: 'POST', body: form, signal: AbortSignal.timeout(25_000) });
+      const j = (await r.json().catch(() => ({}))) as { secure_url?: string };
+      return { url, mirrored: r.ok && typeof j.secure_url === 'string' ? j.secure_url : null };
+    } catch { return { url, mirrored: null }; }
+  }));
+  return res.status(200).json({ results });
 }
 
 // Fails safe: when unsure whether another product uses the photo, it is kept.

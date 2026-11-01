@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { mirrorExternalImages } from '@/lib/cloudinary';
 import { functionErrorMessage } from '@/lib/functionError';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -1123,6 +1124,9 @@ function AddProductForm({ categories, onSuccess }: { categories: any[]; onSucces
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    // A pasted (borrowed) image link is copied into Cloudinary so it survives if the original site removes it.
+    const typedUrl = form.image_url.trim();
+    const copied = typedUrl ? await mirrorExternalImages(null, [typedUrl]) : {};
     const slug = form.name.toLowerCase().replace(/[^\w ]+/g, '').replace(/ +/g, '-') + '-' + Date.now();
     const { error } = await supabase.from('products').insert({
       name: form.name, slug,
@@ -1132,7 +1136,7 @@ function AddProductForm({ categories, onSuccess }: { categories: any[]; onSucces
       brand: form.brand || null,
       stock_quantity: Number(form.stock_quantity),
       description: form.description || null,
-      image_url: form.image_url || null,
+      image_url: (copied[typedUrl] || typedUrl) || null,
       badge: form.badge || null,
       bnpl_eligible: form.bnpl_eligible,
       sku: form.sku || null,

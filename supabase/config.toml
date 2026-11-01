@@ -44,3 +44,9 @@ verify_jwt = false
 
 [functions.check-stream-post]
 verify_jwt = false
+
+[functions.tiktok]
+verify_jwt = false
+
+[functions.mirror-product-images]
+verify_jwt = false

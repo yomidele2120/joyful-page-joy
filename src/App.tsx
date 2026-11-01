@@ -32,6 +32,7 @@ const SupplierLogin = lazyPage(() => import("./pages/SupplierLogin"));
 const SupplierSignup = lazyPage(() => import("./pages/SupplierSignup"));
 const SupplierDashboard = lazyPage(() => import("./pages/SupplierDashboard"));
 const SupplierChat = lazyPage(() => import("./pages/SupplierChat"));
+const TikTokCallback = lazyPage(() => import("./pages/TikTokCallback"));
 const SupplierShop = lazyPage(() => import("./pages/SupplierShop"));
 const AdminLogin = lazyPage(() => import("./pages/AdminLogin"));
 const Wishlist = lazyPage(() => import("./pages/Wishlist"));
@@ -159,6 +160,11 @@ const App = () => (
               <Route path="/supplier-dashboard" element={
                 <ProtectedRoute allowedRoles={['vendor']}>
                   <SupplierDashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/tiktok/callback" element={
+                <ProtectedRoute allowedRoles={['vendor']}>
+                  <TikTokCallback />
                 </ProtectedRoute>
               } />
               <Route path="/supplier-chat" element={

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Hls from 'hls.js';
 import useEmblaCarousel from 'embla-carousel-react';
 import { Loader2, Play, AlertCircle, RotateCcw } from 'lucide-react';
+import { isTikTokPost, tiktokVideoId } from '@/lib/tiktok';
 import type { FeedPost } from '@/hooks/usePosts';
 import { cn } from '@/lib/utils';
 
@@ -18,7 +19,48 @@ interface PostMediaProps {
 export default function PostMedia(props: PostMediaProps) {
   const { post } = props;
   const isImagePost = post.media_type === 'images' && (post.image_urls?.length ?? 0) > 0;
+  if (isTikTokPost(post)) return <TikTokSurface {...props} />;
   return isImagePost ? <ImageCarousel post={post} isActive={props.isActive} /> : <VideoSurface {...props} />;
+}
+
+/* --------------------------------- TikTok --------------------------------- */
+
+// A vendor's own TikTok video. It shows the cover with a play button and loads TikTok's official player only when
+// tapped, so scrolling the feed never loads a page of iframes. Leaving the post unloads the player again.
+function TikTokSurface({ post, isActive, onFirstPlay }: PostMediaProps) {
+  const [playing, setPlaying] = useState(false);
+  const id = tiktokVideoId(post.tiktok_embed_url);
+
+  useEffect(() => { if (!isActive) setPlaying(false); }, [isActive]);
+  if (!id) return null;
+
+  const start = () => { setPlaying(true); onFirstPlay?.(); };
+  return (
+    <div className="relative h-full w-full bg-black">
+      {playing ? (
+        // Leave room above the caption and shop card so the player's own controls stay tappable.
+        <div className="absolute inset-x-0 bottom-44 top-10">
+        <iframe
+          title={post.caption ? `TikTok: ${post.caption.slice(0, 60)}` : 'TikTok video'}
+          src={`https://www.tiktok.com/embed/v2/${id}`}
+          allow="fullscreen; encrypted-media"
+          allowFullScreen
+          referrerPolicy="strict-origin-when-cross-origin"
+          sandbox="allow-scripts allow-same-origin allow-popups allow-presentation"
+          className="mx-auto h-full w-full max-w-[420px] border-0"
+        />
+        </div>
+      ) : (
+        <button type="button" onClick={start} aria-label="Play TikTok video" className="group absolute inset-0 flex items-center justify-center">
+          {post.thumbnail_url && <img src={post.thumbnail_url} alt="" className="absolute inset-0 h-full w-full object-contain" loading="lazy" decoding="async" />}
+          <span className="relative flex h-16 w-16 items-center justify-center rounded-full bg-black/60 text-white transition-transform group-active:scale-95">
+            <Play className="h-8 w-8 translate-x-0.5" fill="currentColor" />
+          </span>
+          <span className="absolute left-3 top-3 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-medium text-white">TikTok</span>
+        </button>
+      )}
+    </div>
+  );
 }
 
 /* ---------------------------------- video --------------------------------- */

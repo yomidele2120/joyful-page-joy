@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { compressImage } from '@/lib/mediaProcessing';
-import { uploadProductImages, deleteCloudinaryImages, type UploadedImage } from '@/lib/cloudinary';
+import { uploadProductImages, deleteCloudinaryImages, mirrorExternalImages, type UploadedImage } from '@/lib/cloudinary';
 import ProductPager from '@/components/ProductPager';
 import { useManagedProducts } from '@/hooks/useManagedProducts';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
@@ -567,7 +567,10 @@ function SupplierAddProduct({ vendorId, categories, onSuccess }: { vendorId: str
     }
     const mainUrl = imageFile ? uploaded[0]?.url ?? null : null;
     const extraUrls = uploaded.slice(imageFile ? 1 : 0).map(u => u.url);
-    const imageUrl = mainUrl ?? form.image_url;
+    // A pasted (borrowed) image link is copied into Cloudinary too. If that fails the original link is kept.
+    const typedUrl = form.image_url.trim();
+    const copied = !mainUrl && typedUrl ? await mirrorExternalImages(vendorId, [typedUrl]) : {};
+    const imageUrl = mainUrl ?? (copied[typedUrl] || typedUrl);
 
     const slug = form.name.toLowerCase().replace(/[^\w ]+/g, '').replace(/ +/g, '-') + '-' + Date.now();
     const { error } = await supabase.from('products').insert({
