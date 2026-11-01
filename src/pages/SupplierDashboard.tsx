@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { compressImage } from '@/lib/mediaProcessing';
+import { listImage } from '@/lib/images';
 import { uploadProductImages, deleteCloudinaryImages, mirrorExternalImages, type UploadedImage } from '@/lib/cloudinary';
 import ProductPager from '@/components/ProductPager';
 import { useManagedProducts } from '@/hooks/useManagedProducts';
@@ -344,10 +345,10 @@ export default function SupplierDashboard() {
                     <table className="w-full text-sm">
                       <thead className="bg-secondary">
                         <tr>
-                          <th className="w-10 p-3">
+                          <th className="sticky left-0 z-[1] w-10 bg-card p-3">
                             <Checkbox aria-label="Select all products on this page" checked={allOnPageSelected ? true : someOnPageSelected ? 'indeterminate' : false} onCheckedChange={v => toggleAllOnPage(v === true)} />
                           </th>
-                          <th className="text-left p-3 font-heading">Product</th>
+                          <th className="sticky left-10 z-[1] min-w-[11rem] bg-card p-3 text-left">Product</th>
                           <th className="text-left p-3 font-heading">Price</th>
                           <th className="text-left p-3 font-heading">Stock</th>
                           <th className="text-left p-3 font-heading">Pay later</th>
@@ -358,12 +359,12 @@ export default function SupplierDashboard() {
                       <tbody>
                         {products.map(p => (
                           <tr key={p.id} className="border-t border-border">
-                            <td className="w-10 p-3">
+                            <td className="sticky left-0 z-[1] w-10 bg-inherit p-3">
                               <Checkbox aria-label={`Select ${p.name}`} checked={selected.has(p.id)} onCheckedChange={v => toggleOne(p.id, v === true)} />
                             </td>
-                            <td className="p-3">
+                            <td className="sticky left-10 z-[1] min-w-[11rem] bg-inherit p-3 shadow-[1px_0_0_hsl(var(--border))]">
                               <div className="flex items-center gap-2">
-                                <img src={p.thumb_url || p.image_url || '/placeholder.svg'} alt="" loading="lazy" decoding="async" className={`w-8 h-8 rounded object-cover ${p.is_active === false ? 'opacity-50' : ''}`} />
+                                <img src={listImage(p) || '/placeholder.svg'} alt="" loading="lazy" decoding="async" className={`w-8 h-8 rounded object-cover ${p.is_active === false ? 'opacity-50' : ''}`} />
                                 <span className="font-medium line-clamp-1">{p.name}</span>
                                 {!p.image_url && !p.thumb_url && (
                                   <button type="button" onClick={() => setEditProductId(p.id)}

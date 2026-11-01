@@ -21,9 +21,9 @@ import {
   Package, ShoppingCart, Users, DollarSign, Plus, LogOut, ArrowLeft,
   Trash2, Store, CheckCircle, XCircle, Eye, BarChart3, CreditCard,
   FileText, AlertCircle, TrendingUp, Layers, FolderPlus, Pencil, Flag, Image as ImageIcon,
-  LayoutDashboard, Megaphone, Settings, Wallet, ChevronRight, Landmark, Percent, Activity, Video
+  LayoutDashboard, Megaphone, Settings, Wallet, ChevronRight, Landmark, Percent, Activity, Video, Copy
 } from 'lucide-react';
-import DashboardShell, { Panel, StatCard, WelcomeBanner, useTabParam, type DashNavItem } from '@/components/dashboard/DashboardShell';
+import DashboardShell, { Panel, StatCard, StatusDot, WelcomeBanner, useTabParam, type DashNavItem } from '@/components/dashboard/DashboardShell';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import FlyersTab from '@/components/admin/FlyersTab';
 import MarketplaceAdminTab, { TikTokSwitch } from '@/components/admin/MarketplaceAdminTab';
@@ -389,7 +389,7 @@ export default function AdminDashboard() {
               <div className="bg-card rounded-xl border border-border overflow-hidden">
                 <div className="p-4 border-b border-border bg-destructive/5">
                   <h2 className="font-heading font-bold flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 text-destructive" /> Pending Verification ({pendingVendors.length})
+                    <AlertCircle className="w-4 h-4 text-destructive" /> Waiting for review ({pendingVendors.length})
                   </h2>
                 </div>
                 <div className="overflow-x-auto">
@@ -400,7 +400,7 @@ export default function AdminDashboard() {
 
             <div className="bg-card rounded-xl border border-border overflow-hidden">
               <div className="p-4 border-b border-border">
-                <h2 className="font-heading font-bold">All Suppliers ({vendors?.length || 0})</h2>
+                <h2 className="font-heading font-bold">All suppliers ({vendors?.length || 0})</h2>
               </div>
               {vendorsLoading ? <TableSkeleton /> : (
                 <div className="overflow-x-auto">
@@ -415,7 +415,7 @@ export default function AdminDashboard() {
         {activeTab === 'orders' && (
           <div className="bg-card rounded-xl border border-border overflow-hidden">
             <div className="p-4 border-b border-border flex flex-wrap items-center justify-between gap-2">
-              <h2 className="font-heading font-bold">All Orders ({orders?.length || 0})</h2>
+              <h2 className="font-heading font-bold">All orders ({orders?.length || 0})</h2>
               <ExportButton
                 filename="orders"
                 head={['Order', 'Date', 'Status', 'Payment method', 'Email', 'Phone', 'City', 'State', 'Total']}
@@ -830,25 +830,13 @@ export default function AdminDashboard() {
 /* ── Helper Components ── */
 
 function StatusBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    success: 'bg-primary/10 text-primary',
-    active: 'bg-primary/10 text-primary',
-    approved: 'bg-primary/10 text-primary',
-    paid: 'bg-primary/10 text-primary',
-    delivered: 'bg-primary/10 text-primary',
-    pending: 'bg-accent/10 text-accent',
-    processing: 'bg-accent/10 text-accent',
-    shipped: 'bg-accent/10 text-accent',
-    inactive: 'bg-muted text-muted-foreground',
-    failed: 'bg-destructive/10 text-destructive',
-    cancelled: 'bg-destructive/10 text-destructive',
-    rejected: 'bg-destructive/10 text-destructive',
+  const tone: Record<string, 'good' | 'warn' | 'bad' | 'idle'> = {
+    success: 'good', active: 'good', approved: 'good', paid: 'good', delivered: 'good',
+    pending: 'warn', processing: 'warn', shipped: 'warn',
+    inactive: 'idle',
+    failed: 'bad', cancelled: 'bad', rejected: 'bad',
   };
-  return (
-    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colors[status] || 'bg-secondary text-foreground'}`}>
-      {status}
-    </span>
-  );
+  return <StatusDot tone={tone[status] ?? 'idle'}>{status.charAt(0).toUpperCase() + status.slice(1)}</StatusDot>;
 }
 
 function TableSkeleton() {
@@ -911,124 +899,150 @@ function SupplierTable({ vendors, onApprove, onReject }: { vendors: any[]; onApp
         </DialogContent>
       </Dialog>
 
-      <table className="w-full text-sm">
-        <thead className="bg-secondary">
+      {/* Phones and small tablets: one card per supplier, nothing hidden off to the side */}
+      <ul className="divide-y divide-border md:hidden">
+        {vendors.map(v => (
+          <li key={v.id} className="space-y-3 p-4">
+            <div className="flex items-start gap-3">
+              <Logo v={v} size="h-11 w-11" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium leading-tight">{v.store_name}</p>
+                {v.company_name && v.company_name !== v.store_name && <p className="truncate text-xs text-muted-foreground">{v.company_name}</p>}
+                <p className="mt-0.5 text-xs text-muted-foreground">{[v.address, joined(v.created_at)].filter(Boolean).join(' · ')}</p>
+              </div>
+              <ApprovalStatus v={v} />
+            </div>
+
+            <dl className="grid grid-cols-[5.5rem_1fr] gap-x-3 gap-y-1.5 text-sm">
+              <dt className="text-muted-foreground">Phone</dt>
+              <dd>{v.phone ? <a href={`tel:${v.phone}`} className="text-foreground underline-offset-2 hover:underline">{v.phone}</a> : <span className="text-muted-foreground">Not given</span>}</dd>
+              <dt className="text-muted-foreground">WhatsApp</dt>
+              <dd>{v.whatsapp_number ? <a href={waLink(v.whatsapp_number)} target="_blank" rel="noopener noreferrer" className="text-primary underline-offset-2 hover:underline">{v.whatsapp_number}</a> : <span className="text-muted-foreground">Not given</span>}</dd>
+            </dl>
+
+            <div className="rounded-md border border-border p-3">
+              <p className="mb-1.5 text-xs text-muted-foreground">Payout account</p>
+              <Payout v={v} />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              <DocLinks v={v} openPreview={openPreview} openDocument={openDocument} />
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <RowActions v={v} onApprove={onApprove} onReject={onReject} wide />
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      {/* Tablets and desktops: a table */}
+      <table className="hidden w-full text-sm md:table">
+        <thead>
           <tr>
-            <th className="text-left p-3 font-heading">Store</th>
-            <th className="text-left p-3 font-heading">Contact</th>
-            <th className="text-left p-3 font-heading">Bank Details</th>
-            <th className="text-left p-3 font-heading">Uploads</th>
-            <th className="text-left p-3 font-heading">Status</th>
-            <th className="text-left p-3 font-heading">Paystack</th>
-            <th className="text-left p-3 font-heading">Actions</th>
+            <th className="p-3 pl-4 text-left">Supplier</th>
+            <th className="p-3 text-left">Contact</th>
+            <th className="p-3 text-left">Payout account</th>
+            <th className="p-3 text-left">Documents</th>
+            <th className="p-3 text-left">Status</th>
+            <th className="p-3 pr-4 text-right"><span className="sr-only">Actions</span></th>
           </tr>
         </thead>
         <tbody>
           {vendors.map(v => (
-            <tr key={v.id} className="border-t border-border">
-              {/* Store info */}
-              <td className="p-3">
-                <div className="flex items-center gap-2">
-                  {v.logo_url ? (
-                    <img
-                      src={v.logo_url}
-                      className="w-10 h-10 rounded object-cover cursor-pointer border border-border hover:ring-2 hover:ring-primary/50 transition-all"
-                      onClick={() => openPreview(v.logo_url, `${v.store_name} - Logo`)}
-                      alt="Logo"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded bg-secondary flex items-center justify-center">
-                      <Store className="w-5 h-5 text-muted-foreground" />
-                    </div>
-                  )}
-                  <div>
-                    <span className="font-medium block">{v.store_name}</span>
-                    {v.company_name && <span className="text-xs text-muted-foreground">{v.company_name}</span>}
-                    {v.address && <span className="block text-[10px] text-muted-foreground">{v.address}</span>}
+            <tr key={v.id} className="border-t border-border align-top">
+              <td className="p-3 pl-4">
+                <div className="flex items-start gap-3">
+                  <Logo v={v} size="h-10 w-10" />
+                  <div className="min-w-0 max-w-[16rem]">
+                    <p className="truncate font-medium leading-tight">{v.store_name}</p>
+                    {v.company_name && v.company_name !== v.store_name && <p className="truncate text-xs text-muted-foreground">{v.company_name}</p>}
+                    {v.address && <p className="truncate text-xs text-muted-foreground">{v.address}</p>}
+                    <p className="text-xs text-muted-foreground/80">{joined(v.created_at)}</p>
                   </div>
                 </div>
               </td>
-
-              {/* Contact */}
-              <td className="p-3 text-xs">
-                <div className="space-y-0.5">
-                  <div className="text-muted-foreground">{v.phone || '-'}</div>
-                  {v.whatsapp_number && <div className="text-[10px] text-muted-foreground">WA: {v.whatsapp_number}</div>}
-                </div>
+              <td className="p-3 text-[13px]">
+                <div>{v.phone ? <a href={`tel:${v.phone}`} className="hover:underline">{v.phone}</a> : <span className="text-muted-foreground">No phone</span>}</div>
+                {v.whatsapp_number && <a href={waLink(v.whatsapp_number)} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">WhatsApp {v.whatsapp_number}</a>}
               </td>
-
-              {/* Bank Details - Full */}
-              <td className="p-3 text-xs">
-                {v.bank_name ? (
-                  <div className="space-y-0.5 bg-secondary/50 rounded p-2">
-                    <div className="font-medium text-foreground">{v.bank_name}</div>
-                    <div className="font-mono text-muted-foreground">{v.bank_account_number || 'No account number'}</div>
-                    <div className="text-muted-foreground">{v.bank_account_name || 'No account name'}</div>
-                  </div>
-                ) : (
-                  <span className="text-muted-foreground italic">No bank details</span>
-                )}
-              </td>
-
-              {/* Uploads - Logo + Verification Doc */}
-              <td className="p-3">
-                <div className="flex flex-col gap-1.5">
-                  {v.logo_url ? (
-                    <button
-                      onClick={() => openPreview(v.logo_url, `${v.store_name} - Logo`)}
-                      className="inline-flex items-center gap-1 text-primary text-xs hover:underline"
-                    >
-                      <Eye className="w-3 h-3" /> Logo
-                    </button>
-                  ) : (
-                    <span className="text-[10px] text-muted-foreground">No logo</span>
-                  )}
-                  {v.verification_document_url ? (
-                    <button
-                      onClick={() => openDocument(v.verification_document_url, `${v.store_name} - Verification Document`)}
-                      className="inline-flex items-center gap-1 text-primary text-xs hover:underline"
-                    >
-                      <FileText className="w-3 h-3" /> Verification Doc
-                    </button>
-                  ) : (
-                    <span className="text-[10px] text-muted-foreground">No document</span>
-                  )}
-                </div>
-              </td>
-
-              {/* Status */}
-              <td className="p-3"><StatusBadge status={v.is_approved ? 'approved' : 'pending'} /></td>
-
-              {/* Paystack */}
-              <td className="p-3">
-                <StatusBadge status={v.paystack_subaccount_code ? 'active' : 'pending'} />
-                {v.paystack_subaccount_code && (
-                  <div className="font-mono text-[10px] text-muted-foreground mt-0.5">{v.paystack_subaccount_code}</div>
-                )}
-              </td>
-
-              {/* Actions */}
-              <td className="p-3">
-                <div className="flex gap-1">
-                  {!v.is_approved && (
-                    <Button size="sm" variant="outline" className="h-7 text-xs text-primary" onClick={() => onApprove(v.id)}>
-                      <CheckCircle className="w-3 h-3 mr-1" /> Approve
-                    </Button>
-                  )}
-                  {v.is_approved && (
-                    <Button size="sm" variant="outline" className="h-7 text-xs text-destructive" onClick={() => onReject(v.id)}>
-                      <XCircle className="w-3 h-3 mr-1" /> Revoke
-                    </Button>
-                  )}
-                  <Link to={`/shop/${v.id}`}>
-                    <Button size="sm" variant="ghost" className="h-7 text-xs"><Eye className="w-3 h-3" /></Button>
-                  </Link>
-                </div>
-              </td>
+              <td className="p-3"><Payout v={v} /></td>
+              <td className="p-3"><div className="flex flex-col items-start gap-1"><DocLinks v={v} openPreview={openPreview} openDocument={openDocument} /></div></td>
+              <td className="p-3"><ApprovalStatus v={v} /></td>
+              <td className="p-3 pr-4"><div className="flex justify-end gap-1.5"><RowActions v={v} onApprove={onApprove} onReject={onReject} /></div></td>
             </tr>
           ))}
         </tbody>
       </table>
+      {vendors.length === 0 && <p className="p-8 text-center text-sm text-muted-foreground">No suppliers here yet.</p>}
+    </>
+  );
+}
+
+/* Small pieces of the supplier list */
+
+const joined = (d?: string | null) => (d ? `Joined ${new Date(d).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}` : '');
+const waLink = (n: string) => `https://wa.me/${n.replace(/\D/g, '')}`;
+
+function Logo({ v, size }: { v: any; size: string }) {
+  return v.logo_url
+    ? <img src={v.logo_url} alt="" className={`${size} shrink-0 rounded-md border border-border bg-white object-contain`} loading="lazy" />
+    : <div className={`${size} flex shrink-0 items-center justify-center rounded-md bg-secondary text-muted-foreground`}><Store className="h-4 w-4" /></div>;
+}
+
+function ApprovalStatus({ v }: { v: any }) {
+  return (
+    <div className="flex flex-col items-end gap-1 md:items-start">
+      <StatusDot tone={v.is_approved ? 'good' : 'warn'}>{v.is_approved ? 'Approved' : 'Awaiting review'}</StatusDot>
+      <span className="text-[11px] text-muted-foreground">{v.paystack_subaccount_code ? 'Paystack linked' : 'No Paystack account'}</span>
+    </div>
+  );
+}
+
+function Payout({ v }: { v: any }) {
+  if (!v.bank_name && !v.bank_account_number) return <span className="text-sm text-muted-foreground">No bank details</span>;
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(String(v.bank_account_number)); toast.success('Account number copied'); }
+    catch { toast.error('Could not copy. Select the number and copy it by hand.'); }
+  };
+  return (
+    <div className="text-[13px] leading-snug">
+      <p className="font-medium">{v.bank_name || 'Bank not given'}</p>
+      {v.bank_account_number ? (
+        <p className="flex items-center gap-1.5">
+          <span className="font-mono tabular-nums tracking-wide">{v.bank_account_number}</span>
+          <button type="button" onClick={copy} aria-label="Copy account number" className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <Copy className="h-3.5 w-3.5" />
+          </button>
+        </p>
+      ) : <p className="text-muted-foreground">No account number</p>}
+      <p className="text-muted-foreground">{v.bank_account_name || 'No account name'}</p>
+    </div>
+  );
+}
+
+function DocLinks({ v, openPreview, openDocument }: { v: any; openPreview: (url: string, title: string) => void; openDocument: (path: string, title: string) => void }) {
+  const link = 'inline-flex items-center gap-1 text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded';
+  return (
+    <>
+      {v.logo_url
+        ? <button type="button" className={link} onClick={() => openPreview(v.logo_url, `${v.store_name} - Logo`)}><Eye className="h-3 w-3" /> Logo</button>
+        : <span className="text-xs text-muted-foreground">No logo</span>}
+      {v.verification_document_url
+        ? <button type="button" className={link} onClick={() => openDocument(v.verification_document_url, `${v.store_name} - Verification Document`)}><FileText className="h-3 w-3" /> Verification document</button>
+        : <span className="text-xs text-muted-foreground">No verification document</span>}
+    </>
+  );
+}
+
+function RowActions({ v, onApprove, onReject, wide }: { v: any; onApprove: (id: string) => void; onReject: (id: string) => void; wide?: boolean }) {
+  const w = wide ? 'flex-1' : '';
+  return (
+    <>
+      {!v.is_approved
+        ? <Button size="sm" className={`h-8 ${w}`} onClick={() => onApprove(v.id)}><CheckCircle className="mr-1.5 h-3.5 w-3.5" />Approve</Button>
+        : <Button size="sm" variant="outline" className={`h-8 text-destructive hover:text-destructive ${w}`} onClick={() => onReject(v.id)}><XCircle className="mr-1.5 h-3.5 w-3.5" />Revoke</Button>}
+      <Button size="sm" variant="outline" className={`h-8 ${w}`} asChild><Link to={`/shop/${v.id}`}><Eye className="mr-1.5 h-3.5 w-3.5" />View shop</Link></Button>
     </>
   );
 }

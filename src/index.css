@@ -139,3 +139,27 @@
     display: none;
   }
 }
+
+/* Dashboards (admin, seller centre, buyer account). Scoped to .dash-scope so the storefront keeps its own look.
+   Plain, dense and readable: Inter with tabular figures, quiet table headers, borders instead of shadows. */
+@layer components {
+  .dash-scope .font-heading {
+    font-family: "Inter", system-ui, sans-serif;
+    font-weight: 600 !important;
+    letter-spacing: -0.012em;
+  }
+  .dash-scope td, .dash-scope th { font-variant-numeric: tabular-nums; }
+  .dash-scope table { border-collapse: collapse; }
+  .dash-scope thead, .dash-scope thead tr { background: transparent !important; }
+  .dash-scope thead th {
+    font-size: 0.75rem; font-weight: 500 !important; letter-spacing: 0; text-transform: none;
+    color: hsl(var(--muted-foreground)); white-space: nowrap;
+    border-bottom: 1px solid hsl(var(--border));
+    padding-top: 0.625rem; padding-bottom: 0.625rem;
+  }
+  /* Rows are opaque so a sticky first column can sit on top of the scrolling cells without showing through. */
+  .dash-scope tbody tr { background: hsl(var(--card)); transition: background-color 120ms ease; }
+  .dash-scope tbody tr:hover { background: color-mix(in srgb, hsl(var(--secondary)) 55%, hsl(var(--card))); }
+  .dash-scope .card-shadow { box-shadow: none; border: 1px solid hsl(var(--border)); }
+  .dash-scope .overflow-x-auto { scrollbar-width: thin; }
+}
