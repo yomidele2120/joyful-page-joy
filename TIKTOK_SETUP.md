@@ -18,8 +18,8 @@ video grid. Buyers watch them with TikTok's own player (loaded only when tapped)
 1. **Now:** run the three SQL files in order (or the single combined file `TIKTOK_run_in_sql_editor.sql`): `20261101090000_tiktok_integration.sql`,
    `20261102090000_tiktok_auto_import.sql`, `20261104090000_tiktok_feature_switch.sql`. Deploy the website. Nothing changes for anyone: sellers see no TikTok panel,
    and the server refuses TikTok actions, because the admin switch is **off** by default.
-2. **When you are ready:** finish the TikTok developer app and add the keys (steps below). Then open **Admin > Marketplace > Sections and rules > TikTok for sellers**.
-   It says whether the keys are found on the server; once they are, switch **Allow sellers to connect TikTok** on. Approved sellers then see the TikTok panel in
+2. **When you are ready:** finish the TikTok developer app and add the keys (steps below). Then open **Admin > Marketplace > TikTok for sellers** (the same card is also under *Pay later, preorders and support > Sections and rules*).
+   The card shows a three-step checklist (database update, server function deployed, keys set), and tells you which step is missing. Once all three are ticked, switch **Allow sellers to connect TikTok** on. Approved sellers then see the TikTok panel in
    Dashboard > Videos straight away, with no redeploy. Switching it off hides the panel again and stops new connecting and choosing; videos already shown stay,
    and a connected seller can still disconnect.
 

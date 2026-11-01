@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2 } from 'lucide-react';
+import { CheckCircle2, Loader2, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -38,17 +38,32 @@ export default function MarketplaceAdminTab() {
 }
 
 // ------------------------------------------------------------ TikTok for sellers (on/off)
-function TikTokSwitch() {
+// Shown in two places: its own menu item (Admin > TikTok for sellers) and the "Sections and rules" tab.
+// The switch stays greyed out until three things are in place, and the card says which one is missing:
+//   1. the database update (adds the on/off setting)   2. the "tiktok" server function is deployed   3. the TikTok keys are set on it.
+type TikTokKeys = { state: 'ready' } | { state: 'keys_missing' } | { state: 'unreachable'; detail: string };
+export function TikTokSwitch() {
   const queryClient = useQueryClient();
   const { data: enabled } = useTikTokEnabled();
-  const { data: configured, isLoading: checking } = useQuery({
-    queryKey: ['tiktok-configured'],
+  const { data: dbReady, isLoading: checkingDb } = useQuery({
+    queryKey: ['tiktok-db-ready'],
+    retry: false,
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('tiktok', { body: { action: 'config_status' } });
-      if (error || data?.error) return false;
-      return data?.configured === true;
+      const { error } = await (supabase as any).from('marketplace_settings').select('tiktok_enabled').eq('id', true).maybeSingle();
+      return !error;
     },
   });
+  const { data: keys, isLoading: checkingKeys } = useQuery<TikTokKeys>({
+    queryKey: ['tiktok-configured'],
+    retry: false,
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke('tiktok', { body: { action: 'config_status' } });
+      if (error) return { state: 'unreachable', detail: error.message || 'no answer from the server' };
+      if (data?.error) return { state: 'unreachable', detail: String(data.error) };
+      return data?.configured === true ? { state: 'ready' } : { state: 'keys_missing' };
+    },
+  });
+  const ready = dbReady === true && keys?.state === 'ready';
   const toggle = useMutation({
     mutationFn: async (value: boolean) => {
       const { data, error } = await (supabase as any).from('marketplace_settings').update({ tiktok_enabled: value }).eq('id', true).select('tiktok_enabled');
@@ -58,18 +73,37 @@ function TikTokSwitch() {
     onSuccess: (_d, value) => { toast.success(value ? 'TikTok is on. Sellers can now connect.' : 'TikTok is off.'); queryClient.invalidateQueries({ queryKey: ['tiktok-enabled'] }); },
     onError: (e: Error) => toast.error(e.message),
   });
+  const Step = ({ ok, loading, title, fix }: { ok: boolean; loading?: boolean; title: string; fix: string }) => (
+    <li className="flex items-start gap-2 text-sm">
+      {loading ? <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
+        : ok ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" /> : <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />}
+      <div className="min-w-0">
+        <p className="font-medium">{title}</p>
+        {!loading && !ok && <p className="text-xs text-muted-foreground">{fix}</p>}
+      </div>
+    </li>
+  );
   return (
     <section className={card}>
       <h2 className="font-heading text-lg font-bold">TikTok for sellers</h2>
       <p className="mt-1 text-xs text-muted-foreground">Lets approved sellers connect their TikTok account and show their videos in their shop and the feed. Sellers see nothing until this is on.</p>
+      <ol className="mt-3 space-y-2.5 border-t border-border pt-3">
+        <Step ok={dbReady === true} loading={checkingDb} title="1. Database update is installed"
+          fix="Run TIKTOK_run_in_sql_editor.sql once in the Supabase SQL editor, then refresh this page." />
+        <Step ok={keys?.state !== 'unreachable'} loading={checkingKeys} title="2. The TikTok server function is deployed"
+          fix={`Deploy it with: supabase functions deploy tiktok. ${keys?.state === 'unreachable' ? `(Server said: ${keys.detail})` : ''}`} />
+        <Step ok={keys?.state === 'ready'} loading={checkingKeys} title="3. The TikTok keys are set on the server"
+          fix="Add the secrets TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET and TIKTOK_REDIRECT_URI (see TIKTOK_SETUP.md), then deploy the function again." />
+      </ol>
       <div className="mt-3 flex items-center justify-between gap-4 border-t border-border pt-3">
         <div>
           <Label htmlFor="s-tiktok" className="font-medium">Allow sellers to connect TikTok</Label>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            {checking ? 'Checking the TikTok keys…' : configured ? 'TikTok keys are set up on the server.' : 'The TikTok keys are not set up on the server yet, so this cannot be switched on. See TIKTOK_SETUP.md.'}
+            {ready ? (enabled === true ? 'On: approved sellers can see the TikTok panel in Dashboard > Videos.' : 'Everything is set up. Switch on when you are ready.')
+              : 'The switch unlocks when all three steps above are ticked.'}
           </p>
         </div>
-        <Switch id="s-tiktok" checked={enabled === true} disabled={toggle.isPending || (!configured && enabled !== true)} onCheckedChange={v => toggle.mutate(v)} />
+        <Switch id="s-tiktok" checked={enabled === true} disabled={toggle.isPending || (!ready && enabled !== true)} onCheckedChange={v => toggle.mutate(v)} />
       </div>
     </section>
   );
