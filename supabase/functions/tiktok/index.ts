@@ -30,7 +30,8 @@ class UserError extends Error {
 }
 
 const TT = "https://open.tiktokapis.com";
-const SCOPES = "user.info.basic,video.list";
+// Optional secret TIKTOK_SCOPES overrides this (e.g. "user.info.basic" while the Display API is not enabled on the TikTok app).
+const SCOPES = (Deno.env.get("TIKTOK_SCOPES") ?? "").replace(/\s+/g, "") || "user.info.basic,video.list";
 const VIDEO_FIELDS = "id,title,video_description,duration,cover_image_url,share_url,embed_link,create_time";
 const MAX_SELECTED = 50;
 const AUTO_BATCH = 10; // newest videos added per run in auto mode, so switching it on never floods the feed

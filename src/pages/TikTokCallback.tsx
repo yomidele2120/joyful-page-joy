@@ -19,7 +19,16 @@ export default function TikTokCallback() {
     const back = () => navigate('/supplier-dashboard?tab=videos', { replace: true });
     const code = params.get('code'), state = params.get('state'), denied = params.get('error');
     if (denied || !code || !state) {
-      toast.error(denied === 'access_denied' ? 'TikTok was not connected because access was declined.' : 'The TikTok link was not valid. Please try again.');
+      if (denied === 'access_denied') {
+        toast.error('TikTok was not connected because access was declined.');
+      } else if (denied) {
+        // TikTok sent the seller back with a reason (for example invalid_scope): show it instead of hiding it.
+        const detail = params.get('error_description') || denied;
+        console.warn('TikTok returned an error:', denied, params.get('error_description'));
+        toast.error(`TikTok could not connect: ${detail} (${denied})`, { duration: 15000 });
+      } else {
+        toast.error('This page is only for TikTok to return to. Go to Dashboard > Videos and tap Connect TikTok.');
+      }
       back(); return;
     }
     (async () => {
