@@ -37,9 +37,13 @@ const AUTO_BATCH = 10; // newest videos added per run in auto mode, so switching
 const ID = /^\d{6,25}$/;
 
 const admin = () => createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+// A secret pasted with a space, a line break or quote marks around it is the usual cause of TikTok's
+// "client_key" error page, so every value is cleaned before use.
+const clean = (v: string | undefined) => (v ?? "").trim().replace(/^["'`]+|["'`]+$/g, "").trim();
 const cfg = () => {
-  const key = Deno.env.get("TIKTOK_CLIENT_KEY"), secret = Deno.env.get("TIKTOK_CLIENT_SECRET"), redirect = Deno.env.get("TIKTOK_REDIRECT_URI");
+  const key = clean(Deno.env.get("TIKTOK_CLIENT_KEY")), secret = clean(Deno.env.get("TIKTOK_CLIENT_SECRET")), redirect = clean(Deno.env.get("TIKTOK_REDIRECT_URI"));
   if (!key || !secret || !redirect) throw new UserError("TikTok is not set up on the server yet.", 501);
+  if (!/^[A-Za-z0-9]{10,40}$/.test(key)) throw new UserError("The TikTok client key on the server looks wrong. Copy it again from the TikTok developer portal (Client key, not Client secret).", 501);
   return { key, secret, redirect };
 };
 
@@ -379,7 +383,13 @@ serve(async (req) => {
     if (action === "config_status") { // for the admin switch: only says whether the keys exist, never the keys
       const { data: isAdmin } = await db.rpc("has_role", { _user_id: user.id, _role: "admin" });
       if (isAdmin !== true) throw new UserError("Forbidden", 403);
-      return json({ configured: !!(Deno.env.get("TIKTOK_CLIENT_KEY") && Deno.env.get("TIKTOK_CLIENT_SECRET") && Deno.env.get("TIKTOK_REDIRECT_URI")) });
+      const k = clean(Deno.env.get("TIKTOK_CLIENT_KEY")), r = clean(Deno.env.get("TIKTOK_REDIRECT_URI"));
+      // Only a masked hint of the client key (it is not a secret: it is in every TikTok login link) and the redirect address.
+      return json({
+        configured: !!(k && clean(Deno.env.get("TIKTOK_CLIENT_SECRET")) && r),
+        key_hint: k ? `${k.slice(0, 3)}...${k.slice(-2)} (${k.length} characters)` : "",
+        redirect_uri: r,
+      });
     }
 
     const { data: vendor } = await db.from("vendors").select("id, is_approved").eq("user_id", user.id).maybeSingle();

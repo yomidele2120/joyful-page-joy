@@ -41,7 +41,7 @@ export default function MarketplaceAdminTab() {
 // Shown in two places: its own menu item (Admin > TikTok for sellers) and the "Sections and rules" tab.
 // The switch stays greyed out until three things are in place, and the card says which one is missing:
 //   1. the database update (adds the on/off setting)   2. the "tiktok" server function is deployed   3. the TikTok keys are set on it.
-type TikTokKeys = { state: 'ready' } | { state: 'keys_missing' } | { state: 'unreachable'; detail: string };
+type TikTokKeys = { state: 'ready'; keyHint?: string; redirect?: string } | { state: 'keys_missing' } | { state: 'unreachable'; detail: string };
 export function TikTokSwitch() {
   const queryClient = useQueryClient();
   const { data: enabled } = useTikTokEnabled();
@@ -60,7 +60,7 @@ export function TikTokSwitch() {
       const { data, error } = await supabase.functions.invoke('tiktok', { body: { action: 'config_status' } });
       if (error) return { state: 'unreachable', detail: error.message || 'no answer from the server' };
       if (data?.error) return { state: 'unreachable', detail: String(data.error) };
-      return data?.configured === true ? { state: 'ready' } : { state: 'keys_missing' };
+      return data?.configured === true ? { state: 'ready', keyHint: data?.key_hint, redirect: data?.redirect_uri } : { state: 'keys_missing' };
     },
   });
   const ready = dbReady === true && keys?.state === 'ready';
@@ -94,6 +94,11 @@ export function TikTokSwitch() {
           fix={`Deploy it with: supabase functions deploy tiktok. ${keys?.state === 'unreachable' ? `(Server said: ${keys.detail})` : ''}`} />
         <Step ok={keys?.state === 'ready'} loading={checkingKeys} title="3. The TikTok keys are set on the server"
           fix="Add the secrets TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET and TIKTOK_REDIRECT_URI (see TIKTOK_SETUP.md), then deploy the function again." />
+        {keys?.state === 'ready' && (keys.keyHint || keys.redirect) && (
+          <li className="ml-6 text-xs text-muted-foreground">
+            Server is sending TikTok the client key <span className="font-mono">{keys.keyHint}</span> and the redirect address <span className="font-mono break-all">{keys.redirect}</span>. Compare these with your TikTok app (Sandbox tab, if it is still in Sandbox).
+          </li>
+        )}
       </ol>
       <div className="mt-3 flex items-center justify-between gap-4 border-t border-border pt-3">
         <div>
