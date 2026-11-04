@@ -11,6 +11,8 @@ interface PostMediaProps {
   isActive: boolean;
   muted: boolean;
   onFirstPlay?: () => void;
+  onUserPlayback?: () => void;
+  autoplayEnabled?: boolean;
 }
 
 // Renders the media surface of a feed post: either a single video or a
@@ -25,10 +27,11 @@ export default function PostMedia(props: PostMediaProps) {
 
 /* --------------------------------- TikTok --------------------------------- */
 
-// Load TikTok's official player only after an explicit tap; TikTok can rate-limit embeds by domain.
-function TikTokSurface({ post, isActive, onFirstPlay }: PostMediaProps) {
+// Load TikTok's official player on demand, then autoplay it for active posts after the user starts playback.
+function TikTokSurface({ post, isActive, muted, onFirstPlay, onUserPlayback, autoplayEnabled }: PostMediaProps) {
   const playerUrl = tiktokPlayerUrl(post.tiktok_embed_url);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const playerReadyRef = useRef(false);
   const [playerRequested, setPlayerRequested] = useState(false);
   const [playerError, setPlayerError] = useState<string | null>(null);
 
@@ -36,6 +39,7 @@ function TikTokSurface({ post, isActive, onFirstPlay }: PostMediaProps) {
     if (!isActive) {
       setPlayerRequested(false);
       setPlayerError(null);
+      playerReadyRef.current = false;
     }
   }, [isActive]);
 
@@ -45,14 +49,29 @@ function TikTokSurface({ post, isActive, onFirstPlay }: PostMediaProps) {
       if (!event.data || typeof event.data !== 'object') return;
 
       const message = event.data as { 'x-tiktok-player'?: unknown; type?: unknown; value?: unknown };
-      if (message['x-tiktok-player'] === true && message.type === 'onPlayerError') {
+      if (message['x-tiktok-player'] !== true) return;
+      if (message.type === 'onPlayerReady') {
+        playerReadyRef.current = true;
+        iframeRef.current?.contentWindow?.postMessage(
+          { 'x-tiktok-player': true, type: muted ? 'mute' : 'unMute' },
+          'https://www.tiktok.com'
+        );
+      } else if (message.type === 'onPlayerError') {
         setPlayerError(tiktokPlayerErrorMessage(message.value));
       }
     };
 
     window.addEventListener('message', handlePlayerMessage);
     return () => window.removeEventListener('message', handlePlayerMessage);
-  }, []);
+  }, [muted]);
+
+  useEffect(() => {
+    if (!playerReadyRef.current) return;
+    iframeRef.current?.contentWindow?.postMessage(
+      { 'x-tiktok-player': true, type: muted ? 'mute' : 'unMute' },
+      'https://www.tiktok.com'
+    );
+  }, [muted]);
 
   if (!playerUrl) return null;
 
@@ -60,11 +79,12 @@ function TikTokSurface({ post, isActive, onFirstPlay }: PostMediaProps) {
     setPlayerError(null);
     setPlayerRequested(true);
     onFirstPlay?.();
+    onUserPlayback?.();
   };
 
   return (
     <div className="relative h-full w-full bg-black">
-      {isActive && playerRequested && !playerError ? (
+      {isActive && (playerRequested || autoplayEnabled) && !playerError ? (
         <div className="absolute inset-0">
           <iframe
             ref={iframeRef}
@@ -112,7 +132,7 @@ function TikTokSurface({ post, isActive, onFirstPlay }: PostMediaProps) {
 
 /* ---------------------------------- video --------------------------------- */
 
-function VideoSurface({ post, isActive, muted, onFirstPlay }: PostMediaProps) {
+function VideoSurface({ post, isActive, muted, onFirstPlay, onUserPlayback }: PostMediaProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hasCountedView = useRef(false);
   const [loading, setLoading] = useState(true);
@@ -188,9 +208,14 @@ function VideoSurface({ post, isActive, muted, onFirstPlay }: PostMediaProps) {
   const handleTap = useCallback(() => {
     const video = videoRef.current;
     if (!video || errored) return;
-    if (video.paused) void video.play().catch(() => setPaused(true));
+    if (video.paused) {
+      void video.play().then(
+        () => onUserPlayback?.(),
+        () => setPaused(true)
+      );
+    }
     else video.pause();
-  }, [errored]);
+  }, [errored, onUserPlayback]);
 
   const retry = () => {
     setAttempt((a) => a + 1);

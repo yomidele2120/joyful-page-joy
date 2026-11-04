@@ -10,7 +10,9 @@ export function tiktokVideoId(embedUrl: string | null | undefined): string | nul
 
 export function tiktokPlayerUrl(embedUrl: string | null | undefined): string | null {
   const id = tiktokVideoId(embedUrl);
-  return id ? `https://www.tiktok.com/player/v1/${id}?autoplay=1&loop=1` : null;
+  return id
+    ? `https://www.tiktok.com/player/v1/${id}?autoplay=1&loop=1&muted=1&controls=0&progress_bar=0&play_button=0&volume_control=0&fullscreen_button=0&timestamp=0&music_info=0&description=0&closed_caption=0&rel=0`
+    : null;
 }
 
 export function tiktokPlayerErrorMessage(value: unknown): string {
@@ -20,7 +22,7 @@ export function tiktokPlayerErrorMessage(value: unknown): string {
     return 'TikTok temporarily limited its embedded player for this site. Try again later.';
   }
   if (error.errorCode === 3002 || error.errorType === 'AUTOPLAY_ERROR') {
-    return 'TikTok could not start automatically. Tap Play in the TikTok player.';
+    return 'TikTok could not start automatically. Tap Try again to retry playback.';
   }
   return 'TikTok could not play this video. Try again later.';
 }

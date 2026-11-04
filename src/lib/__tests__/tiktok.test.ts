@@ -17,12 +17,12 @@ describe('tiktokVideoId', () => {
 
   it('builds the official autoplaying player URL only for a valid TikTok embed', () => {
     expect(tiktokPlayerUrl('https://www.tiktok.com/embed/v2/7234567890123456789'))
-      .toBe('https://www.tiktok.com/player/v1/7234567890123456789?autoplay=1&loop=1');
+      .toBe('https://www.tiktok.com/player/v1/7234567890123456789?autoplay=1&loop=1&muted=1&controls=0&progress_bar=0&play_button=0&volume_control=0&fullscreen_button=0&timestamp=0&music_info=0&description=0&closed_caption=0&rel=0');
     expect(tiktokPlayerUrl('https://example.com/video')).toBeNull();
   });
 
   it('explains TikTok server and autoplay player errors', () => {
     expect(tiktokPlayerErrorMessage({ errorCode: 2001, errorType: 'SERVER_ERROR' })).toContain('temporarily limited');
-    expect(tiktokPlayerErrorMessage({ errorCode: 3002, errorType: 'AUTOPLAY_ERROR' })).toContain('Tap Play');
+    expect(tiktokPlayerErrorMessage({ errorCode: 3002, errorType: 'AUTOPLAY_ERROR' })).toContain('Tap Try again');
   });
 });

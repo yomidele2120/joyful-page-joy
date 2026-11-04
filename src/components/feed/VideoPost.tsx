@@ -20,11 +20,13 @@ interface VideoPostProps {
   isActive: boolean;
   isLiked: boolean;
   onOpenComments: (postId: string) => void;
+  autoplayEnabled: boolean;
+  onUserPlayback: () => void;
 }
 
 // Renders one post in the feed (video or image carousel). Only the "active"
 // post plays, so we never have more than one decoder running at a time.
-export default function VideoPost({ post, isActive, isLiked, onOpenComments }: VideoPostProps) {
+export default function VideoPost({ post, isActive, isLiked, onOpenComments, autoplayEnabled, onUserPlayback }: VideoPostProps) {
   const [muted, setMuted] = useState(true);
   const { user } = useAuth();
   const toggleLike = useToggleLike();
@@ -72,7 +74,14 @@ export default function VideoPost({ post, isActive, isLiked, onOpenComments }: V
 
   return (
     <div className="relative h-full w-full snap-start snap-always bg-black flex items-center justify-center overflow-hidden">
-      <PostMedia post={post} isActive={isActive} muted={muted} onFirstPlay={handleFirstPlay} />
+      <PostMedia
+        post={post}
+        isActive={isActive}
+        muted={muted}
+        onFirstPlay={handleFirstPlay}
+        onUserPlayback={onUserPlayback}
+        autoplayEnabled={autoplayEnabled}
+      />
 
 
       {/* Bottom gradient + caption + shop card */}
