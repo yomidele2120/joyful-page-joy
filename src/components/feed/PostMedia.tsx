@@ -65,8 +65,7 @@ function TikTokSurface({ post, isActive, onFirstPlay }: PostMediaProps) {
   return (
     <div className="relative h-full w-full bg-black">
       {isActive && playerRequested && !playerError ? (
-        // Leave room above the caption and shop card so the player's own controls stay tappable.
-        <div className="absolute inset-x-0 bottom-44 top-10">
+        <div className="absolute inset-0">
           <iframe
             ref={iframeRef}
             title={post.caption ? `TikTok: ${post.caption.slice(0, 60)}` : 'TikTok video'}
@@ -75,7 +74,7 @@ function TikTokSurface({ post, isActive, onFirstPlay }: PostMediaProps) {
             allowFullScreen
             referrerPolicy="strict-origin-when-cross-origin"
             sandbox="allow-scripts allow-same-origin allow-popups allow-presentation"
-            className="mx-auto h-full w-full max-w-[420px] border-0"
+            className="absolute inset-0 h-full w-full border-0"
           />
         </div>
       ) : isActive && playerError ? (
