@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 
 type AllowedRole = 'admin' | 'vendor' | 'user';
@@ -13,11 +13,14 @@ interface ProtectedRouteProps {
 export default function ProtectedRoute({ children, allowedRoles, redirectTo = '/users-login' }: ProtectedRouteProps) {
   const { user, loading, isAdmin, isVendor } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isTikTokCallback = location.pathname === '/tiktok/callback';
 
   useEffect(() => {
     if (loading) return;
 
     if (!user) {
+      if (isTikTokCallback) return;
       navigate(redirectTo, { replace: true });
       return;
     }
@@ -33,7 +36,7 @@ export default function ProtectedRoute({ children, allowedRoles, redirectTo = '/
       else if (isVendor) navigate('/supplier-dashboard', { replace: true });
       else navigate('/user-dashboard', { replace: true });
     }
-  }, [user, loading, isAdmin, isVendor, allowedRoles, navigate, redirectTo]);
+  }, [user, loading, isAdmin, isVendor, allowedRoles, navigate, redirectTo, isTikTokCallback]);
 
   if (loading) {
     return (
@@ -43,7 +46,7 @@ export default function ProtectedRoute({ children, allowedRoles, redirectTo = '/
     );
   }
 
-  if (!user) return null;
+  if (!user) return isTikTokCallback ? <>{children}</> : null;
 
   const hasAccess =
     (allowedRoles.includes('admin') && isAdmin) ||

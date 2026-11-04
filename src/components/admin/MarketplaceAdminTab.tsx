@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Loader2, XCircle } from 'lucide-react';
+import { CheckCircle2, Copy, Loader2, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -41,7 +41,16 @@ export default function MarketplaceAdminTab() {
 // Shown in two places: its own menu item (Admin > TikTok for sellers) and the "Sections and rules" tab.
 // The switch stays greyed out until three things are in place, and the card says which one is missing:
 //   1. the database update (adds the on/off setting)   2. the "tiktok" server function is deployed   3. the TikTok keys are set on it.
-type TikTokKeys = { state: 'ready'; keyHint?: string; redirect?: string } | { state: 'keys_missing' } | { state: 'unreachable'; detail: string };
+type TikTokKeys = {
+  state: 'ready' | 'keys_missing' | 'invalid' | 'unreachable';
+  detail?: string;
+  keyHint?: string;
+  redirect?: string;
+  requestedScopes?: string[];
+  requireVideoList?: boolean;
+  authorizeUrl?: string | null;
+  environment?: Record<string, boolean>;
+};
 export function TikTokSwitch() {
   const queryClient = useQueryClient();
   const { data: enabled } = useTikTokEnabled();
@@ -60,7 +69,16 @@ export function TikTokSwitch() {
       const { data, error } = await supabase.functions.invoke('tiktok', { body: { action: 'config_status' } });
       if (error) return { state: 'unreachable', detail: error.message || 'no answer from the server' };
       if (data?.error) return { state: 'unreachable', detail: String(data.error) };
-      return data?.configured === true ? { state: 'ready', keyHint: data?.key_hint, redirect: data?.redirect_uri } : { state: 'keys_missing' };
+      return {
+        state: data?.configured === true ? 'ready' : data?.configuration_error ? 'invalid' : 'keys_missing',
+        detail: data?.configuration_error || data?.scope_error || undefined,
+        keyHint: data?.key_hint,
+        redirect: data?.redirect_uri,
+        requestedScopes: data?.requested_scopes,
+        requireVideoList: data?.require_video_list,
+        authorizeUrl: data?.authorize_url,
+        environment: data?.environment,
+      };
     },
   });
   const ready = dbReady === true && keys?.state === 'ready';
@@ -91,15 +109,62 @@ export function TikTokSwitch() {
         <Step ok={dbReady === true} loading={checkingDb} title="1. Database update is installed"
           fix="Run TIKTOK_run_in_sql_editor.sql once in the Supabase SQL editor, then refresh this page." />
         <Step ok={keys?.state !== 'unreachable'} loading={checkingKeys} title="2. The TikTok server function is deployed"
-          fix={`Deploy it with: supabase functions deploy tiktok. ${keys?.state === 'unreachable' ? `(Server said: ${keys.detail})` : ''}`} />
-        <Step ok={keys?.state === 'ready'} loading={checkingKeys} title="3. The TikTok keys are set on the server"
-          fix="Add the secrets TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET and TIKTOK_REDIRECT_URI (see TIKTOK_SETUP.md), then deploy the function again." />
-        {keys?.state === 'ready' && (keys.keyHint || keys.redirect) && (
+          fix={`Deploy it with: npx supabase@latest functions deploy tiktok --project-ref <ref>. ${keys?.state === 'unreachable' ? `(Server said: ${keys.detail})` : ''}`} />
+        <Step ok={keys?.state === 'ready'} loading={checkingKeys} title="3. The TikTok keys and settings are valid"
+          fix={keys?.detail || 'Set TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET and TIKTOK_REDIRECT_URI as Supabase function secrets; check the Sandbox scopes.'} />
+        {(keys?.keyHint || keys?.redirect) && (
           <li className="ml-6 text-xs text-muted-foreground">
-            Server is sending TikTok the client key <span className="font-mono">{keys.keyHint}</span> and the redirect address <span className="font-mono break-all">{keys.redirect}</span>. Compare these with your TikTok app (Sandbox tab, if it is still in Sandbox).
+            {keys.keyHint && <>Server is sending TikTok the client key <span className="font-mono">{keys.keyHint}</span>. </>}
+            Compare the redirect address with your TikTok app (Sandbox tab, if it is still in Sandbox).
+          </li>
+        )}
+        {keys?.environment && (
+          <li className="ml-6">
+            <p className="text-xs font-medium">TikTok environment variables (presence only)</p>
+            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              {Object.entries(keys.environment).map(([name, isSet]) => (
+                <span key={name}>{name}: {isSet ? 'set' : 'missing'}</span>
+              ))}
+            </div>
+          </li>
+        )}
+        {keys?.redirect && (
+          <li className="ml-6 text-xs text-muted-foreground">
+            Exact redirect_uri: <span className="break-all font-mono">{keys.redirect}</span>
+          </li>
+        )}
+        {keys?.requestedScopes && (
+          <li className="ml-6 text-xs text-muted-foreground">
+            Requested scopes: <span className="font-mono">{keys.requestedScopes.join(', ') || 'invalid or unavailable'}</span>
+            {keys.requireVideoList === false && <span> (video.list is optional; video selection requires that scope)</span>}
+          </li>
+        )}
+        {keys?.authorizeUrl && (
+          <li className="ml-6 space-y-1">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-medium">Authorize URL preview (diagnostic state; not a seller connection link)</p>
+              <Button size="sm" variant="outline" onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(keys.authorizeUrl!);
+                  toast.success('TikTok authorize URL copied.');
+                } catch {
+                  toast.error('Could not copy the authorize URL. Select and copy it manually.');
+                }
+              }}><Copy className="mr-1.5 h-3.5 w-3.5" />Copy</Button>
+            </div>
+            <code className="block break-all rounded bg-muted p-2 text-xs">{keys.authorizeUrl}</code>
           </li>
         )}
       </ol>
+      <div className="mt-3 border-t border-border pt-3">
+        <p className="text-sm font-medium">TikTok Sandbox checklist</p>
+        <ul className="mt-1 list-disc space-y-1 pl-5 text-xs text-muted-foreground">
+          <li>Sandbox target user added</li>
+          <li>Login Kit includes the Web platform and its redirect URI is saved under Web</li>
+          <li>Every requested scope is added in Sandbox</li>
+          <li>Sandbox client key and secret are set in Supabase secrets</li>
+        </ul>
+      </div>
       <div className="mt-3 flex items-center justify-between gap-4 border-t border-border pt-3">
         <div>
           <Label htmlFor="s-tiktok" className="font-medium">Allow sellers to connect TikTok</Label>
