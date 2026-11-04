@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Hls from 'hls.js';
 import useEmblaCarousel from 'embla-carousel-react';
 import { Loader2, Play, AlertCircle, RotateCcw } from 'lucide-react';
-import { isTikTokPost, tiktokVideoId } from '@/lib/tiktok';
+import { isTikTokPost, tiktokPlayerErrorMessage, tiktokPlayerUrl } from '@/lib/tiktok';
 import type { FeedPost } from '@/hooks/usePosts';
 import { cn } from '@/lib/utils';
 
@@ -25,37 +25,85 @@ export default function PostMedia(props: PostMediaProps) {
 
 /* --------------------------------- TikTok --------------------------------- */
 
-// A vendor's own TikTok video. It shows the cover with a play button and loads TikTok's official player only when
-// tapped, so scrolling the feed never loads a page of iframes. Leaving the post unloads the player again.
+// Load TikTok's official player only after an explicit tap; TikTok can rate-limit embeds by domain.
 function TikTokSurface({ post, isActive, onFirstPlay }: PostMediaProps) {
-  const [playing, setPlaying] = useState(false);
-  const id = tiktokVideoId(post.tiktok_embed_url);
+  const playerUrl = tiktokPlayerUrl(post.tiktok_embed_url);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [playerRequested, setPlayerRequested] = useState(false);
+  const [playerError, setPlayerError] = useState<string | null>(null);
 
-  useEffect(() => { if (!isActive) setPlaying(false); }, [isActive]);
-  if (!id) return null;
+  useEffect(() => {
+    if (!isActive) {
+      setPlayerRequested(false);
+      setPlayerError(null);
+    }
+  }, [isActive]);
 
-  const start = () => { setPlaying(true); onFirstPlay?.(); };
+  useEffect(() => {
+    const handlePlayerMessage = (event: MessageEvent<unknown>) => {
+      if (event.origin !== 'https://www.tiktok.com' || event.source !== iframeRef.current?.contentWindow) return;
+      if (!event.data || typeof event.data !== 'object') return;
+
+      const message = event.data as { 'x-tiktok-player'?: unknown; type?: unknown; value?: unknown };
+      if (message['x-tiktok-player'] === true && message.type === 'onPlayerError') {
+        setPlayerError(tiktokPlayerErrorMessage(message.value));
+      }
+    };
+
+    window.addEventListener('message', handlePlayerMessage);
+    return () => window.removeEventListener('message', handlePlayerMessage);
+  }, []);
+
+  if (!playerUrl) return null;
+
+  const startPlayer = () => {
+    setPlayerError(null);
+    setPlayerRequested(true);
+    onFirstPlay?.();
+  };
+
   return (
     <div className="relative h-full w-full bg-black">
-      {playing ? (
+      {isActive && playerRequested && !playerError ? (
         // Leave room above the caption and shop card so the player's own controls stay tappable.
         <div className="absolute inset-x-0 bottom-44 top-10">
-        <iframe
-          title={post.caption ? `TikTok: ${post.caption.slice(0, 60)}` : 'TikTok video'}
-          src={`https://www.tiktok.com/embed/v2/${id}`}
-          allow="fullscreen; encrypted-media"
-          allowFullScreen
-          referrerPolicy="strict-origin-when-cross-origin"
-          sandbox="allow-scripts allow-same-origin allow-popups allow-presentation"
-          className="mx-auto h-full w-full max-w-[420px] border-0"
-        />
+          <iframe
+            ref={iframeRef}
+            title={post.caption ? `TikTok: ${post.caption.slice(0, 60)}` : 'TikTok video'}
+            src={playerUrl}
+            allow="autoplay; fullscreen; encrypted-media"
+            allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
+            sandbox="allow-scripts allow-same-origin allow-popups allow-presentation"
+            className="mx-auto h-full w-full max-w-[420px] border-0"
+          />
+        </div>
+      ) : isActive && playerError ? (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/80 px-6 text-center text-white">
+          <AlertCircle className="h-7 w-7 text-white/70" />
+          <p className="text-sm">{playerError}</p>
+          <button
+            type="button"
+            onClick={startPlayer}
+            className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm"
+          >
+            <RotateCcw className="h-4 w-4" /> Try again
+          </button>
         </div>
       ) : (
-        <button type="button" onClick={start} aria-label="Play TikTok video" className="group absolute inset-0 flex items-center justify-center">
+        <button
+          type="button"
+          onClick={startPlayer}
+          disabled={!isActive}
+          aria-label="Play TikTok video"
+          className="group absolute inset-0 flex items-center justify-center disabled:cursor-default"
+        >
           {post.thumbnail_url && <img src={post.thumbnail_url} alt="" className="absolute inset-0 h-full w-full object-contain" loading="lazy" decoding="async" />}
-          <span className="relative flex h-16 w-16 items-center justify-center rounded-full bg-black/60 text-white transition-transform group-active:scale-95">
-            <Play className="h-8 w-8 translate-x-0.5" fill="currentColor" />
-          </span>
+          {isActive && (
+            <span className="relative flex h-16 w-16 items-center justify-center rounded-full bg-black/60 text-white transition-transform group-active:scale-95">
+              <Play className="h-8 w-8 translate-x-0.5" fill="currentColor" />
+            </span>
+          )}
           <span className="absolute left-3 top-3 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-medium text-white">TikTok</span>
         </button>
       )}

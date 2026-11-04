@@ -8,5 +8,22 @@ export function tiktokVideoId(embedUrl: string | null | undefined): string | nul
   return m ? m[1] : null;
 }
 
+export function tiktokPlayerUrl(embedUrl: string | null | undefined): string | null {
+  const id = tiktokVideoId(embedUrl);
+  return id ? `https://www.tiktok.com/player/v1/${id}?autoplay=1&loop=1` : null;
+}
+
+export function tiktokPlayerErrorMessage(value: unknown): string {
+  if (!value || typeof value !== 'object') return 'TikTok could not play this video. Try again later.';
+  const error = value as { errorCode?: unknown; errorType?: unknown };
+  if (error.errorCode === 2001 || error.errorType === 'SERVER_ERROR') {
+    return 'TikTok temporarily limited its embedded player for this site. Try again later.';
+  }
+  if (error.errorCode === 3002 || error.errorType === 'AUTOPLAY_ERROR') {
+    return 'TikTok could not start automatically. Tap Play in the TikTok player.';
+  }
+  return 'TikTok could not play this video. Try again later.';
+}
+
 export const isTikTokPost = (p: { media_type?: string | null; tiktok_embed_url?: string | null }) =>
   p.media_type === 'tiktok' && tiktokVideoId(p.tiktok_embed_url) !== null;
