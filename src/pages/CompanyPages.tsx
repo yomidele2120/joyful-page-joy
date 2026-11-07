@@ -30,7 +30,7 @@ export function AboutUs() {
         <ul className="list-disc space-y-1.5 pl-5">
           <li>Browse products with clear prices, minimum order quantities and supplier details.</li>
           <li>Send an inquiry, chat with a supplier, or post a request for quotation (RFQ) and compare the quotes you receive.</li>
-          <li>Pay through Paystack. Where it is available and you are eligible, pay later in instalments through Klump.</li>
+          <li>Pay through Paystack. Where it is available and you are eligible, pay later in instalments through our Pay later partner (Klump or Credit Direct, as shown at checkout).</li>
           <li>Order goods that are not in stock yet as a preorder, and follow them under My orders.</li>
           <li>Get help from us if something goes wrong: see our <Link to="/dispute-resolution" className="text-primary hover:underline">dispute process</Link>.</li>
         </ul>
@@ -224,9 +224,9 @@ const FAQ: { group: string; items: { q: string; a: React.ReactNode }[] }[] = [
   {
     group: 'Paying',
     items: [
-      { q: 'How can I pay?', a: 'Through Paystack at checkout. Where it is available and your cart is eligible, you can choose to pay later in instalments with Klump.' },
-      { q: 'Who approves Pay later?', a: <>Klump decides, not us. Being shown the option does not guarantee approval. Read the <Link to="/bnpl-terms" className="text-primary hover:underline">BNPL Terms</Link> and see which products are eligible on the <Link to="/pay-later" className="text-primary hover:underline">Pay later page</Link>.</> },
-      { q: 'Are my card details stored?', a: 'No. Card and bank details are entered on Paystack\'s or Klump\'s secure screens and are not stored by us.' },
+      { q: 'How can I pay?', a: 'Through Paystack at checkout. Where it is available and your cart is eligible, you can choose to pay later in instalments with our Pay later partner (Klump or Credit Direct, as shown at checkout).' },
+      { q: 'Who approves Pay later?', a: <>The Pay later provider (Klump or Credit Direct) decides, not us. Being shown the option does not guarantee approval. Read the <Link to="/bnpl-terms" className="text-primary hover:underline">BNPL Terms</Link> and see which products are eligible on the <Link to="/pay-later" className="text-primary hover:underline">Pay later page</Link>.</> },
+      { q: 'Are my card details stored?', a: 'No. Card and bank details are entered on Paystack\'s or the Pay later provider\'s secure screens and are not stored by us.' },
     ],
   },
   {

@@ -1,3 +1,4 @@
+import { providerName } from '@/lib/bnplProvider';
 import { imgSrc } from '@/lib/images';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -75,7 +76,7 @@ export default function MyOrders() {
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_my_bnpl_status', { _order_ids: bnplOrderIds });
       if (error) throw error;
-      return new Map((data ?? []).map(r => [r.order_id, r.status] as [string, string]));
+      return new Map(((data ?? []) as { order_id: string; status: string; provider?: string }[]).map(r => [r.order_id, { status: r.status, provider: r.provider ?? 'klump' }] as [string, { status: string; provider: string }]));
     },
   });
 
@@ -194,8 +195,8 @@ export default function MyOrders() {
                     <p className="flex justify-between"><span className="text-muted-foreground">Total</span><span className="font-heading font-bold">{formatNaira(order.total)}</span></p>
                     {order.payment_method === 'bnpl' && (
                       <p className="text-xs text-muted-foreground">
-                        Pay later (Klump): <strong className="text-foreground">{BNPL_STATUS[bnpl?.get(order.id) ?? ''] ?? 'Checking status'}</strong>.
-                        Your instalment plan and repayments are shown by Klump. See the <Link to="/bnpl-terms" className="text-primary hover:underline">BNPL Terms</Link>.
+                        Pay later ({providerName(bnpl?.get(order.id)?.provider)}): <strong className="text-foreground">{BNPL_STATUS[bnpl?.get(order.id)?.status ?? ''] ?? 'Checking status'}</strong>.
+                        Your instalment plan and repayments are shown by {providerName(bnpl?.get(order.id)?.provider)}. See the <Link to="/bnpl-terms" className="text-primary hover:underline">BNPL Terms</Link>.
                       </p>
                     )}
                     {order.is_preorder && <p className="text-xs text-muted-foreground">Preorder rules: <Link to="/preorder-policy" className="text-primary hover:underline">Preorder Policy</Link>.</p>}
@@ -258,7 +259,7 @@ function RequestDialog({ target, onClose, onDone, userId }: {
           <DialogTitle>{isCancel ? 'Request cancellation' : 'Request a refund'}</DialogTitle>
           <DialogDescription>
             Order #{target.order.id.slice(0, 8).toUpperCase()}. We review every request and tell you the result. Refunds go back to the way you paid.
-            {target.order.payment_method === 'bnpl' && ' For Pay later orders we work with Klump on the refund.'}
+            {target.order.payment_method === 'bnpl' && ' For Pay later orders we work with the Pay later provider on the refund.'}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-1.5">

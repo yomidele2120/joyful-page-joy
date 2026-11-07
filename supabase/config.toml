@@ -30,6 +30,15 @@ verify_jwt = false
 [functions.klump-webhook]
 verify_jwt = false
 
+[functions.creditdirect-initialize]
+verify_jwt = false
+
+[functions.creditdirect-verify]
+verify_jwt = false
+
+[functions.creditdirect-webhook]
+verify_jwt = false
+
 [functions.refund-order]
 verify_jwt = false
 

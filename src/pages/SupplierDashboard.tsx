@@ -635,7 +635,7 @@ function SupplierAddProduct({ vendorId, categories, onSuccess }: { vendorId: str
         <Switch id="bnpl-eligible" checked={form.bnpl_eligible && !preorder.enabled} disabled={preorder.enabled} onCheckedChange={v => setForm(p => ({ ...p, bnpl_eligible: v }))} />
         <div>
           <Label htmlFor="bnpl-eligible" className="font-medium">Allow Pay later (buy now, pay later)</Label>
-          <p className="text-xs text-muted-foreground">Buyers can pay in instalments through Klump, and you are paid in full after delivery like any other order. Best for higher-priced items such as laptops and phones.</p>
+          <p className="text-xs text-muted-foreground">Buyers can pay in instalments through our Pay later partner, and you are paid in full after delivery like any other order. Best for higher-priced items such as laptops and phones.</p>
         </div>
       </div>
 

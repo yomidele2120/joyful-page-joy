@@ -44,6 +44,7 @@ const Rfqs = lazyPage(() => import("./pages/Rfqs"));
 const NotFound = lazyPage(() => import("./pages/NotFound"));
 // Marketplace sections, account pages, legal and company pages
 const PayLater = lazyPage(() => import("./pages/PayLater"));
+const PayLaterReturn = lazyPage(() => import("./pages/PayLaterReturn"));
 const Preorders = lazyPage(() => import("./pages/Preorders"));
 const MyOrders = lazyPage(() => import("./pages/MyOrders"));
 const ForgotPassword = lazyPage(() => import("./pages/ForgotPassword"));
@@ -133,6 +134,7 @@ const App = () => (
               <Route path="/inquiries" element={<Inquiries />} />
               <Route path="/rfq" element={<Rfqs />} />
               <Route path="/pay-later" element={<PayLater />} />
+              <Route path="/pay-later/return" element={<PayLaterReturn />} />
               <Route path="/preorders" element={<Preorders />} />
               <Route path="/my-orders" element={<MyOrders />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />

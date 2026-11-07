@@ -14,6 +14,8 @@ import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import BnplProviderPicker, { useCreditDirectStatus } from '@/components/admin/BnplProviderPicker';
+import { activeProvider, providerName } from '@/lib/bnplProvider';
 
 // The finance tables are new, so they are not in the generated Supabase types yet.
 // (Regenerate the types later and this cast can be removed.)
@@ -31,11 +33,11 @@ interface PayoutRow {
 }
 interface Settings {
   default_commission_percent: number; payout_hold_days: number; min_payout_amount: number; delivery_confirm_days: number; free_period_months: number;
-  bnpl_enabled: boolean; bnpl_fee_percent: number; bnpl_fee_bearer: 'platform' | 'supplier' | 'customer';
+  bnpl_enabled: boolean; bnpl_provider?: 'klump' | 'creditdirect'; bnpl_fee_percent: number; bnpl_fee_bearer: 'platform' | 'supplier' | 'customer';
   bnpl_min_order: number; bnpl_max_order: number; bnpl_max_outstanding_per_customer: number; bnpl_down_payment_percent: number;
 }
 interface BnplRow {
-  id: string; order_id: string; amount: number; status: 'initiated' | 'successful' | 'abandoned' | 'failed';
+  id: string; order_id: string; amount: number; status: 'initiated' | 'successful' | 'abandoned' | 'failed'; provider?: string;
   provider_reference: string | null; is_live: boolean | null; fee_charged: number | null;
   settled_at: string | null; created_at: string; orders?: { email: string | null; status: string } | null;
 }
@@ -114,6 +116,7 @@ export default function FinanceTab() {
 
   const [form, setForm] = useState<Settings | null>(null);
   useEffect(() => { if (settings) setForm(settings); }, [settings]);
+  const cd = useCreditDirectStatus();
 
   const totals = (payables ?? []).reduce(
     (t, r) => ({ held: t.held + r.held, available: t.available + r.available, processing: t.processing + r.processing, paid: t.paid + r.paid }),
@@ -157,7 +160,8 @@ export default function FinanceTab() {
   });
 
   const markSettled = (orderId: string) => {
-    const fee = window.prompt('Optional: the fee Klump actually charged on this order (₦). Leave empty to skip.', '');
+    const who = providerName(bnplTx?.find(t => t.order_id === orderId)?.provider);
+    const fee = window.prompt(`Optional: the fee ${who} actually charged on this order (₦). Leave empty to skip.`, '');
     if (fee === null) return;
     const feeValue = fee.trim() === '' ? null : Number(fee);
     if (feeValue !== null && (!Number.isFinite(feeValue) || feeValue < 0)) { toast.error('Enter a valid amount'); return; }
@@ -183,6 +187,10 @@ export default function FinanceTab() {
   const saveSettings = () => run('settings', async () => {
     if (!form) return;
     if (form.bnpl_min_order > form.bnpl_max_order) throw new Error('BNPL minimum order cannot be above the maximum');
+    // Never switch buyers to a provider whose keys are not in place: checkout would fail for everyone.
+    if (form.bnpl_provider === 'creditdirect' && settings?.bnpl_provider !== 'creditdirect' && !cd.data?.configured) {
+      throw new Error('Credit Direct cannot be switched on yet: its settings are not complete on the server. See the checklist under Active provider.');
+    }
     // The commission rate and free period are changed only by a super admin, in Commission & terms.
     const { default_commission_percent: _rate, free_period_months: _free, ...rest } = form;
     const { error } = await db.from('finance_settings').update(rest).eq('id', true);
@@ -336,14 +344,14 @@ export default function FinanceTab() {
 
         {/* ---------------- Pay later ---------------- */}
         <TabsContent value="bnpl" className="space-y-3">
-          <Panel title="Pay later (Klump) payments" flush>
+          <Panel title="Pay later payments" flush>
             {bnplLoading ? (
               <div className="space-y-2 p-4">{[1, 2, 3].map(i => <Skeleton key={i} className="h-10 w-full" />)}</div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="border-b border-border">
-                    <tr><th className={TH}>Date</th><th className={TH}>Order</th><th className={TH}>Customer</th><th className={TH}>Amount</th><th className={TH}>Klump status</th><th className={TH}>Mode</th><th className={TH}>Money received</th><th className={TH}></th></tr>
+                    <tr><th className={TH}>Date</th><th className={TH}>Order</th><th className={TH}>Customer</th><th className={TH}>Provider</th><th className={TH}>Amount</th><th className={TH}>Status</th><th className={TH}>Mode</th><th className={TH}>Money received</th><th className={TH}></th></tr>
                   </thead>
                   <tbody className="divide-y divide-border">
                     {(bnplTx ?? []).map(r => (
@@ -351,10 +359,11 @@ export default function FinanceTab() {
                         <td className={TD}>{new Date(r.created_at).toLocaleString('en-NG')}</td>
                         <td className={TD}>#{r.order_id.slice(0, 8)}</td>
                         <td className={TD}>{r.orders?.email ?? '-'}</td>
+                        <td className={TD}>{providerName(r.provider)}</td>
                         <td className={`${TD} font-semibold`}>{formatNaira(r.amount)}</td>
                         <td className={TD}><Badge variant={r.status === 'successful' ? 'default' : r.status === 'initiated' ? 'secondary' : 'outline'}>{r.status}</Badge></td>
                         <td className={TD}>{r.is_live === null ? '-' : r.is_live ? 'Live' : 'Test'}</td>
-                        <td className={TD}>{r.settled_at ? <Badge>Settled</Badge> : r.status === 'successful' ? <Badge variant="secondary">Waiting for Klump</Badge> : '-'}</td>
+                        <td className={TD}>{r.settled_at ? <Badge>Settled</Badge> : r.status === 'successful' ? <Badge variant="secondary">Waiting for {providerName(r.provider)}</Badge> : '-'}</td>
                         <td className={`${TD} text-right`}>
                           {r.status === 'successful' && !r.settled_at && (
                             <Button size="sm" variant="outline" disabled={busy === `settle-${r.order_id}`} onClick={() => markSettled(r.order_id)}>Mark settled</Button>
@@ -362,14 +371,14 @@ export default function FinanceTab() {
                         </td>
                       </tr>
                     ))}
-                    {!bnplTx?.length && <tr><td className="p-6 text-center text-sm text-muted-foreground" colSpan={8}>No Pay later payments yet.</td></tr>}
+                    {!bnplTx?.length && <tr><td className="p-6 text-center text-sm text-muted-foreground" colSpan={9}>No Pay later payments yet.</td></tr>}
                   </tbody>
                 </table>
               </div>
             )}
           </Panel>
           <p className="text-xs text-muted-foreground">
-            When Klump pays the money into your account, click "Mark settled". Suppliers are only paid after that, plus delivery and the hold period.
+            When the provider (Klump or Credit Direct) pays the money into your account, click "Mark settled". Suppliers are only paid after that, plus delivery and the hold period.
           </p>
         </TabsContent>
 
@@ -393,8 +402,14 @@ export default function FinanceTab() {
 
               <Panel title="Buy now, pay later">
                 <p className="mb-4 rounded-md bg-muted p-3 text-xs text-muted-foreground">
-                  Pay later also needs the Klump keys to be set. Suppliers choose which of their products allow it (the "Allow Pay later" switch). Klump decides each customer's approval, credit limit and instalment plan; the limits below can only be stricter.
+                  Pay later also needs the chosen provider's keys to be set. Suppliers choose which of their products allow it (the "Allow Pay later" switch). The provider decides each customer's approval, credit limit and instalment plan; the limits below can only be stricter.
                 </p>
+                <BnplProviderPicker
+                  value={activeProvider(form)}
+                  savedValue={settings ? activeProvider(settings) : undefined}
+                  onChange={v => setForm(f => f ? { ...f, bnpl_provider: v } : f)}
+                  status={cd.data} checking={cd.isFetching} onRecheck={() => void cd.refetch()}
+                />
                 <div className="mb-4 flex items-center gap-3">
                   <Switch checked={form.bnpl_enabled} onCheckedChange={v => setForm(f => f ? { ...f, bnpl_enabled: v } : f)} />
                   <Label>Offer "Pay later" at checkout</Label>

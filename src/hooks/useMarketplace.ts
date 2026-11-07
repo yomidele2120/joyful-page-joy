@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { PublicFinance } from '@/lib/payLater';
+import { activeProvider, providerBrowserReady, providerName } from '@/lib/bnplProvider';
 
 export { bnplEligibleForPrice } from '@/lib/payLater';
 export type { PublicFinance } from '@/lib/payLater';
@@ -44,11 +45,17 @@ export function useMarketplaceSettings() {
   });
 }
 
-/** Is Pay later genuinely offered right now (switched on, provider key present, section visible)? */
+/** Is Pay later genuinely offered right now (switched on, the active provider ready, section visible)? */
 export function usePayLaterAvailable() {
   const { data: finance } = usePublicFinance();
   const { data: settings } = useMarketplaceSettings();
-  return !!KLUMP_PUBLIC_KEY && !!finance?.bnpl_enabled && settings?.bnpl_section_visible !== false;
+  return providerBrowserReady(activeProvider(finance), KLUMP_PUBLIC_KEY) && !!finance?.bnpl_enabled && settings?.bnpl_section_visible !== false;
+}
+
+/** Name of the Pay later partner the admin has switched on ("Klump" or "Credit Direct"), for customer-facing text. */
+export function usePayLaterProviderName() {
+  const { data: finance } = usePublicFinance();
+  return providerName(activeProvider(finance));
 }
 
 // Places already taken on preorder products (counts only).

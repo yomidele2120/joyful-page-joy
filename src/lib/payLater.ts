@@ -2,6 +2,7 @@
 
 export interface PublicFinance {
   bnpl_enabled: boolean;
+  bnpl_provider?: 'klump' | 'creditdirect';
   bnpl_min_order: number;
   bnpl_max_order: number;
   bnpl_fee_percent: number;

@@ -19,7 +19,7 @@ export function AnimatedDots() {
 }
 
 // Full-screen "please wait" panel for the slowest part of paying later: creating the order, asking
-// Klump for the payment and loading its window. It is removed as soon as Klump's own window opens.
+// the Pay later provider and loading its window (or redirecting to it). It is removed as soon as the provider's own window opens.
 export function PaymentPreparingOverlay({ message = 'Preparing secure payment' }: { message?: string }) {
   return (
     <div

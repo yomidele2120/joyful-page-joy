@@ -10,6 +10,7 @@ import ProductCard, { ProductCardSkeleton } from '@/components/ProductCard';
 import { useProducts, useSuppliers } from '@/hooks/useProducts';
 import { getMoq } from '@/lib/pricing';
 import { bnplEligibleForPrice, useMarketplaceSettings, usePayLaterAvailable, usePublicFinance } from '@/hooks/useMarketplace';
+import { activeProvider, providerName } from '@/lib/bnplProvider';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -95,7 +96,7 @@ export default function Index() {
           : hasUploadedRows ? null : <BrandFlyerBanner className="mt-8 sm:mt-10" flyer={BRAND_FLYERS.seamlessPurple} />)}
 
         {payLaterOn && !!payLaterRow.length && (
-          <ScrollRow eyebrow="Buy now, pay later" title="Pay later with Klump" linkTo="/pay-later">
+          <ScrollRow eyebrow="Buy now, pay later" title={`Pay later with ${providerName(activeProvider(finance))}`} linkTo="/pay-later">
             {payLaterRow.map(p => <ScrollItem key={p.id}><ProductCard {...p} /></ScrollItem>)}
           </ScrollRow>
         )}

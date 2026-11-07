@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { trackInitiateCheckout, trackPurchase } from '@/lib/tracking';
+import { activeProvider, providerBrowserReady, providerName } from '@/lib/bnplProvider';
 
 // Set VITE_PAYSTACK_PUBLIC_KEY in Vercel (Settings > Environment Variables) and redeploy.
 const PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY as string | undefined;
@@ -30,7 +31,7 @@ function getKlump(): any {
 
 type PayMethod = 'card' | 'bnpl';
 interface PublicFinance {
-  bnpl_enabled: boolean; bnpl_min_order: number; bnpl_max_order: number;
+  bnpl_enabled: boolean; bnpl_provider?: 'klump' | 'creditdirect'; bnpl_min_order: number; bnpl_max_order: number;
   bnpl_fee_percent: number; bnpl_fee_bearer: 'platform' | 'supplier' | 'customer';
 }
 
@@ -87,7 +88,7 @@ export default function Checkout() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items.length]);
 
-  // Pay later is offered only when it is switched on, the Klump key is set, every item in the
+  // Pay later is offered only when it is switched on, the active provider is ready, every item in the
   // cart was marked "Pay later" by its supplier, and the total is inside the admin's limits.
   // (The database re-checks all of this when the order is created.)
   const { data: finance } = useQuery({
@@ -101,13 +102,23 @@ export default function Checkout() {
   });
   // Wake the payment functions up while the buyer fills in the form. Cloud functions that have been idle
   // take a few seconds to start; doing it now means the pay button responds straight away.
+  const provider = activeProvider(finance);
+  const providerLabel = providerName(provider);
   const warmedUp = useRef(false);
   useEffect(() => {
-    if (!user || warmedUp.current || !items.length) return;
+    if (!user || !finance || warmedUp.current || !items.length) return;
     warmedUp.current = true;
     void supabase.functions.invoke('initialize-payment', { body: { warmup: true } }).catch(() => {});
-    void supabase.functions.invoke('klump-initialize', { body: { warmup: true } }).catch(() => {});
-  }, [user, items.length]);
+    void supabase.functions.invoke(provider === 'creditdirect' ? 'creditdirect-initialize' : 'klump-initialize', { body: { warmup: true } }).catch(() => {});
+  }, [user, finance, provider, items.length]);
+
+  // Coming back with the browser's Back button from Credit Direct's page restores this page as it was left
+  // (still "preparing"). Reset it so the buyer can choose again.
+  useEffect(() => {
+    const onShow = (e: PageTransitionEvent) => { if (e.persisted) { setOverlay(null); setLoading(false); } };
+    window.addEventListener('pageshow', onShow);
+    return () => window.removeEventListener('pageshow', onShow);
+  }, []);
 
   const itemIds = items.map(i => i.id);
   const { data: eligibility } = useQuery({
@@ -131,7 +142,7 @@ export default function Checkout() {
   const allEligible = !!eligibility && eligibility.length === itemIds.length && eligibility.every(p => p.bnpl_eligible);
   const hasPreorder = items.some(i => i.is_preorder);
   const mixedCart = hasPreorder && items.some(i => !i.is_preorder);
-  const bnplAvailable = !hasPreorder && marketplace?.bnpl_section_visible !== false && !!KLUMP_PUBLIC_KEY && !!finance?.bnpl_enabled && allEligible
+  const bnplAvailable = !hasPreorder && marketplace?.bnpl_section_visible !== false && providerBrowserReady(provider, KLUMP_PUBLIC_KEY) && !!finance?.bnpl_enabled && allEligible
     && bnplBase >= Number(finance.bnpl_min_order) && bnplBase <= Number(finance.bnpl_max_order);
   const usingBnpl = method === 'bnpl' && bnplAvailable;
   const grandTotal = usingBnpl ? bnplTotal : cardTotal;
@@ -186,6 +197,24 @@ export default function Checkout() {
       });
       if (orderError) throw orderError;
       const order = created as { order_id: string; total: number };
+
+      // Credit Direct: the server opens a hosted checkout and we send the buyer there. They come back to
+      // /pay-later/return, which asks Credit Direct whether the order was really paid.
+      if (provider === 'creditdirect') {
+        const { data: cd, error: cdError } = await supabase.functions.invoke('creditdirect-initialize', {
+          body: { order_id: order.order_id, customer_name: formData.name, phone: formData.phone },
+        });
+        if (cdError || cd?.error) throw new Error(await functionErrorMessage(cdError, cd));
+        if (!cd?.checkout_url) throw new Error('Credit Direct did not return a checkout link. Please try again or pay by card.');
+        try {
+          window.sessionStorage.setItem('pay-later-return', JSON.stringify({
+            orderId: order.order_id, total: Number(order.total),
+            items: items.map(i => ({ id: i.id, quantity: i.quantity, unitPrice: unitPrice(i) })),
+          }));
+        } catch { /* storage unavailable: the return page still verifies by order id */ }
+        window.location.assign(cd.checkout_url);
+        return;   // leave the "preparing" screen up while the browser navigates away
+      }
 
       // 2. The server prepares the exact Klump payload (amount and items come from the database).
       const { data: init, error: initError } = await supabase.functions.invoke('klump-initialize', {
@@ -363,9 +392,9 @@ export default function Checkout() {
               <label className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 ${method === 'bnpl' ? 'border-primary bg-primary/5' : 'border-border'}`}>
                 <input type="radio" name="pay-method" className="mt-1" checked={method === 'bnpl'} onChange={() => setMethod('bnpl')} />
                 <span>
-                  <span className="font-medium">Buy now, pay later with Klump</span><br />
+                  <span className="font-medium">Buy now, pay later with {providerLabel}</span><br />
                   <span className="text-sm text-muted-foreground">
-                    Spread the cost in instalments. Klump checks your eligibility and shows your plan before you confirm.
+                    Spread the cost in instalments. {providerLabel} checks your eligibility and shows your plan before you confirm.
                     {bnplCustomerFee > 0 && ` A pay-later fee of ${formatNaira(bnplCustomerFee)} applies.`}
                   </span>
                 </span>
@@ -428,8 +457,8 @@ export default function Checkout() {
               <div>
                 <p className="font-heading font-semibold">About Pay later</p>
                 <p className="mt-1 text-muted-foreground">
-                  Pay later is provided by Klump, not by us. Klump decides whether you are approved and shows your instalment plan before you confirm.
-                  By accepting a plan you agree to repay it under Klump's terms. Read the{' '}
+                  Pay later is provided by {providerLabel}, not by us. {providerLabel} decides whether you are approved and shows your instalment plan before you confirm.
+                  By accepting a plan you agree to repay it under {providerLabel}'s terms. Read the{' '}
                   <Link to="/bnpl-terms" target="_blank" className="text-primary hover:underline">BNPL Terms</Link>.
                 </p>
               </div>

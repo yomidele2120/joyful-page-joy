@@ -1,8 +1,12 @@
-# Pay later (Klump): setup
+# Pay later (Klump or Credit Direct): setup
+
+Two partners are supported and the admin chooses one under **Admin > Finance > Settings > Active provider**.
+This file covers **Klump**. For **Credit Direct** (needs their merchant documentation first) see `CREDITDIRECT_SETUP.md`.
+Run `supabase/migrations/20261106090000_bnpl_providers.sql` once to enable the switch (existing Klump setups keep working unchanged).
 
 Pay later is shown at checkout only when ALL of these are true:
 1. "Offer Pay later at checkout" is ON (Admin > Finance > Settings).
-2. `VITE_KLUMP_PUBLIC_KEY` is set on Vercel.
+2. The active provider is ready (for Klump: `VITE_KLUMP_PUBLIC_KEY` is set on Vercel; for Credit Direct: its secrets are set on Supabase).
 3. EVERY item in the cart has "Allow Pay later" switched on (suppliers tick it when adding a product, or flip it in their Products list; admins can do the same).
 4. The cart total (with VAT) is between your minimum and maximum Pay later amounts.
 

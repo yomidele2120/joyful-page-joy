@@ -4,6 +4,7 @@ import { BUSINESS } from '@/config/business';
 import { Button } from '@/components/ui/button';
 import { useConsent } from '@/contexts/ConsentContext';
 import { useMarketplaceSettings, usePublicFinance } from '@/hooks/useMarketplace';
+import { activeProvider, providerName } from '@/lib/bnplProvider';
 import { formatNaira } from '@/lib/format';
 
 const B = BUSINESS;
@@ -39,7 +40,7 @@ export function PrivacyPolicy() {
         <Bullets items={[
           <><strong className="text-foreground">Account details:</strong> name, email address, phone number, delivery address, city and state, and a password (handled by our sign-in provider; we never see it in plain text).</>,
           <><strong className="text-foreground">Seller details:</strong> business name, contact names, WhatsApp number, business address, product categories, logo, a verification document and bank account details used to pay you.</>,
-          <><strong className="text-foreground">Orders and payments:</strong> what you ordered, amounts, delivery details and payment status and references. Card or bank details are entered on our payment partners' secure screens (Paystack, or Klump for Pay later) and are not stored by us.</>,
+          <><strong className="text-foreground">Orders and payments:</strong> what you ordered, amounts, delivery details and payment status and references. Card or bank details are entered on our payment partners' secure screens (Paystack, or Klump or Credit Direct for Pay later) and are not stored by us.</>,
           <><strong className="text-foreground">Messages and content:</strong> chat messages, photos, videos and voice notes, inquiries, requests for quotation, quotes, support requests, disputes and anything you post.</>,
           <><strong className="text-foreground">Technical data:</strong> device, browser and IP address recorded by our hosting and service providers, and cookies or similar storage described in our <Link to="/cookie-policy" className="text-primary hover:underline">Cookie Policy</Link>.</>,
         ]} />
@@ -57,7 +58,7 @@ export function PrivacyPolicy() {
       <Section title="4. Who we share it with">
         <Bullets items={[
           <><strong className="text-foreground">Sellers</strong> receive what they need to fulfil your order (name, phone, delivery address, items). Buyers see a seller's store details.</>,
-          <><strong className="text-foreground">Payment providers:</strong> Paystack for payments and seller payouts, and Klump for Pay later.</>,
+          <><strong className="text-foreground">Payment providers:</strong> Paystack for payments and seller payouts, and Klump or Credit Direct for Pay later (whichever is offered at checkout).</>,
           <><strong className="text-foreground">Infrastructure providers</strong> that host the site and store data (for example Supabase for the database, sign-in and file storage, and Vercel for hosting) and Cloudflare Stream for video delivery.</>,
           'Regulators, courts or law enforcement when the law requires it.',
           'A buyer of the business, if it is ever sold, under the same protections.',
@@ -121,7 +122,7 @@ export function TermsAndConditions() {
         ]} />
       </Section>
       <Section title="5. Payment">
-        <p>Payments are processed by Paystack. Where offered, you can pay later through Klump, which is a separate service with its own approval and its own terms (see the <Link to="/bnpl-terms" className="text-primary hover:underline">BNPL Terms</Link>). Only payments made through our checkout are covered by our dispute process, so do not pay a seller outside the platform.</p>
+        <p>Payments are processed by Paystack. Where offered, you can pay later through Klump or Credit Direct (whichever is offered at checkout), which is a separate service with its own approval and its own terms (see the <Link to="/bnpl-terms" className="text-primary hover:underline">BNPL Terms</Link>). Only payments made through our checkout are covered by our dispute process, so do not pay a seller outside the platform.</p>
       </Section>
       <Section title="6. Delivery, returns and cancellations">
         <p>See the <Link to="/shipping-policy" className="text-primary hover:underline">Shipping and Delivery Policy</Link>, the <Link to="/returns-policy" className="text-primary hover:underline">Return, Refund and Cancellation Policy</Link> and, for goods not yet available, the <Link to="/preorder-policy" className="text-primary hover:underline">Preorder Policy</Link>.</p>
@@ -143,7 +144,7 @@ export function TermsAndConditions() {
         <p>The {B.brand} name, logo, design and software belong to us or our licensors. These terms do not give you any rights to them.</p>
       </Section>
       <Section title="10. Third-party services">
-        <p>The marketplace relies on services such as Paystack, Klump and Cloudflare Stream. They are run by other companies under their own terms, and we are not responsible for their services.</p>
+        <p>The marketplace relies on services such as Paystack, Klump, Credit Direct and Cloudflare Stream. They are run by other companies under their own terms, and we are not responsible for their services.</p>
       </Section>
       <Section title="11. Availability and changes">
         <p>We work to keep the site available but cannot promise it will always be uninterrupted or error free. We may change or stop features. We may update these terms; the date above shows the latest version, and continuing to use the site means you accept the update.</p>
@@ -169,7 +170,7 @@ export function CookiePolicy() {
     ['Inquiry basket', 'Remembers products you added to your inquiry basket on this device.', 'Until you clear it'],
     ['Theme', 'Remembers your light or dark choice.', 'Until you change it'],
     ['Your cookie choice', 'Remembers what you chose in the cookie banner.', 'Until you change it or the policy changes'],
-    ['Payment services', 'Paystack and Klump load scripts so you can pay. Klump keeps a short-lived setting in your browser during Pay later checkout.', 'During checkout'],
+    ['Payment services', 'Paystack and Klump load scripts so you can pay. Klump keeps a short-lived setting in your browser during Pay later checkout. If Credit Direct is offered instead, you are sent to its own page to apply.', 'During checkout'],
     ['Video', 'Cloudflare Stream plays videos on the Watch page.', 'While watching'],
     ['Fonts', 'Text fonts are loaded from Google Fonts.', 'Per browser cache rules'],
     ['Saved shop data and offline copy', 'Speeds up repeat visits by keeping public shop data (products, categories, flyers) and the site\'s own files on your device, and lets the site show an offline page. It holds nothing about you.', 'Up to 24 hours for shop data; site files until replaced'],
@@ -281,10 +282,10 @@ export function ReturnsPolicy() {
       </Section>
       <Section title="3. Refunds">
         <Bullets items={[
-          'Approved refunds go back to the way you paid: to your card or bank through Paystack, or through Klump for Pay later orders.',
+          'Approved refunds go back to the way you paid: to your card or bank through Paystack, or through the Pay later provider (Klump or Credit Direct) for Pay later orders.',
           <>Refunds normally take about <Fill value={B.refundProcessingDays} label="number of working days" /> working days after approval; your bank may need longer.</>,
           'Delivery charges you paid to a seller outside our checkout are not refunded by us.',
-          'For Pay later orders, how any instalments already paid are returned follows Klump\'s process. See the BNPL Terms.',
+          'For Pay later orders, how any instalments already paid are returned follows the Pay later provider\'s process. See the BNPL Terms.',
         ]} />
       </Section>
       <Section title="4. Asking for a refund">
@@ -366,19 +367,21 @@ export function SellerAgreement() {
 export function BnplTerms() {
   const { data: finance } = usePublicFinance();
   const bearer = finance?.bnpl_fee_bearer;
+  const P = providerName(activeProvider(finance));
+  const redirects = activeProvider(finance) === 'creditdirect';
   return (
     <LegalPage
       title="BNPL Terms and Conditions"
       related={['/returns-policy', '/terms', '/dispute-resolution']}
-      intro={<><p>Pay later ("buy now, pay later") lets you split the cost of an eligible order into instalments. It is provided by <strong className="text-foreground">Klump</strong>, a separate company. {B.brand} is not the lender.</p>{draftNotice}</>}
+      intro={<><p>Pay later ("buy now, pay later") lets you split the cost of an eligible order into instalments. It is provided by <strong className="text-foreground">{P}</strong>, a separate company. {B.brand} is not the lender.</p>{draftNotice}</>}
     >
       <Section title="1. Who provides it">
-        <p>Your application, approval, instalment plan and repayments are between you and Klump and are governed by Klump's terms. {B.brand} passes your order details to Klump so it can process the payment, and receives confirmation of the result.</p>
+        <p>Your application, approval, instalment plan and repayments are between you and {P} and are governed by {P}'s terms. {B.brand} passes your order details to {P} so it can process the payment, and receives confirmation of the result.</p>
       </Section>
       <Section title="2. Who can use it">
         <Bullets items={[
           'You must be signed in and have a complete delivery address and phone number.',
-          'Klump decides whether to approve you. Being shown the option is not a promise of approval.',
+          `${P} decides whether to approve you. Being shown the option is not a promise of approval.`,
           'Pay later is only offered when every item in your cart was marked as eligible by its seller.',
           finance
             ? <>The order total (with VAT) must be between {formatNaira(Number(finance.bnpl_min_order))} and {formatNaira(Number(finance.bnpl_max_order))}.</>
@@ -392,24 +395,26 @@ export function BnplTerms() {
           {finance && Number(finance.bnpl_fee_percent) > 0
             ? <>A Pay later fee of {Number(finance.bnpl_fee_percent)}% of the order total applies. {bearer === 'customer' ? 'It is added to your total and shown before you confirm.' : bearer === 'supplier' ? 'It is covered by the seller and is not added to your total.' : 'It is covered by the marketplace and is not added to your total.'}</>
             : 'Any fee that applies to you is shown at checkout before you confirm.'}
-          {' '}The number of instalments, their dates, amounts and any charges for late payment are set by Klump and shown to you when you apply.
+          {' '}The number of instalments, their dates, amounts and any charges for late payment are set by {P} and shown to you when you apply.
         </p>
       </Section>
       <Section title="4. How checkout works">
         <Bullets items={[
-          'Choose "Buy now, pay later with Klump" at checkout and review the order, VAT and any fee.',
-          'We create your order and prepare the payment. Klump opens its own window where you apply, see your plan and confirm.',
-          'We mark the order as paid only after our system has checked the result directly with Klump and the amount matches. You are told by notification.',
+          `Choose "Buy now, pay later with ${P}" at checkout and review the order, VAT and any fee.`,
+          redirects
+            ? `We create your order and prepare the payment. You are taken to ${P}'s own page where you apply, see your plan and confirm, and then you return to our site.`
+            : `We create your order and prepare the payment. ${P} opens its own window where you apply, see your plan and confirm.`,
+          `We mark the order as paid only after our system has checked the result directly with ${P} and the amount matches. You are told by notification.`,
         ]} />
       </Section>
       <Section title="5. Your payment obligations">
-        <p>By accepting a Klump plan you agree to repay it as Klump's terms require. Missed or late payments can have consequences set out by Klump. Read the plan before you confirm and keep your payments up to date.</p>
+        <p>By accepting a {P} plan you agree to repay it as {P}'s terms require. Missed or late payments can have consequences set out by {P}. Read the plan before you confirm and keep your payments up to date.</p>
       </Section>
       <Section title="6. Failed, cancelled or refunded payments">
         <Bullets items={[
           'If the application is declined, abandoned or the payment fails, the order is not confirmed and you can try again or pay by card.',
-          <>To cancel or return a Pay later order, use <Link to="/my-orders" className="text-primary hover:underline">My orders</Link>. Refunds on Pay later orders are handled together with Klump, and how instalments already paid are returned depends on Klump's process.</>,
-          'Questions about your plan or repayments go to Klump.',
+          <>To cancel or return a Pay later order, use <Link to="/my-orders" className="text-primary hover:underline">My orders</Link>. Refunds on Pay later orders are handled together with {P}, and how instalments already paid are returned depends on {P}'s process.</>,
+          `Questions about your plan or repayments go to ${P}.`,
         ]} />
       </Section>
       <Section title="7. Changes">

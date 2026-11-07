@@ -1185,7 +1185,7 @@ function AddProductForm({ categories, onSuccess }: { categories: any[]; onSucces
         <Switch id="admin-bnpl-eligible" checked={form.bnpl_eligible} onCheckedChange={v => setForm(p => ({ ...p, bnpl_eligible: v }))} />
         <div>
           <Label htmlFor="admin-bnpl-eligible" className="font-medium">Allow Pay later (buy now, pay later)</Label>
-          <p className="text-xs text-muted-foreground">Buyers can pay in instalments through Klump. Best for higher-priced items such as laptops and phones.</p>
+          <p className="text-xs text-muted-foreground">Buyers can pay in instalments through the active Pay later provider. Best for higher-priced items such as laptops and phones.</p>
         </div>
       </div>
       <div><Label>Description</Label><Textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} /></div>

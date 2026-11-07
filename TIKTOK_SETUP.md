@@ -25,22 +25,17 @@ video grid. Buyers watch them with TikTok's own player (loaded only when tapped)
 
 ## Setup, in this order
 1. **TikTok developer app** (developers.tiktok.com > Manage apps > Connect an app). Add the products **Login Kit** and **Display API**.
-   In the Sandbox tab, enable Login Kit for the **Web** platform and save the redirect URI under Web (not Desktop).
    - Redirect URI (must match exactly, https): `https://techubafrica-nu.vercel.app/tiktok/callback` (also add your real domain if you use one).
    - Scopes: `user.info.basic` and `video.list`.
-   - Add the seller's TikTok account under **Target users** while the app is in Sandbox.
    - Submit the app for review (TikTok asks for app details, a privacy policy and terms URL, and a short demo video of the flow). Your site already has
      `/privacy-policy` and `/terms`. Until it is approved, TikTok normally lets only accounts you add as test users connect. Check the portal for the current rules.
 2. **Run the migrations** (already done if you did the step above).
 3. **Secrets**, then deploy:
    ```
-   npx supabase@latest login
-   npx supabase@latest secrets set --project-ref <ref> TIKTOK_CLIENT_KEY=<sandbox-client-key> TIKTOK_CLIENT_SECRET=<sandbox-client-secret> TIKTOK_REDIRECT_URI=https://techubafrica-nu.vercel.app/tiktok/callback TIKTOK_CRON_SECRET=<a-long-random-string>
-   npx supabase@latest functions deploy tiktok --project-ref <ref>
+   supabase secrets set TIKTOK_CLIENT_KEY=... TIKTOK_CLIENT_SECRET=... TIKTOK_REDIRECT_URI=https://techubafrica-nu.vercel.app/tiktok/callback TIKTOK_CRON_SECRET=<a long random string>
+   supabase functions deploy tiktok
    ```
-   Replace the placeholders locally; never paste the client secret into logs or source control. `TIKTOK_REDIRECT_URI` must be identical to the Web redirect URI in the TikTok portal, with no trailing slash. For permanent covers also set the three `CLOUDINARY_*` secrets on this function (see CLOUDINARY_SETUP.md).
-   `TIKTOK_SCOPES` defaults to `user.info.basic,video.list`. It is parsed as a comma-separated list: whitespace around entries is trimmed, empty entries are dropped, duplicates are removed, and unsupported scopes are rejected. Keep `user.info.basic` in the list.
-   `TIKTOK_REQUIRE_VIDEO_LIST` defaults to `true`. For an opt-in Sandbox connection test before `video.list` is enabled, set `TIKTOK_SCOPES=user.info.basic` and `TIKTOK_REQUIRE_VIDEO_LIST=false`. A connection can then complete, but video selection remains unavailable until `video.list` is added and the seller reconnects. Restore both the default scopes and `TIKTOK_REQUIRE_VIDEO_LIST=true` for normal operation.
+   `TIKTOK_REDIRECT_URI` must be identical to the one in the TikTok portal. For permanent covers also set the three `CLOUDINARY_*` secrets on this function (see CLOUDINARY_SETUP.md).
 4. **Deploy the website** (`vercel --prod`) if you have not since the code update.
 5. **Switch it on** in the admin dashboard (see above).
 6. **Scheduled refresh (optional but recommended).** TikTok access tokens last 24 hours and are renewed automatically when used; this job also adds new videos for sellers in automatic mode, updates titles/covers and removes

@@ -1,7 +1,7 @@
 // Sends a refund to the buyer through Paystack. Admin only.
 //   { refund_id: string }
 // The amount, the order and the payment all come from the database, never from the browser.
-// Refunds for Klump pay-later orders cannot be sent from here: refund them in the Klump
+// Refunds for pay-later orders (Klump or Credit Direct) cannot be sent from here: refund them in the provider's
 // dashboard, then use "Mark refunded" in Admin > Disputes & refunds.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -47,9 +47,9 @@ serve(async (req) => {
       .eq('order_id', order.id).eq('status', 'success')
       .order('created_at', { ascending: false }).limit(1).maybeSingle();
     if (!payment) return reply({ error: 'No successful payment found for this order.' }, 404);
-    if (payment.payment_method === 'klump_bnpl' || !payment.paystack_reference) {
+    if (String(payment.payment_method ?? '').endsWith('_bnpl') || !payment.paystack_reference) {
       return reply({
-        error: 'This order was paid with Klump pay later. Refund it in the Klump dashboard, then press "Mark refunded".',
+        error: 'This order was paid with Pay later (Klump or Credit Direct). Refund it in that provider\'s dashboard, then press "Mark refunded".',
         code: 'manual_refund',
       }, 400);
     }

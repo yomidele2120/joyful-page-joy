@@ -127,7 +127,7 @@ export default function OrderOpsTab() {
                     <p className="mt-1 flex items-center gap-1 text-destructive"><AlertTriangle className="h-3.5 w-3.5" />{r.failure_reason}</p>
                   )}
                   {bnpl && (
-                    <p className="mt-1 text-xs text-muted-foreground">Paid with Klump pay later: refund it in the Klump dashboard, then press "Mark refunded".</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Paid with Pay later: refund it in your Pay later provider's dashboard (Klump or Credit Direct), then press "Mark refunded".</p>
                   )}
                   <div className="mt-3 flex flex-wrap gap-2">
                     {!bnpl && (r.status === 'to_process' || r.status === 'failed') && (

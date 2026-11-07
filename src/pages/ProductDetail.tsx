@@ -11,6 +11,7 @@ import { useProduct, useProducts } from '@/hooks/useProducts';
 import { useCart } from '@/contexts/CartContext';
 import { PayLaterBadge, PreorderBadge } from '@/components/ProductBadges';
 import { formatLongDate, useMarketplaceSettings, usePreorderTaken } from '@/hooks/useMarketplace';
+import { activeProvider, providerBrowserReady, providerName } from '@/lib/bnplProvider';
 import { useInquiryBasket } from '@/contexts/InquiryBasketContext';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -145,8 +146,8 @@ export default function ProductDetail() {
     navigate('/checkout');
   };
 
-  // Pay later: shown for products the supplier marked eligible, when it is switched on and Klump is set up.
-  const payLaterOffered = !isPreorder && !!product.bnpl_eligible && !!finance?.bnpl_enabled && !!KLUMP_PUBLIC_KEY && marketplace?.bnpl_section_visible !== false;
+  // Pay later: shown for products the supplier marked eligible, when it is switched on and the active provider is ready.
+  const payLaterOffered = !isPreorder && !!product.bnpl_eligible && !!finance?.bnpl_enabled && providerBrowserReady(activeProvider(finance), KLUMP_PUBLIC_KEY) && marketplace?.bnpl_section_visible !== false;
   const payLaterTotal = Math.round(unitNow * quantity * 1.075); // includes 7.5% VAT, same as checkout
   const payLaterFits = !!finance && payLaterTotal >= Number(finance.bnpl_min_order) && payLaterTotal <= Number(finance.bnpl_max_order);
 
@@ -353,11 +354,11 @@ export default function ProductDetail() {
             {payLaterOffered && (
               <div className="mt-2">
                 <Button size="lg" variant="secondary" className="h-12 w-full font-semibold" disabled={!canBuy || !payLaterFits} onClick={handlePayLater}>
-                  <Wallet className="mr-2 h-4 w-4" /> Buy now, pay later with Klump
+                  <Wallet className="mr-2 h-4 w-4" /> Buy now, pay later with {providerName(activeProvider(finance))}
                 </Button>
                 <p className="mt-1.5 text-xs text-muted-foreground">
                   {payLaterFits
-                    ? 'Spread the cost in instalments. Klump checks your eligibility and shows your plan before you confirm.'
+                    ? `Spread the cost in instalments. ${providerName(activeProvider(finance))} checks your eligibility and shows your plan before you confirm.`
                     : `Pay later is available for orders from ${formatNaira(Number(finance?.bnpl_min_order ?? 0))} to ${formatNaira(Number(finance?.bnpl_max_order ?? 0))}.`}
                 </p>
               </div>

@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2, Users } from 'lucide-react';
 import VideoPost from './VideoPost';
 import CommentsSheet from './CommentsSheet';
 import SearchResultsGrid from './SearchResultsGrid';
 import { usePostsFeed, useFollowingFeed, useUserLikedPosts, type FeedPost } from '@/hooks/usePosts';
-import { shuffleItems } from '@/lib/feed';
 
 // How many posts on either side of the active one stay mounted. Everything
 // outside this window is unmounted so we never keep more than a handful of
@@ -58,7 +57,6 @@ export default function VideoFeed({ hashtag, search, postId, following }: VideoF
             : "Vendors haven't posted any videos. Check back soon."
       }
       emptyIcon={following ? <Users className="w-8 h-8" /> : undefined}
-      shuffle={!postId}
     />
   );
 }
@@ -72,7 +70,6 @@ interface SwipeFeedProps {
   resetKey: string;
   emptyMessage: string;
   emptyIcon?: React.ReactNode;
-  shuffle: boolean;
 }
 
 // The original immersive, full-screen, vertically-swipeable video feed —
@@ -88,34 +85,11 @@ function SwipeFeed({
   resetKey,
   emptyMessage,
   emptyIcon,
-  shuffle,
 }: SwipeFeedProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
-  const [autoplayEnabled, setAutoplayEnabled] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const orderedFeedRef = useRef<{ resetKey: string; posts: FeedPost[] }>({ resetKey, posts: [] });
-  const [orderedFeed, setOrderedFeed] = useState(orderedFeedRef.current);
-  const orderedPosts = useMemo(
-    () => (orderedFeed.resetKey === resetKey ? orderedFeed.posts : []),
-    [orderedFeed, resetKey]
-  );
-
-  useEffect(() => {
-    const previous = orderedFeedRef.current.resetKey === resetKey ? orderedFeedRef.current.posts : [];
-    const existingIds = new Set(previous.map((post) => post.id));
-    const additions = posts.filter((post) => !existingIds.has(post.id));
-    const next = [
-      ...previous,
-      ...(shuffle ? shuffleItems(additions) : additions),
-    ];
-    const updated = { resetKey, posts: next };
-    orderedFeedRef.current = updated;
-    setOrderedFeed(updated);
-  }, [posts, resetKey, shuffle]);
-
-  const handleUserPlayback = useCallback(() => setAutoplayEnabled(true), []);
 
   // Jump back to the top whenever the filter changes (switching between
   // "For You", a hashtag, "Following", or a deep-linked post) so
@@ -125,7 +99,7 @@ function SwipeFeed({
     containerRef.current?.scrollTo({ top: 0 });
   }, [resetKey]);
 
-  const likedIds = useMemo(() => orderedPosts.map((p) => p.id), [orderedPosts]);
+  const likedIds = useMemo(() => posts.map((p) => p.id), [posts]);
   const { data: likedSet } = useUserLikedPosts(likedIds);
 
   // Track which post is on screen via IntersectionObserver — cheaper and
@@ -148,16 +122,16 @@ function SwipeFeed({
 
     itemRefs.current.forEach((el) => el && observer.observe(el));
     return () => observer.disconnect();
-  }, [orderedPosts.length]);
+  }, [posts.length]);
 
   // Load the next page a couple of posts before the user reaches the end.
   useEffect(() => {
-    if (activeIndex >= orderedPosts.length - 2 && hasNextPage && !isFetchingNextPage) {
+    if (activeIndex >= posts.length - 2 && hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
-  }, [activeIndex, orderedPosts.length, hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [activeIndex, posts.length, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  if (isLoading || (posts.length > 0 && orderedPosts.length === 0)) {
+  if (isLoading) {
     return (
       <div className="h-full w-full flex items-center justify-center bg-black">
         <Loader2 className="w-8 h-8 text-white animate-spin" />
@@ -165,7 +139,7 @@ function SwipeFeed({
     );
   }
 
-  if (!orderedPosts.length) {
+  if (!posts.length) {
     return (
       <div className="h-full w-full flex flex-col items-center justify-center bg-black text-white gap-2 px-6 text-center">
         {emptyIcon && <div className="text-white/60 mb-1">{emptyIcon}</div>}
@@ -180,7 +154,7 @@ function SwipeFeed({
         ref={containerRef}
         className="h-full w-full overflow-y-scroll snap-y snap-mandatory scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
-        {orderedPosts.map((post: FeedPost, index) => {
+        {posts.map((post: FeedPost, index) => {
           const withinWindow = Math.abs(index - activeIndex) <= RENDER_WINDOW;
           return (
             <div
@@ -195,8 +169,6 @@ function SwipeFeed({
                   isActive={index === activeIndex}
                   isLiked={likedSet?.has(post.id) ?? false}
                   onOpenComments={setCommentsPostId}
-                  autoplayEnabled={autoplayEnabled}
-                  onUserPlayback={handleUserPlayback}
                 />
               ) : (
                 // Placeholder keeps scroll height correct without mounting a <video>

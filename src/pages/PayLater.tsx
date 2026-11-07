@@ -7,14 +7,17 @@ import { Button } from '@/components/ui/button';
 import { useProducts } from '@/hooks/useProducts';
 import { bnplEligibleForPrice, usePayLaterAvailable, usePublicFinance } from '@/hooks/useMarketplace';
 import { formatNaira } from '@/lib/format';
+import { activeProvider, providerName } from '@/lib/bnplProvider';
 
 const PAGE = 24;
 
-const STEPS = [
+const stepsFor = (name: string, redirects: boolean) => [
   { title: 'Pick an eligible product', text: 'Look for the "Pay later" label. Only products the seller allowed, within the limits below, are shown here.' },
-  { title: 'Choose Pay later at checkout', text: 'Add it to your cart, enter your delivery details and choose "Buy now, pay later with Klump".' },
-  { title: 'Klump reviews you', text: 'Klump opens its own window. It decides whether you are approved and shows your instalment plan before you confirm.' },
-  { title: 'We confirm your order', text: 'After Klump confirms, our system checks the result with Klump directly. Your order is marked paid and you get a notification.' },
+  { title: 'Choose Pay later at checkout', text: `Add it to your cart, enter your delivery details and choose "Buy now, pay later with ${name}".` },
+  { title: `${name} reviews you`, text: redirects
+    ? `You are taken to ${name}'s own page. It decides whether you are approved and shows your instalment plan before you confirm, then brings you back here.`
+    : `${name} opens its own window. It decides whether you are approved and shows your instalment plan before you confirm.` },
+  { title: 'We confirm your order', text: `After ${name} confirms, our system checks the result with ${name} directly. Your order is marked paid and you get a notification.` },
 ];
 
 export default function PayLater() {
@@ -30,6 +33,8 @@ export default function PayLater() {
   );
 
   const fee = finance ? Number(finance.bnpl_fee_percent) : 0;
+  const P = providerName(activeProvider(finance));
+  const STEPS = stepsFor(P, activeProvider(finance) === 'creditdirect');
 
   return (
     <Layout>
@@ -38,7 +43,7 @@ export default function PayLater() {
           <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase text-primary"><Wallet className="h-4 w-4" /> Buy now, pay later</p>
           <h1 className="mt-2 font-heading text-3xl font-bold sm:text-4xl">Spread the cost of eligible orders</h1>
           <p className="mt-3 max-w-2xl text-muted-foreground">
-            Pay later is provided by Klump, not by us. Klump decides whether you are approved and shows your instalment plan before you confirm.
+            Pay later is provided by {P}, not by us. {P} decides whether you are approved and shows your instalment plan before you confirm.
             Being shown the option does not guarantee approval.
           </p>
         </div>
@@ -70,7 +75,7 @@ export default function PayLater() {
             finance
               ? `The order total, including 7.5% VAT, is between ${formatNaira(Number(finance.bnpl_min_order))} and ${formatNaira(Number(finance.bnpl_max_order))}.`
               : 'The order total, including VAT, is within the limits shown at checkout.',
-            'Klump approves your application. Preorders cannot be paid for with Pay later.',
+            `${P} approves your application. Preorders cannot be paid for with Pay later.`,
           ].map(text => (
             <li key={text} className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> <span>{text}</span></li>
           ))}
@@ -81,7 +86,7 @@ export default function PayLater() {
           {finance && fee > 0
             ? <>A Pay later fee of {fee}% of the order total applies. {finance.bnpl_fee_bearer === 'customer' ? 'It is added to your total and shown before you confirm.' : 'You do not pay it: it is covered by the seller or the marketplace.'} </>
             : <>Any fee that applies to you is shown at checkout before you confirm. </>}
-          The number of instalments, their dates and amounts, and any late-payment charges are set by Klump and shown to you when you apply.
+          The number of instalments, their dates and amounts, and any late-payment charges are set by {P} and shown to you when you apply.
           You can follow the status of your order under <Link to="/my-orders" className="text-primary hover:underline">My orders</Link>.
           Read the full <Link to="/bnpl-terms" className="text-primary hover:underline">BNPL Terms and Conditions</Link>.
         </p>

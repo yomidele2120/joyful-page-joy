@@ -1,23 +1,6 @@
 // supabase.functions.invoke() reports any 4xx/5xx as the generic
 // "Edge Function returned a non-2xx status code". The real reason is in the
 // response body, so pull it out to show (and debug) the actual error.
-export function mapTikTokOAuthError(errorCode: string, description = ''): string {
-  if (errorCode === 'access_denied') return 'TikTok access was declined. You can start again from Dashboard > Videos.';
-  if (errorCode === 'server_error') {
-    return 'Check that every requested scope is added to your TikTok app (Sandbox) and that TIKTOK_SCOPES matches.';
-  }
-  if (errorCode === 'invalid_scope') {
-    return 'TikTok rejected a requested scope. Add every requested scope to your TikTok app (Sandbox) and check TIKTOK_SCOPES.';
-  }
-  if (errorCode === 'non_sandbox_target') {
-    return 'This TikTok account is not a Sandbox target user. Add it under Target users in the TikTok Sandbox, then try again.';
-  }
-  if (/redirect[_\s-]?uri|redirect url/i.test(`${errorCode} ${description}`)) {
-    return 'The redirect URI must exactly match the Web redirect URI saved in your TikTok app and TIKTOK_REDIRECT_URI.';
-  }
-  return `TikTok could not connect (${errorCode}). Check the Sandbox app settings and try again.`;
-}
-
 export async function functionErrorMessage(error: unknown, data?: any): Promise<string> {
   if (data?.error) return String(data.error);
   const e = error as any;
