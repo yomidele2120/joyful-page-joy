@@ -24,16 +24,34 @@ export default function PostMedia(props: PostMediaProps) {
 
 /* --------------------------------- TikTok --------------------------------- */
 
+// TikTok's embed refuses to load ("overload protect triggered") when one browser asks for many players in a short
+// time. So players are loaded one at a time with a short gap between them, never in the background.
+const TIKTOK_GAP_MS = 2500;
+let lastTikTokLoadAt = 0;
+
 // A vendor's own TikTok video. It shows the cover with a play button and loads TikTok's official player only when
 // tapped, so scrolling the feed never loads a page of iframes. Leaving the post unloads the player again.
 function TikTokSurface({ post, isActive, onFirstPlay }: PostMediaProps) {
   const [playing, setPlaying] = useState(false);
+  const [waiting, setWaiting] = useState(false);
+  const timer = useRef<number | null>(null);
   const id = tiktokVideoId(post.tiktok_embed_url);
 
-  useEffect(() => { if (!isActive) setPlaying(false); }, [isActive]);
+  const cancel = () => { if (timer.current !== null) { window.clearTimeout(timer.current); timer.current = null; } setWaiting(false); };
+  useEffect(() => { if (!isActive) { cancel(); setPlaying(false); } }, [isActive]);
+  useEffect(() => cancel, []);
   if (!id) return null;
 
-  const start = () => { setPlaying(true); onFirstPlay?.(); };
+  const start = () => {
+    if (waiting) return;
+    const wait = Math.max(0, lastTikTokLoadAt + TIKTOK_GAP_MS - Date.now());
+    lastTikTokLoadAt = Date.now() + wait;           // reserve the slot so a second tap cannot jump the queue
+    const go = () => { timer.current = null; setWaiting(false); setPlaying(true); onFirstPlay?.(); };
+    if (wait === 0) { go(); return; }
+    setWaiting(true);
+    timer.current = window.setTimeout(go, wait);
+  };
+  const tiktokPage = `https://www.tiktok.com/@/video/${id}`;
   return (
     <div className="relative h-full w-full bg-black">
       {playing ? (
@@ -52,13 +70,16 @@ function TikTokSurface({ post, isActive, onFirstPlay }: PostMediaProps) {
             className="h-full w-full border-0"
           />
           <div aria-hidden className="absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-black from-70% to-transparent" />
+          <a href={tiktokPage} target="_blank" rel="noopener noreferrer" className="absolute left-3 top-2 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white">
+            Not loading? Open on TikTok
+          </a>
           </div>
         </div>
       ) : (
         <button type="button" onClick={start} aria-label="Play TikTok video" className="group absolute inset-0 flex items-center justify-center">
           {post.thumbnail_url && <img src={post.thumbnail_url} alt="" className="absolute inset-0 h-full w-full object-contain" loading="lazy" decoding="async" />}
           <span className="relative flex h-16 w-16 items-center justify-center rounded-full bg-black/60 text-white transition-transform group-active:scale-95">
-            <Play className="h-8 w-8 translate-x-0.5" fill="currentColor" />
+            {waiting ? <Loader2 className="h-7 w-7 animate-spin" /> : <Play className="h-8 w-8 translate-x-0.5" fill="currentColor" />}
           </span>
           <span className="absolute left-3 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-medium text-white">TikTok</span>
         </button>
