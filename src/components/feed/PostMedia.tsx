@@ -37,18 +37,22 @@ function TikTokSurface({ post, isActive, onFirstPlay }: PostMediaProps) {
   return (
     <div className="relative h-full w-full bg-black">
       {playing ? (
-        // The parent (VideoPost) leaves room for the header above and our action bar below, and puts nothing
-        // of ours on top of the player, so TikTok's own buttons stay tappable.
-        <div className="absolute inset-0">
-        <iframe
-          title={post.caption ? `TikTok: ${post.caption.slice(0, 60)}` : 'TikTok video'}
-          src={`https://www.tiktok.com/embed/v2/${id}`}
-          allow="fullscreen; encrypted-media"
-          allowFullScreen
-          referrerPolicy="strict-origin-when-cross-origin"
-          sandbox="allow-scripts allow-same-origin allow-popups allow-presentation"
-          className="mx-auto h-full w-full max-w-[420px] border-0"
-        />
+        // The player fills the post, below the floating header. TikTok draws its own like/comment pill on the right
+        // edge, inside its page where we cannot restyle it, so a black strip is laid over that edge: it hides the
+        // pill and blocks taps on it, and the website's own action rail (drawn after this, so on top) takes its place.
+        <div className="absolute inset-x-0 bottom-0 top-14 overflow-hidden">
+          <div className="relative mx-auto h-full w-full max-w-[420px]">
+          <iframe
+            title={post.caption ? `TikTok: ${post.caption.slice(0, 60)}` : 'TikTok video'}
+            src={`https://www.tiktok.com/embed/v2/${id}`}
+            allow="fullscreen; encrypted-media"
+            allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
+            sandbox="allow-scripts allow-same-origin allow-popups allow-presentation"
+            className="h-full w-full border-0"
+          />
+          <div aria-hidden className="absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-black from-70% to-transparent" />
+          </div>
         </div>
       ) : (
         <button type="button" onClick={start} aria-label="Play TikTok video" className="group absolute inset-0 flex items-center justify-center">

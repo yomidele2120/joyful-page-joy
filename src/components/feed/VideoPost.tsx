@@ -69,9 +69,9 @@ export default function VideoPost({ post, isActive, isLiked, onOpenComments }: V
   };
 
   const isImagePost = post.media_type === 'images';
-  // A TikTok embed draws its own side buttons (comments, more) INSIDE the player and owns its sound, and those
-  // cannot be removed. So a TikTok post never gets our floating rail on top of it: its actions sit in a solid bar
-  // under the player instead, and the two UIs can never overlap at any screen size.
+  // A TikTok embed owns its sound (so no mute button of ours) and draws its own like/comment pill on the right
+  // edge. That pill lives inside TikTok's page and cannot be restyled, so PostMedia covers that strip while the
+  // player runs and our own rail sits on top of the cover.
   const isTikTok = isTikTokPost(post);
 
   const storeName = post.vendors?.store_name ?? 'Vendor';
@@ -145,44 +145,7 @@ export default function VideoPost({ post, isActive, isLiked, onOpenComments }: V
     // action rail sits next to the video instead of floating at the far edge of a wide monitor.
     <div className="relative flex h-full w-full snap-start snap-always justify-center overflow-hidden bg-black">
       <div className="relative h-full w-full md:max-w-[480px]">
-        {isTikTok ? (
-          <div className="flex h-full flex-col">
-            {/* pt-16 clears the floating header (back / search / shop buttons). */}
-            <div className="min-h-0 flex-1 pt-16">
-              <PostMedia post={post} isActive={isActive} muted={muted} onFirstPlay={handleFirstPlay} />
-            </div>
-
-            <div className="shrink-0 bg-black px-4 pb-4 pt-2">
-              {/* One row: who posted it, then our actions. Nothing here sits on top of TikTok's player. */}
-              <div className="mb-2 flex items-center gap-2">
-                <button onClick={handleFollow} className="relative shrink-0" aria-label={isFollowing ? 'Connected' : 'Connect with vendor'}>
-                  <Avatar className="h-9 w-9 border border-white/40">
-                    <AvatarImage src={post.vendors?.logo_url ?? undefined} />
-                    <AvatarFallback>{storeName[0] ?? 'V'}</AvatarFallback>
-                  </Avatar>
-                  <span className="absolute -bottom-1 -right-1">{connectBadge}</span>
-                </button>
-                <Link to={`/shop/${post.vendor_id}`} className="min-w-0 flex-1 truncate text-sm font-semibold text-white">
-                  {storeName}
-                </Link>
-                <div className="flex shrink-0 items-center">
-                  <BarButton onClick={handleLike} label={String(post.likes_count)} aria-label={isLiked ? 'Unlike' : 'Like'}>
-                    <Heart className={cn('h-6 w-6', isLiked && 'fill-red-500 text-red-500')} />
-                  </BarButton>
-                  <BarButton onClick={() => onOpenComments(post.id)} label={String(post.comments_count)} aria-label="Comments">
-                    <MessageCircle className="h-6 w-6" />
-                  </BarButton>
-                  <BarButton onClick={handleShare} aria-label="Share this video">
-                    <Share2 className="h-6 w-6" />
-                  </BarButton>
-                  {reportMenu(<BarButton aria-label="Report this video"><Flag className="h-5 w-5 text-white/80" /></BarButton>)}
-                </div>
-              </div>
-              {details}
-            </div>
-          </div>
-        ) : (
-          <>
+        <>
             <PostMedia post={post} isActive={isActive} muted={muted} onFirstPlay={handleFirstPlay} />
 
             {/* Bottom gradient + store + caption + shop card (leaves the right edge free for the rail) */}
@@ -213,7 +176,7 @@ export default function VideoPost({ post, isActive, isLiked, onOpenComments }: V
                 <Share2 className="h-7 w-7" />
               </RailButton>
 
-              {!isImagePost && (
+              {!isImagePost && !isTikTok && (
                 <RailButton onClick={() => setMuted((m) => !m)} aria-label={muted ? 'Turn sound on' : 'Turn sound off'}>
                   {muted ? <VolumeX className="h-6 w-6" /> : <Volume2 className="h-6 w-6" />}
                 </RailButton>
@@ -221,8 +184,7 @@ export default function VideoPost({ post, isActive, isLiked, onOpenComments }: V
 
               {reportMenu(<RailButton aria-label="Report this video"><Flag className="h-5 w-5 text-white/80" /></RailButton>)}
             </div>
-          </>
-        )}
+        </>
       </div>
     </div>
   );
@@ -241,12 +203,3 @@ const RailButton = forwardRef<HTMLButtonElement, TapProps>(({ label, children, c
   </button>
 ));
 RailButton.displayName = 'RailButton';
-
-// Horizontal bar item (TikTok posts): icon with the count beside it.
-const BarButton = forwardRef<HTMLButtonElement, TapProps>(({ label, children, className, ...rest }, ref) => (
-  <button ref={ref} type="button" {...rest} className={cn('flex h-10 min-w-10 items-center justify-center gap-1 px-1.5 text-white transition-transform active:scale-95', className)}>
-    {children}
-    {label !== undefined && <span className="text-xs font-medium tabular-nums">{label}</span>}
-  </button>
-));
-BarButton.displayName = 'BarButton';
