@@ -1,8 +1,7 @@
-import { useCallback, useState } from 'react';
+import { forwardRef, useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, MessageCircle, Share2, ShoppingBag, Volume2, VolumeX, Flag } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -14,6 +13,7 @@ import { useReportContent } from '@/hooks/useReports';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { sharePost } from '@/lib/shareLinks';
+import { isTikTokPost } from '@/lib/tiktok';
 
 interface VideoPostProps {
   post: FeedPost;
@@ -69,112 +69,184 @@ export default function VideoPost({ post, isActive, isLiked, onOpenComments }: V
   };
 
   const isImagePost = post.media_type === 'images';
+  // A TikTok embed draws its own side buttons (comments, more) INSIDE the player and owns its sound, and those
+  // cannot be removed. So a TikTok post never gets our floating rail on top of it: its actions sit in a solid bar
+  // under the player instead, and the two UIs can never overlap at any screen size.
+  const isTikTok = isTikTokPost(post);
+
+  const storeName = post.vendors?.store_name ?? 'Vendor';
+  const tags = (post.hashtags ?? []).slice(0, 4);
+
+  const vendorAvatar = (size: string) => (
+    <Avatar className={cn(size, 'border-2 border-white')}>
+      <AvatarImage src={post.vendors?.logo_url ?? undefined} />
+      <AvatarFallback>{storeName[0] ?? 'V'}</AvatarFallback>
+    </Avatar>
+  );
+
+  const connectBadge = (
+    <span
+      className={cn(
+        'flex h-5 w-5 items-center justify-center rounded-full border-2 border-black text-xs font-bold leading-none text-white',
+        isFollowing ? 'bg-muted-foreground' : 'bg-primary'
+      )}
+    >
+      {isFollowing ? '✓' : '+'}
+    </span>
+  );
+
+  const reportMenu = (trigger: React.ReactNode) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => handleReport('spam')}>Spam or misleading</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleReport('inappropriate')}>Inappropriate content</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleReport('counterfeit')}>Counterfeit product</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleReport('other')}>Other</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  // Caption, hashtags and the shop card. Same on every post type.
+  const details = (
+    <>
+      {post.caption && <p className="mb-1 line-clamp-2 text-sm text-white">{post.caption}</p>}
+
+      {tags.length > 0 && (
+        <div className="mb-2 flex flex-wrap gap-x-2 gap-y-0.5 overflow-hidden [@media(max-height:700px)]:hidden" style={{ maxHeight: '2.5rem' }}>
+          {tags.map((tag) => (
+            <Link key={tag} to={`/feed?tag=${tag}`} className="text-xs font-medium text-white/90 hover:underline">
+              #{tag}
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {post.products && (
+        <Link
+          to={`/product/${post.products.slug}`}
+          className="flex max-w-xs items-center gap-3 rounded-lg bg-white/95 p-2 transition-transform active:scale-[0.98]"
+        >
+          {post.products.image_url && (
+            <img src={post.products.image_url} alt={post.products.name} className="h-10 w-10 shrink-0 rounded object-cover" loading="lazy" decoding="async" />
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-medium">{post.products.name}</p>
+            <p className="text-xs font-semibold text-primary">{formatNaira(post.products.price)}</p>
+          </div>
+          <ShoppingBag className="h-4 w-4 shrink-0 text-primary" />
+        </Link>
+      )}
+    </>
+  );
 
   return (
-    <div className="relative h-full w-full snap-start snap-always bg-black flex items-center justify-center overflow-hidden">
-      <PostMedia post={post} isActive={isActive} muted={muted} onFirstPlay={handleFirstPlay} />
-
-
-      {/* Bottom gradient + caption + shop card */}
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-4 pb-6 pr-20">
-        <Link to={`/shop/${post.vendor_id}`} className="flex items-center gap-2 mb-2">
-          <Avatar className="h-9 w-9 border border-white/40">
-            <AvatarImage src={post.vendors?.logo_url ?? undefined} />
-            <AvatarFallback>{post.vendors?.store_name?.[0] ?? 'V'}</AvatarFallback>
-          </Avatar>
-          <span className="text-white font-medium text-sm">{post.vendors?.store_name ?? 'Vendor'}</span>
-        </Link>
-
-        {post.caption && <p className="text-white text-sm mb-1 line-clamp-2">{post.caption}</p>}
-
-        {post.hashtags?.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-3">
-            {post.hashtags.map((tag) => (
-              <Link
-                key={tag}
-                to={`/feed?tag=${tag}`}
-                className="text-xs text-white/90 font-medium hover:underline"
-              >
-                #{tag}
-              </Link>
-            ))}
-          </div>
-        )}
-
-        {post.products && (
-          <Link
-            to={`/product/${post.products.slug}`}
-            className="flex items-center gap-3 bg-white/95 rounded-lg p-2 max-w-xs active:scale-[0.98] transition-transform"
-          >
-            {post.products.image_url && (
-              <img src={post.products.image_url} alt={post.products.name} className="h-10 w-10 rounded object-cover shrink-0" loading="lazy" decoding="async" />
-            )}
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-medium truncate">{post.products.name}</p>
-              <p className="text-xs text-primary font-semibold">{formatNaira(post.products.price)}</p>
+    // The black page fills the screen; the post itself is a phone-width column, centred on larger screens so the
+    // action rail sits next to the video instead of floating at the far edge of a wide monitor.
+    <div className="relative flex h-full w-full snap-start snap-always justify-center overflow-hidden bg-black">
+      <div className="relative h-full w-full md:max-w-[480px]">
+        {isTikTok ? (
+          <div className="flex h-full flex-col">
+            {/* pt-16 clears the floating header (back / search / shop buttons). */}
+            <div className="min-h-0 flex-1 pt-16">
+              <PostMedia post={post} isActive={isActive} muted={muted} onFirstPlay={handleFirstPlay} />
             </div>
-            <ShoppingBag className="w-4 h-4 text-primary shrink-0" />
-          </Link>
+
+            <div className="shrink-0 bg-black px-4 pb-4 pt-2">
+              {/* One row: who posted it, then our actions. Nothing here sits on top of TikTok's player. */}
+              <div className="mb-2 flex items-center gap-2">
+                <button onClick={handleFollow} className="relative shrink-0" aria-label={isFollowing ? 'Connected' : 'Connect with vendor'}>
+                  <Avatar className="h-9 w-9 border border-white/40">
+                    <AvatarImage src={post.vendors?.logo_url ?? undefined} />
+                    <AvatarFallback>{storeName[0] ?? 'V'}</AvatarFallback>
+                  </Avatar>
+                  <span className="absolute -bottom-1 -right-1">{connectBadge}</span>
+                </button>
+                <Link to={`/shop/${post.vendor_id}`} className="min-w-0 flex-1 truncate text-sm font-semibold text-white">
+                  {storeName}
+                </Link>
+                <div className="flex shrink-0 items-center">
+                  <BarButton onClick={handleLike} label={String(post.likes_count)} aria-label={isLiked ? 'Unlike' : 'Like'}>
+                    <Heart className={cn('h-6 w-6', isLiked && 'fill-red-500 text-red-500')} />
+                  </BarButton>
+                  <BarButton onClick={() => onOpenComments(post.id)} label={String(post.comments_count)} aria-label="Comments">
+                    <MessageCircle className="h-6 w-6" />
+                  </BarButton>
+                  <BarButton onClick={handleShare} aria-label="Share this video">
+                    <Share2 className="h-6 w-6" />
+                  </BarButton>
+                  {reportMenu(<BarButton aria-label="Report this video"><Flag className="h-5 w-5 text-white/80" /></BarButton>)}
+                </div>
+              </div>
+              {details}
+            </div>
+          </div>
+        ) : (
+          <>
+            <PostMedia post={post} isActive={isActive} muted={muted} onFirstPlay={handleFirstPlay} />
+
+            {/* Bottom gradient + store + caption + shop card (leaves the right edge free for the rail) */}
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-4 pb-6 pr-20">
+              <Link to={`/shop/${post.vendor_id}`} className="mb-1.5 block truncate text-sm font-semibold text-white drop-shadow">
+                {storeName}
+              </Link>
+              {details}
+            </div>
+
+            {/* Right-side action rail. Every item uses the same 44px touch box, icon size and label style. On short
+                screens the spacing tightens so the rail never runs up under the floating header. */}
+            <div className="absolute bottom-6 right-2 flex flex-col items-center gap-3 [@media(max-height:700px)]:gap-1.5">
+              <button onClick={handleFollow} className="flex flex-col items-center" aria-label={isFollowing ? 'Connected' : 'Connect with vendor'}>
+                {vendorAvatar('h-11 w-11 [@media(max-height:700px)]:h-9 [@media(max-height:700px)]:w-9')}
+                <span className="-mt-2.5">{connectBadge}</span>
+              </button>
+
+              <RailButton onClick={handleLike} label={String(post.likes_count)} aria-label={isLiked ? 'Unlike' : 'Like'}>
+                <Heart className={cn('h-7 w-7', isLiked && 'fill-red-500 text-red-500')} />
+              </RailButton>
+
+              <RailButton onClick={() => onOpenComments(post.id)} label={String(post.comments_count)} aria-label="Comments">
+                <MessageCircle className="h-7 w-7" />
+              </RailButton>
+
+              <RailButton onClick={handleShare} label="Share" aria-label="Share this video">
+                <Share2 className="h-7 w-7" />
+              </RailButton>
+
+              {!isImagePost && (
+                <RailButton onClick={() => setMuted((m) => !m)} aria-label={muted ? 'Turn sound on' : 'Turn sound off'}>
+                  {muted ? <VolumeX className="h-6 w-6" /> : <Volume2 className="h-6 w-6" />}
+                </RailButton>
+              )}
+
+              {reportMenu(<RailButton aria-label="Report this video"><Flag className="h-5 w-5 text-white/80" /></RailButton>)}
+            </div>
+          </>
         )}
-      </div>
-
-      {/* Right-side action rail */}
-      <div className="absolute right-3 bottom-24 flex flex-col items-center gap-5">
-        <button onClick={handleFollow} className="flex flex-col items-center" aria-label={isFollowing ? 'Connected' : 'Connect with vendor'}>
-          <Avatar className="h-11 w-11 border-2 border-white">
-            <AvatarImage src={post.vendors?.logo_url ?? undefined} />
-            <AvatarFallback>{post.vendors?.store_name?.[0] ?? 'V'}</AvatarFallback>
-          </Avatar>
-          <span
-            className={cn(
-              'h-5 w-5 -mt-2.5 rounded-full flex items-center justify-center text-xs font-bold text-white border-2 border-black',
-              isFollowing ? 'bg-muted-foreground' : 'bg-primary'
-            )}
-          >
-            {isFollowing ? '✓' : '+'}
-          </span>
-        </button>
-
-        <button onClick={handleLike} className="flex flex-col items-center gap-1 text-white">
-          <Heart className={cn('w-7 h-7', isLiked && 'fill-red-500 text-red-500')} />
-          <span className="text-xs">{post.likes_count}</span>
-        </button>
-
-        <button onClick={() => onOpenComments(post.id)} className="flex flex-col items-center gap-1 text-white">
-          <MessageCircle className="w-7 h-7" />
-          <span className="text-xs">{post.comments_count}</span>
-        </button>
-
-        <button onClick={handleShare} aria-label="Share this video" className="flex flex-col items-center gap-1 text-white">
-          <Share2 className="w-7 h-7" />
-          <span className="text-xs">Share</span>
-        </button>
-
-        {!isImagePost && (
-          <Button
-            size="icon"
-            variant="ghost"
-            className="text-white hover:text-white hover:bg-white/10"
-            onClick={() => setMuted((m) => !m)}
-          >
-            {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-          </Button>
-        )}
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="flex flex-col items-center gap-1 text-white/80">
-              <Flag className="w-5 h-5" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleReport('spam')}>Spam or misleading</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleReport('inappropriate')}>Inappropriate content</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleReport('counterfeit')}>Counterfeit product</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleReport('other')}>Other</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
     </div>
   );
 }
+
+type TapProps = React.ButtonHTMLAttributes<HTMLButtonElement> & { label?: string };
+
+// Vertical rail item: icon over a small count/label, white with a soft shadow so it stays readable on bright video.
+const RailButton = forwardRef<HTMLButtonElement, TapProps>(({ label, children, className, ...rest }, ref) => (
+  <button
+    ref={ref} type="button" {...rest}
+    className={cn('flex w-12 flex-col items-center text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)] transition-transform active:scale-95', className)}
+  >
+    <span className="flex h-11 items-center justify-center [@media(max-height:700px)]:h-9">{children}</span>
+    {label !== undefined && <span className="-mt-0.5 text-xs font-medium leading-none">{label}</span>}
+  </button>
+));
+RailButton.displayName = 'RailButton';
+
+// Horizontal bar item (TikTok posts): icon with the count beside it.
+const BarButton = forwardRef<HTMLButtonElement, TapProps>(({ label, children, className, ...rest }, ref) => (
+  <button ref={ref} type="button" {...rest} className={cn('flex h-10 min-w-10 items-center justify-center gap-1 px-1.5 text-white transition-transform active:scale-95', className)}>
+    {children}
+    {label !== undefined && <span className="text-xs font-medium tabular-nums">{label}</span>}
+  </button>
+));
+BarButton.displayName = 'BarButton';

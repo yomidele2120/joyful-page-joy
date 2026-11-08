@@ -39,9 +39,13 @@ export default function Feed() {
   const isGridMode = !!q; // search results render as a light-background grid
 
   return (
-    <div className={cn('fixed inset-x-0 top-0 bottom-14 md:bottom-0 z-30 w-full', isGridMode ? 'bg-background' : 'bg-black')}>
-      {/* Minimal floating header — feed is meant to be immersive/full-bleed */}
-      <div className="absolute top-0 inset-x-0 z-10 flex items-center gap-2 p-4 pointer-events-none">
+    // bottom = the tab bar's height PLUS the phone's home-indicator inset, so the last 30px of the video are never
+    // hidden behind the tab bar on iPhones.
+    <div className={cn('fixed inset-x-0 top-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] md:bottom-0 z-30 w-full', isGridMode ? 'bg-background' : 'bg-black')}>
+      {/* Minimal floating header — feed is meant to be immersive/full-bleed. On wide screens it lines up with the
+          phone-width video column instead of stretching to the window edges. */}
+      <div className="absolute top-0 inset-x-0 z-10 pointer-events-none">
+      <div className={cn('mx-auto flex w-full items-center gap-2 p-4', !isGridMode && 'md:max-w-[480px]')}>
         {searchOpen ? (
           <div className="pointer-events-auto flex items-center gap-2 flex-1 rounded-full bg-black/50 backdrop-blur px-3 py-1.5">
             <Search className="w-4 h-4 text-white/70 shrink-0" />
@@ -116,6 +120,7 @@ export default function Feed() {
             </Link>
           </>
         )}
+      </div>
       </div>
 
       <VideoFeed

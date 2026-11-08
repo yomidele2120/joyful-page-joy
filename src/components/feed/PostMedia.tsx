@@ -4,7 +4,6 @@ import useEmblaCarousel from 'embla-carousel-react';
 import { Loader2, Play, AlertCircle, RotateCcw } from 'lucide-react';
 import { isTikTokPost, tiktokVideoId } from '@/lib/tiktok';
 import type { FeedPost } from '@/hooks/usePosts';
-import { cn } from '@/lib/utils';
 
 interface PostMediaProps {
   post: FeedPost;
@@ -38,8 +37,9 @@ function TikTokSurface({ post, isActive, onFirstPlay }: PostMediaProps) {
   return (
     <div className="relative h-full w-full bg-black">
       {playing ? (
-        // Leave room above the caption and shop card so the player's own controls stay tappable.
-        <div className="absolute inset-x-0 bottom-44 top-10">
+        // The parent (VideoPost) leaves room for the header above and our action bar below, and puts nothing
+        // of ours on top of the player, so TikTok's own buttons stay tappable.
+        <div className="absolute inset-0">
         <iframe
           title={post.caption ? `TikTok: ${post.caption.slice(0, 60)}` : 'TikTok video'}
           src={`https://www.tiktok.com/embed/v2/${id}`}
@@ -56,7 +56,7 @@ function TikTokSurface({ post, isActive, onFirstPlay }: PostMediaProps) {
           <span className="relative flex h-16 w-16 items-center justify-center rounded-full bg-black/60 text-white transition-transform group-active:scale-95">
             <Play className="h-8 w-8 translate-x-0.5" fill="currentColor" />
           </span>
-          <span className="absolute left-3 top-3 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-medium text-white">TikTok</span>
+          <span className="absolute left-3 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-medium text-white">TikTok</span>
         </button>
       )}
     </div>
@@ -250,16 +250,8 @@ function ImageCarousel({ post, isActive }: { post: FeedPost; isActive: boolean }
 
       {images.length > 1 && (
         <>
-          <div className="absolute top-4 right-4 rounded-full bg-black/50 px-2.5 py-1 text-xs font-medium text-white">
+          <div className="absolute right-4 top-16 rounded-full bg-black/50 px-2.5 py-1 text-xs font-medium text-white">
             {index + 1}/{images.length}
-          </div>
-          <div className="absolute bottom-2 inset-x-0 flex items-center justify-center gap-1.5 pointer-events-none">
-            {images.map((_, i) => (
-              <span
-                key={i}
-                className={cn('h-1.5 rounded-full transition-all', i === index ? 'w-4 bg-white' : 'w-1.5 bg-white/50')}
-              />
-            ))}
           </div>
         </>
       )}
