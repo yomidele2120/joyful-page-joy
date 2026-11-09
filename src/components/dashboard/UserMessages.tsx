@@ -10,6 +10,8 @@ import { ArrowLeft, Send, MessageCircle, Store, User, ExternalLink } from 'lucid
 import { Link } from 'react-router-dom';
 import MediaPreview from '@/components/chat/MediaPreview';
 import CallButtons from '@/components/calls/CallButtons';
+import CallMessageCard from '@/components/calls/CallMessageCard';
+import { parseCallMessage } from '@/lib/zego';
 
 export default function UserMessages() {
   const { user } = useAuth();
@@ -133,7 +135,7 @@ export default function UserMessages() {
                       <MediaPreview url={m.media_url} type={m.media_type} isOwn={m.sender_id === user?.id} />
                     </div>
                   ) : (
-                    <p>{m.content}</p>
+                    {parseCallMessage(m.content) ? <CallMessageCard content={m.content} createdAt={m.created_at} own={m.sender_id === user?.id} /> : <p>{m.content}</p>}
                   )}
                   <span className={`text-[10px] mt-1 flex items-center gap-1 ${
                     m.sender_id === user?.id ? 'justify-end text-primary-foreground/70' : 'text-muted-foreground'

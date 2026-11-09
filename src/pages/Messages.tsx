@@ -15,6 +15,8 @@ import { getOrCreateConversation, sendMessage, useConversations, useMarkConversa
 import MessageTicks from '@/components/chat/MessageTicks';
 import { supabase } from '@/integrations/supabase/client';
 import CallButtons from '@/components/calls/CallButtons';
+import CallMessageCard from '@/components/calls/CallMessageCard';
+import { parseCallMessage } from '@/lib/zego';
 
 function useChatProducts(ids: string[]) {
   const key = [...new Set(ids)].sort();
@@ -241,7 +243,7 @@ export default function Messages() {
                             {m.media_url && m.media_type ? (
                               <div className="mb-1"><MediaPreview url={m.media_url} type={m.media_type} isOwn={own} /></div>
                             ) : (
-                              <p className="whitespace-pre-wrap break-words">{m.content}</p>
+                              parseCallMessage(m.content) ? <CallMessageCard content={m.content} createdAt={m.created_at} own={own} /> : <p className="whitespace-pre-wrap break-words">{m.content}</p>
                             )}
                             <span className={`mt-1 flex items-center gap-1 text-[10px] ${own ? 'justify-end text-primary-foreground/70' : 'text-muted-foreground'}`}>
                               {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

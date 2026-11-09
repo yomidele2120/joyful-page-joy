@@ -15,6 +15,8 @@ import VoiceRecorder from '@/components/chat/VoiceRecorder';
 import MediaUploadButton from '@/components/chat/MediaUploadButton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import CallButtons from '@/components/calls/CallButtons';
+import CallMessageCard from '@/components/calls/CallMessageCard';
+import { parseCallMessage } from '@/lib/zego';
 
 export default function SupplierChat() {
   const { user, loading: authLoading } = useAuth();
@@ -295,7 +297,7 @@ export default function SupplierChat() {
                             <MediaPreview url={m.media_url} type={m.media_type} isOwn={m.sender_id === user?.id} />
                           </div>
                         ) : (
-                          <p>{m.content}</p>
+                          {parseCallMessage(m.content) ? <CallMessageCard content={m.content} createdAt={m.created_at} own={m.sender_id === user?.id} /> : <p>{m.content}</p>}
                         )}
                         <span className={`text-[10px] mt-1 flex items-center gap-1 ${
                           m.sender_id === user?.id ? 'justify-end text-primary-foreground/70' : 'text-muted-foreground'

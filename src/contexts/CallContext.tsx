@@ -4,7 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useCallsEnabled } from '@/hooks/useCallsEnabled';
 import { sendMessage } from '@/hooks/useChat';
-import IncomingCallDialog from '@/components/calls/IncomingCallDialog';
+import CallScreen from '@/components/calls/CallScreen';
+import { startRingtone, stopRingtone } from '@/lib/ringtone';
 import { callMessage, isGenuineIncomingCall, outcomeForEnd, toZegoUserId, type CallOutcome, type CallRow, type CallType } from '@/lib/zego';
 
 // Voice/video calls with ZEGOCLOUD Call Kit. The libraries are loaded only when a signed-in member opens the site
@@ -23,6 +24,7 @@ interface Active {
   role: 'caller' | 'callee'; callId?: string; peerUserId?: string; peerName: string; type: CallType; conversationId?: string; closed?: boolean;
 }
 interface Incoming { callerName: string; type: CallType; accept: () => void; refuse: () => void }
+interface Outgoing { name: string; type: CallType; cancel: () => void }
 
 const RENEW_MS = 20 * 60 * 60 * 1000;   // tokens last 24h; sign in again well before that
 const db = supabase as any;
@@ -40,13 +42,14 @@ export function CallProvider({ children }: { children: ReactNode }) {
   const active = useRef<Active | null>(null);
   const [ready, setReady] = useState(false);
   const [incoming, setIncoming] = useState<Incoming | null>(null);
+  const [outgoing, setOutgoing] = useState<Outgoing | null>(null);
   const meId = user?.id;
 
   // Report the end of a call once. The caller also leaves a line in the chat ("Voice call · 1:35", "Missed video call").
   const closeCall = useCallback(async (outcome: CallOutcome) => {
     const a = active.current;
     if (!a || a.closed) return;
-    a.closed = true; active.current = null;
+    a.closed = true; active.current = null; setOutgoing(null);
     if (!a.callId) return;
     await db.rpc('finish_call', { _call: a.callId, _outcome: outcome });
     if (outcome === 'failed') return;      // a technical failure is not something to leave in the chat
@@ -79,6 +82,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
         zp.addPlugins({ ZIM });
         zp.setCallInvitationConfig({
           enableCustomCallInvitationDialog: true,
+          enableCustomCallInvitationWaitingPage: true,
           endCallWhenInitiatorLeave: true,
           onConfirmDialogWhenReceiving: (callType: number, caller: { userID: string; userName?: string }, refuse: () => void, accept: () => void, extra: string) => {
             void (async () => {
@@ -102,18 +106,25 @@ export function CallProvider({ children }: { children: ReactNode }) {
               });
             })();
           },
+          onWaitingPageWhenSending: (callType: number, _callees: unknown, cancel: () => void) => {
+            const a = active.current;
+            if (!a || a.role !== 'caller') return;
+            setOutgoing({ name: a.peerName, type: callType === Kit.InvitationTypeVideoCall ? 'video' : 'voice', cancel: () => { setOutgoing(null); cancel(); } });
+          },
           onSetRoomConfigBeforeJoining: (callType: number) => {
+            setOutgoing(null);                                                    // the other person accepted: leave the ringing screen
             const video = callType === Kit.InvitationTypeVideoCall;
             return {
               turnOnCameraWhenJoining: video, showMyCameraToggleButton: video,
               showScreenSharingButton: false, showTextChat: false, showUserList: false, maxUsers: 2,
+              showLayoutButton: false, showPinButton: false, lowerLeftNotification: { showUserJoinAndLeave: false, showTextChat: false },
               onJoinRoom: () => { if (active.current?.role === 'callee') markAnswered(); },   // the callee joins only after accepting
               onUserJoin: () => { if (active.current?.role === 'caller') markAnswered(); },   // the caller counts as answered when the other person arrives
               onLeaveRoom: () => { void closeCall('ended'); },
             };
           },
           onCallInvitationEnded: (reason: string) => {
-            setIncoming(null);                                                   // caller cancelled or it timed out while ringing
+            setIncoming(null); setOutgoing(null);                                // cancelled, declined or timed out while ringing
             const a = active.current;
             if (!a) return;
             if (a.role === 'caller' || reason === 'LeaveRoom') void closeCall(outcomeForEnd(reason));
@@ -134,7 +145,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       if (renew) window.clearTimeout(renew);
       try { current?.destroy?.(); } catch { /* ignore */ }
-      kit.current = null; active.current = null; setReady(false); setIncoming(null);
+      kit.current = null; active.current = null; setReady(false); setIncoming(null); setOutgoing(null);
     };
   }, [meId, enabled, closeCall, markAnswered]);
 
@@ -167,11 +178,20 @@ export function CallProvider({ children }: { children: ReactNode }) {
     }
   }, [meId, closeCall]);
 
+  // Ring while a call is ringing in either direction, and stop the moment it is answered, declined or ended.
+  const ringing = incoming ? 'incoming' : outgoing ? 'outgoing' : null;
+  useEffect(() => {
+    if (!ringing) return;
+    startRingtone(ringing);
+    return () => stopRingtone();
+  }, [ringing]);
+
   const api = useMemo<CallApi>(() => ({ available: ready, startCall }), [ready, startCall]);
   return (
     <Ctx.Provider value={api}>
       {children}
-      {incoming && <IncomingCallDialog callerName={incoming.callerName} type={incoming.type} onAccept={incoming.accept} onDecline={incoming.refuse} />}
+      {incoming && <CallScreen mode="incoming" name={incoming.callerName} type={incoming.type} onAccept={incoming.accept} onEnd={incoming.refuse} />}
+      {!incoming && outgoing && <CallScreen mode="outgoing" name={outgoing.name} type={outgoing.type} onEnd={outgoing.cancel} />}
     </Ctx.Provider>
   );
 }

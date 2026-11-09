@@ -11,6 +11,8 @@ import { ArrowLeft, Send, MessageCircle, Store } from 'lucide-react';
 import { toast } from 'sonner';
 import MediaPreview from '@/components/chat/MediaPreview';
 import CallButtons from '@/components/calls/CallButtons';
+import CallMessageCard from '@/components/calls/CallMessageCard';
+import { parseCallMessage } from '@/lib/zego';
 
 export default function BuyerChat() {
   const { user, loading: authLoading } = useAuth();
@@ -134,7 +136,7 @@ export default function BuyerChat() {
                       <MediaPreview url={m.media_url} type={m.media_type} isOwn={m.sender_id === user?.id} />
                     </div>
                   ) : (
-                    <p>{m.content}</p>
+                    {parseCallMessage(m.content) ? <CallMessageCard content={m.content} createdAt={m.created_at} own={m.sender_id === user?.id} /> : <p>{m.content}</p>}
                   )}
                   <span className={`text-[10px] mt-1 flex items-center gap-1 ${
                     m.sender_id === user?.id ? 'justify-end text-primary-foreground/70' : 'text-muted-foreground'

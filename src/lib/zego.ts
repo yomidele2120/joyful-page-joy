@@ -63,3 +63,50 @@ export function isGenuineIncomingCall(row: CallRow | null | undefined, ctx: { me
 
 /** Can this pair call each other? Mirrors the database rule (which is the real enforcement) so buttons only show when it can work. */
 export const pairMayCall = (meIsVendor: boolean, peerIsVendor: boolean) => meIsVendor || peerIsVendor;
+
+/* ------------------------- call lines in the chat, shown as cards ------------------------- */
+
+export type CallLineKind = 'completed' | 'missed' | 'declined' | 'cancelled' | 'busy' | 'failed';
+export interface ParsedCallLine { type: CallType; kind: CallLineKind; seconds?: number }
+
+/** Recognises exactly the lines callMessage() writes, so the chat can show them as call cards. Anything else is normal text. */
+export function parseCallMessage(content: string | null | undefined): ParsedCallLine | null {
+  const t = String(content ?? '').trim();
+  let m = /^(Voice|Video) call · (\d+):(\d{2})$/.exec(t);
+  if (m) return { type: m[1] === 'Video' ? 'video' : 'voice', kind: 'completed', seconds: Number(m[2]) * 60 + Number(m[3]) };
+  m = /^(Voice|Video) call (declined|cancelled|could not connect)$/.exec(t);
+  if (m) return { type: m[1] === 'Video' ? 'video' : 'voice', kind: m[2] === 'declined' ? 'declined' : m[2] === 'cancelled' ? 'cancelled' : 'failed' };
+  m = /^(Voice|Video) call · line busy$/.exec(t);
+  if (m) return { type: m[1] === 'Video' ? 'video' : 'voice', kind: 'busy' };
+  m = /^Missed (voice|video) call$/.exec(t);
+  if (m) return { type: m[1] === 'video' ? 'video' : 'voice', kind: 'missed' };
+  return null;
+}
+
+export interface CallCardView { title: string; direction: string; startedAt: Date; duration: string | null; tone: 'ok' | 'bad' | 'neutral' }
+
+/**
+ * What the call card says. The line is written when the call ENDS, so for a connected call the start time is the
+ * message time minus the duration. `own` = I placed the call (the caller's browser writes the line).
+ */
+export function callCardView(p: ParsedCallLine, own: boolean, createdAtIso: string): CallCardView {
+  const label = p.type === 'video' ? 'Video call' : 'Voice call';
+  const end = new Date(createdAtIso);
+  const startedAt = p.kind === 'completed' ? new Date(end.getTime() - (p.seconds ?? 0) * 1000) : end;
+  const direction = own ? 'Outgoing' : 'Incoming';
+  switch (p.kind) {
+    case 'completed': return { title: label, direction, startedAt, duration: formatDuration(p.seconds ?? 0), tone: 'ok' };
+    case 'missed': return { title: own ? `${label} · no answer` : `Missed ${label.toLowerCase()}`, direction, startedAt, duration: null, tone: own ? 'neutral' : 'bad' };
+    case 'cancelled': return { title: own ? `${label} · cancelled` : `Missed ${label.toLowerCase()}`, direction, startedAt, duration: null, tone: own ? 'neutral' : 'bad' };
+    case 'declined': return { title: `${label} · declined`, direction, startedAt, duration: null, tone: 'neutral' };
+    case 'busy': return { title: `${label} · line busy`, direction, startedAt, duration: null, tone: 'neutral' };
+    default: return { title: `${label} · could not connect`, direction, startedAt, duration: null, tone: 'neutral' };
+  }
+}
+
+/** Two letters for the call screen's avatar circle. */
+export function initialsOf(name: string | null | undefined): string {
+  const parts = String(name ?? '').trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return '?';
+  return (parts.length === 1 ? parts[0].slice(0, 2) : parts[0][0] + parts[1][0]).toUpperCase();
+}

@@ -34,6 +34,10 @@ ZEGOCLOUD bills per minute of audio/video and has a free allowance; check their 
 Built-in limits: 20 calls per hour per person, and after 3 unanswered calls to the same person within 10 minutes further attempts are blocked.
 Calls are logged in the `call_logs` table (who, type, outcome, duration). Admins can read it; nobody can write it directly.
 
+## Call times and history
+- Every call is stored in the `call_logs` table with exact times: `created_at` (when it was placed), `answered_at`, `ended_at` and `duration_seconds`, plus who called whom, voice or video, and the outcome.
+- In the chat each call appears as a call card (icon, Outgoing/Incoming, the time it started, and how long it lasted), e.g. "Video call - Outgoing - 6:15 PM - 1:35". Missed calls show in red for the person who missed them.
+
 ## How it is protected
 - The admin switch controls everything: when it is off, no tokens are issued and no buttons show.
 - Who may call whom is decided in the database (`start_call`), not in the browser.
@@ -42,4 +46,5 @@ Calls are logged in the `call_logs` table (who, type, outcome, duration). Admins
 ## Known limits
 - Rings only while the other person's site is open (no phone-style push when the tab is closed). A mobile app with push (ZEGO offline push) is the next step if you need that.
 - Group calls are not offered (2 people per call).
-- Browser tab titles flash while ringing; there is no ringtone sound yet.
+- The ringing screens (incoming and "Calling...") are our own WhatsApp-style full-screen design with a ring tone. The in-call screen (video grid, mute and hang-up buttons) is ZEGOCLOUD's own prebuilt screen: we remove the clutter, but its look cannot be fully restyled. A completely custom in-call screen means building on ZEGO's lower-level SDK (a bigger job).
+- The ring tone is made by the browser; if a browser blocks sound until the person has tapped the page, the call still rings visually.
