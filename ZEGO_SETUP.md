@@ -21,7 +21,7 @@ Note: ZEGOCLOUD's console also shows a "Server" URL and a "Callback secret". You
 4. Supabase > Project Settings > Edge Functions > Secrets: add `ZEGO_APP_ID` and `ZEGO_SERVER_SECRET`.
 5. Deploy the function: `supabase functions deploy zego-token`
 6. Install the two new packages and commit the updated lock files: `npm install` (they are already listed in package.json).
-7. Push to Vercel. Admin > Marketplace has a new **Voice and video calls** card: three ticks, then switch it on.
+7. Push to Vercel. Admin > **Voice and video calls** (in the Marketplace group of the left menu) has a new card: three ticks, then switch it on.
 
 ## Test it with two accounts (two browsers, or one normal and one private window)
 1. Account A (buyer) messages Account B (supplier) so a chat exists. Both stay signed in with the site open.

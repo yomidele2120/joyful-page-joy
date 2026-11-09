@@ -21,12 +21,12 @@ import {
   Package, ShoppingCart, Users, DollarSign, Plus, LogOut, ArrowLeft,
   Trash2, Store, CheckCircle, XCircle, Eye, BarChart3, CreditCard,
   FileText, AlertCircle, TrendingUp, Layers, FolderPlus, Pencil, Flag, Image as ImageIcon,
-  LayoutDashboard, Megaphone, Settings, Wallet, ChevronRight, Landmark, Percent, Activity, Video, Copy
+  LayoutDashboard, Megaphone, Settings, Wallet, ChevronRight, Landmark, Percent, Activity, Video, Copy, Phone
 } from 'lucide-react';
 import DashboardShell, { Panel, StatCard, StatusDot, WelcomeBanner, useTabParam, type DashNavItem } from '@/components/dashboard/DashboardShell';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import FlyersTab from '@/components/admin/FlyersTab';
-import MarketplaceAdminTab, { TikTokSwitch } from '@/components/admin/MarketplaceAdminTab';
+import MarketplaceAdminTab, { TikTokSwitch, CallsSwitch } from '@/components/admin/MarketplaceAdminTab';
 import TrafficTab from '@/components/admin/TrafficTab';
 import FinanceTab from '@/components/admin/FinanceTab';
 import OrderOpsTab from '@/components/admin/OrderOpsTab';
@@ -250,6 +250,7 @@ export default function AdminDashboard() {
     { key: 'flyers', label: 'Flyers', icon: Megaphone, group: 'Marketplace' },
     { key: 'marketplace', label: 'Pay later, preorders and support', icon: Wallet, group: 'Marketplace' },
     { key: 'tiktok', label: 'TikTok for sellers', icon: Video, group: 'Marketplace' },
+    { key: 'calls', label: 'Voice and video calls', icon: Phone, group: 'Marketplace' },
     { key: 'orders', label: 'Orders', icon: ShoppingCart, group: 'Sales' },
     { key: 'payments', label: 'Payments', icon: CreditCard, group: 'Sales' },
     { key: 'finance', label: 'Finance', icon: Landmark, group: 'Sales' },
@@ -604,6 +605,7 @@ export default function AdminDashboard() {
         {activeTab === 'flyers' && <FlyersTab />}
         {activeTab === 'marketplace' && <MarketplaceAdminTab />}
         {activeTab === 'tiktok' && <div className="max-w-2xl"><TikTokSwitch /></div>}
+        {activeTab === 'calls' && <div className="max-w-2xl"><CallsSwitch /></div>}
 
         {activeTab === 'finance' && <FinanceTab />}
         {activeTab === 'commission' && <SupplierCommissionTab />}
