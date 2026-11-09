@@ -42,6 +42,9 @@ verify_jwt = false
 [functions.zego-token]
 verify_jwt = false
 
+[functions.call-push]
+verify_jwt = false
+
 [functions.refund-order]
 verify_jwt = false
 

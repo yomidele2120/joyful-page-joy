@@ -5,7 +5,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCallsEnabled } from '@/hooks/useCallsEnabled';
 import { sendMessage } from '@/hooks/useChat';
 import CallScreen from '@/components/calls/CallScreen';
-import { startRingtone, stopRingtone } from '@/lib/ringtone';
+import SpeakerControl from '@/components/calls/SpeakerControl';
+import CallAlertsPrompt from '@/components/calls/CallAlertsPrompt';
+import { primeRingtone, startRingtone, stopRingtone } from '@/lib/ringtone';
+import { inviteWithRetry } from '@/lib/callRetry';
+import { sendCallAlert } from '@/lib/callPush';
 import { callMessage, isGenuineIncomingCall, outcomeForEnd, toZegoUserId, type CallOutcome, type CallType } from '@/lib/zego';
 
 // Voice/video calls with ZEGOCLOUD Call Kit. The libraries are loaded only when a signed-in member opens the site
@@ -22,14 +26,16 @@ export const useCalls = () => useContext(Ctx);
 
 interface Active {
   role: 'caller' | 'callee'; callId?: string; peerUserId?: string; peerName: string; type: CallType; conversationId?: string; closed?: boolean;
-  startedAt: number; joined?: boolean;
+  startedAt: number; joined?: boolean; abort?: boolean;
 }
 interface Incoming { callerName: string; type: CallType; accept: () => void; refuse: () => void }
-interface Outgoing { name: string; type: CallType; cancel: () => void }
+interface Outgoing { name: string; type: CallType; cancel: () => void; note?: string }
 
 const RENEW_MS = 20 * 60 * 60 * 1000;   // tokens last 24h; sign in again well before that
 const RING_LIMIT_MS = 65_000;           // ZEGO stops ringing after 60s; never leave a ringing screen up longer than this
-const UNCONNECTED_LIMIT_MS = 90_000;    // a call that has not connected after this long is treated as dead
+const UNCONNECTED_LIMIT_MS = 90_000;
+const OFFLINE_RING_MS = 40_000;         // keep ringing someone who is not on the site this long, alerting them and retrying
+const OFFLINE_RETRY_MS = 5_000;    // a call that has not connected after this long is treated as dead
 const db = supabase as any;
 const zegoErrorText = (e: any) => {
   const code = e?.code ?? e?.errorCode ?? e?.ret;
@@ -48,10 +54,12 @@ export function CallProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [incoming, setIncoming] = useState<Incoming | null>(null);
   const [outgoing, setOutgoing] = useState<Outgoing | null>(null);
+  const [roomType, setRoomType] = useState<CallType | null>(null);   // set while this person is inside a call room (shows the speaker control)
   const meId = user?.id;
 
   // Report the end of a call once. The caller also leaves a line in the chat ("Voice call · 1:35", "Missed video call").
   const closeCall = useCallback(async (outcome: CallOutcome) => {
+    setRoomType(null);
     const a = active.current;
     if (!a || a.closed) return;
     a.closed = true; active.current = null; setOutgoing(null);
@@ -136,11 +144,15 @@ export function CallProvider({ children }: { children: ReactNode }) {
           onWaitingPageWhenSending: (callType: number, _callees: unknown, cancel: () => void) => {
             const a = active.current;
             if (!a || a.role !== 'caller') return;
-            setOutgoing({ name: a.peerName, type: callType === Kit.InvitationTypeVideoCall ? 'video' : 'voice', cancel: () => { setOutgoing(null); cancel(); } });
+            setOutgoing((o) => ({
+              name: a.peerName, type: callType === Kit.InvitationTypeVideoCall ? 'video' : 'voice', note: o?.note,
+              cancel: () => { a.abort = true; setOutgoing(null); try { cancel(); } catch { /* nothing to cancel yet */ } void closeCall('cancelled'); },
+            }));
           },
           onSetRoomConfigBeforeJoining: (callType: number) => {
             setOutgoing(null);                                                    // the other person accepted: leave the ringing screen
             const video = callType === Kit.InvitationTypeVideoCall;
+            setRoomType(video ? 'video' : 'voice');
             return {
               turnOnCameraWhenJoining: video, showMyCameraToggleButton: video,
               showScreenSharingButton: false, showTextChat: false, showUserList: false, maxUsers: 2,
@@ -152,7 +164,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
           },
           onCallInvitationEnded: (reason: string) => {
             ringGen.current++; clearRingTimer();
-            setIncoming(null); setOutgoing(null);                                // cancelled, declined or timed out while ringing
+            setIncoming(null); setOutgoing(null); setRoomType(null);                                // cancelled, declined or timed out while ringing
             const a = active.current;
             if (!a) return;
             if (a.role === 'caller' || reason === 'LeaveRoom') void closeCall(outcomeForEnd(reason));
@@ -182,7 +194,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
       if (renew) window.clearTimeout(renew);
       try { current?.destroy?.(); } catch { /* ignore */ }
       clearRingTimer();
-      kit.current = null; active.current = null; setReady(false); setIncoming(null); setOutgoing(null);
+      kit.current = null; active.current = null; setReady(false); setIncoming(null); setOutgoing(null); setRoomType(null);
     };
   }, [meId, enabled, closeCall, markAnswered, isBusy, clearRingTimer]);
 
@@ -191,20 +203,36 @@ export function CallProvider({ children }: { children: ReactNode }) {
     if (!meId) { toast.error('Sign in to make a call'); return; }
     if (!k) { toast.error('Calling is still connecting. Try again in a few seconds.'); return; }
     if (isBusy()) { toast.error('You are already on a call'); return; }
+    primeRingtone();                       // inside the tap, so the phone allows the ring-back tone a moment later
     const { data: callId, error } = await db.rpc('start_call', { _peer: peerUserId, _type: type });
     if (error || !callId) { toast.error(errText(error) || 'Could not start the call'); return; }
     const { data: row } = await db.from('call_logs').select('conversation_id').eq('id', callId).maybeSingle();
-    active.current = { role: 'caller', callId, peerUserId, peerName, type, conversationId: row?.conversation_id, startedAt: Date.now() };
+    const a: Active = { role: 'caller', callId, peerUserId, peerName, type, conversationId: row?.conversation_id, startedAt: Date.now() };
+    active.current = a;
+    // Show "Calling..." and start the ring-back tone right away. ZEGO's own waiting page takes over once it is ready.
+    setOutgoing({ name: peerName, type, cancel: () => { a.abort = true; void closeCall('cancelled'); } });
+    const invite = () => k.zp.sendCallInvitation({
+      callees: [{ userID: toZegoUserId(peerUserId), userName: peerName }],
+      callType: type === 'video' ? k.Kit.InvitationTypeVideoCall : k.Kit.InvitationTypeVoiceCall,
+      timeout: 60,
+      data: JSON.stringify({ callId }),
+    });
     try {
-      const res = await k.zp.sendCallInvitation({
-        callees: [{ userID: toZegoUserId(peerUserId), userName: peerName }],
-        callType: type === 'video' ? k.Kit.InvitationTypeVideoCall : k.Kit.InvitationTypeVoiceCall,
-        timeout: 60,
-        data: JSON.stringify({ callId }),
+      // If the other person's site is closed, ZEGO cannot reach them. Send a call alert to their phone or computer, keep ringing
+      // here, and keep trying: the moment they open the site, the call rings on their screen.
+      const outcome = await inviteWithRetry({
+        send: invite,
+        isAborted: () => a.abort === true || active.current !== a,
+        onOffline: () => {
+          setOutgoing((o) => (o ? { ...o, note: `${peerName} is not on the site right now. Still ringing…` } : o));
+          void sendCallAlert(callId).then((sent) => {
+            if (sent > 0) setOutgoing((o) => (o ? { ...o, note: `${peerName} is not on the site. We sent them a call alert. Still ringing…` } : o));
+          });
+        },
+        intervalMs: OFFLINE_RETRY_MS, totalMs: OFFLINE_RING_MS,
       });
-      if (res?.errorInvitees?.length) {
-        // They are not signed in to calling right now (site closed). Leave a missed-call line so they see it later.
-        toast.error(`${peerName} is not online right now. They will see your missed call in the chat.`);
+      if (outcome === 'timeout') {
+        toast.error(`${peerName} did not pick up. They will see your missed call in the chat.`);
         await closeCall('missed');
       }
     } catch (e) {
@@ -228,7 +256,9 @@ export function CallProvider({ children }: { children: ReactNode }) {
     <Ctx.Provider value={api}>
       {children}
       {incoming && <CallScreen mode="incoming" name={incoming.callerName} type={incoming.type} onAccept={incoming.accept} onEnd={incoming.refuse} />}
-      {!incoming && outgoing && <CallScreen mode="outgoing" name={outgoing.name} type={outgoing.type} onEnd={outgoing.cancel} />}
+      {!incoming && outgoing && <CallScreen mode="outgoing" name={outgoing.name} type={outgoing.type} note={outgoing.note} onEnd={outgoing.cancel} />}
+      {ready && <CallAlertsPrompt />}
+      {roomType && <SpeakerControl type={roomType} />}
     </Ctx.Provider>
   );
 }

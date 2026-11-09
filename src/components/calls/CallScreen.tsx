@@ -6,6 +6,8 @@ interface Props {
   mode: 'incoming' | 'outgoing';
   name: string;
   type: CallType;
+  /** Extra line under the status while calling, for example that an alert was sent. */
+  note?: string;
   onAccept?: () => void;
   /** Decline (incoming) or cancel (outgoing). */
   onEnd: () => void;
@@ -13,7 +15,7 @@ interface Props {
 
 // Full-screen ringing screen in the style of a phone call: big avatar with pulsing rings, the name, what is happening,
 // and large round buttons (green to accept, red to decline or cancel). Used for incoming calls and while we are calling out.
-export default function CallScreen({ mode, name, type, onAccept, onEnd }: Props) {
+export default function CallScreen({ mode, name, type, note, onAccept, onEnd }: Props) {
   // Make a ringing call noticeable when the tab is in the background.
   useEffect(() => {
     if (mode !== 'incoming') return;
@@ -35,6 +37,7 @@ export default function CallScreen({ mode, name, type, onAccept, onEnd }: Props)
         </p>
         <h2 className="mt-3 max-w-[85vw] truncate font-heading text-3xl font-bold">{name}</h2>
         <p className="mt-1.5 text-sm text-white/70" aria-live="polite">{status}</p>
+        {mode === 'outgoing' && note && <p className="mt-2 max-w-[80vw] text-xs text-white/55">{note}</p>}
       </div>
 
       <div className="relative flex h-56 w-56 items-center justify-center" aria-hidden>

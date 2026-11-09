@@ -44,6 +44,31 @@ Calls are logged in the `call_logs` table (who, type, outcome, duration). Admins
 - Who may call whom is decided in the database (`start_call`), not in the browser.
 - The receiving browser only rings for a call that has a matching, fresh row in `call_logs` (its age is measured by the server, so a wrong phone clock does not matter). A call sent straight through ZEGO that skipped these rules is refused automatically.
 
+## Call alerts when the site is closed (Web Push)
+What the caller sees: the moment they tap call, a full-screen "Calling..." screen with a ring-back tone. If the other person's site is
+not open, the caller's screen keeps ringing for about 40 seconds and says an alert was sent. If they never open it, the call becomes a
+missed call in the chat. What the other person gets: a notification "Incoming voice/video call - NAME is calling you" on their phone or
+computer (even with the site closed). Tapping it opens the site, and within a few seconds the call rings on their screen so they can accept.
+
+One-time setup:
+1. Make the keys (any computer with Node): `npx web-push generate-vapid-keys`. You get a Public Key and a Private Key.
+2. Supabase > SQL editor: run `supabase/migrations/20261109090000_call_push_alerts.sql` once.
+3. Supabase > Edge Functions > Secrets: add `VAPID_PUBLIC_KEY` (the public key), `VAPID_PRIVATE_KEY` (the private key, never anywhere else)
+   and `VAPID_SUBJECT` (for example `mailto:you@yourdomain.com`).
+4. Deploy the function: `npx supabase@latest functions deploy call-push --project-ref YOUR_REF`
+5. Vercel > Environment Variables: add `VITE_VAPID_PUBLIC_KEY` = the SAME public key (public keys are safe in the browser), then redeploy the site.
+6. Each person taps "Turn on" on the small "Get call alerts" card (shown once to signed-in members) and allows notifications.
+
+Limits to know:
+- It is a notification, not a phone ring: the sound is the device's notification sound and vibration. Nothing can play a looping ringtone
+  from a closed web page. A true phone-style ring (like WhatsApp) needs a native app with push.
+- Android (Chrome, Edge, Samsung Internet) and desktop browsers work. iPhone works only after the site is added to the Home Screen
+  (Share > Add to Home Screen) and opened from there once, on iOS 16.4 or newer.
+- Delivery depends on the phone: battery saver or "restrict background activity" can delay or block alerts. Delivery is fast but not guaranteed.
+- A desktop browser must be running (it can be in the background). A phone with the browser fully closed still gets alerts on Android.
+- If the other person has not turned alerts on, nothing can reach them: the caller rings for about 40 seconds, then it is a missed call.
+- Each call sends at most one alert, and only the caller of a fresh, still-ringing call can trigger it.
+
 ## Known limits
 - Use one browser tab or device per account when testing. ZEGO signs an account in once per browser; opening the site in a second tab or on a second device with the SAME account may sign the first one out of calling, so only the newest tab would ring.
 - Rings only while the other person's site is open (no phone-style push when the tab is closed). A mobile app with push (ZEGO offline push) is the next step if you need that.

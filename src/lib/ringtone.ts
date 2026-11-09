@@ -5,6 +5,7 @@
 
 type Kind = 'incoming' | 'outgoing';
 let ctx: AudioContext | null = null;
+let primed: AudioContext | null = null;   // created inside a tap, so the browser lets it play later
 let timer: number | null = null;
 
 const AudioCtor = (): typeof AudioContext | null =>
@@ -39,12 +40,24 @@ export function stopRingtone() {
   if (ctx) { const c = ctx; ctx = null; void c.close().catch(() => {}); }
 }
 
+/** Call this synchronously inside the tap that starts a call. Phones only allow sound that was unlocked by a tap, and the ring-back
+ *  starts a moment later (after the network), when the tap no longer counts. */
+export function primeRingtone() {
+  const Ctor = AudioCtor();
+  if (!Ctor) return;
+  try {
+    if (!primed || primed.state === 'closed') primed = new Ctor();
+    void primed.resume().catch(() => {});
+  } catch { primed = null; }
+}
+
 export function startRingtone(kind: Kind) {
   stopRingtone();
   const Ctor = AudioCtor();
   if (!Ctor) return;
   try {
-    ctx = new Ctor();
+    ctx = primed && primed.state !== 'closed' ? primed : new Ctor();
+    primed = null;
     void ctx.resume().catch(() => {});
     pattern(kind);
     timer = window.setInterval(() => pattern(kind), kind === 'incoming' ? 3000 : 4000);
