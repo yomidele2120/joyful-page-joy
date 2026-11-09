@@ -6,7 +6,7 @@ import { useCallsEnabled } from '@/hooks/useCallsEnabled';
 import { sendMessage } from '@/hooks/useChat';
 import CallScreen from '@/components/calls/CallScreen';
 import { startRingtone, stopRingtone } from '@/lib/ringtone';
-import { callMessage, isGenuineIncomingCall, outcomeForEnd, toZegoUserId, type CallOutcome, type CallRow, type CallType } from '@/lib/zego';
+import { callMessage, isGenuineIncomingCall, outcomeForEnd, toZegoUserId, type CallOutcome, type CallType } from '@/lib/zego';
 
 // Voice/video calls with ZEGOCLOUD Call Kit. The libraries are loaded only when a signed-in member opens the site
 // AND the admin has switched calling on, so everyone else downloads nothing extra.
@@ -22,11 +22,14 @@ export const useCalls = () => useContext(Ctx);
 
 interface Active {
   role: 'caller' | 'callee'; callId?: string; peerUserId?: string; peerName: string; type: CallType; conversationId?: string; closed?: boolean;
+  startedAt: number; joined?: boolean;
 }
 interface Incoming { callerName: string; type: CallType; accept: () => void; refuse: () => void }
 interface Outgoing { name: string; type: CallType; cancel: () => void }
 
 const RENEW_MS = 20 * 60 * 60 * 1000;   // tokens last 24h; sign in again well before that
+const RING_LIMIT_MS = 65_000;           // ZEGO stops ringing after 60s; never leave a ringing screen up longer than this
+const UNCONNECTED_LIMIT_MS = 90_000;    // a call that has not connected after this long is treated as dead
 const db = supabase as any;
 const zegoErrorText = (e: any) => {
   const code = e?.code ?? e?.errorCode ?? e?.ret;
@@ -40,6 +43,8 @@ export function CallProvider({ children }: { children: ReactNode }) {
   const { data: enabled } = useCallsEnabled();
   const kit = useRef<{ zp: any; Kit: any } | null>(null);
   const active = useRef<Active | null>(null);
+  const ringGen = useRef(0);                          // bumps whenever a ringing call ends, so a slow check never shows a call that is already over
+  const ringTimer = useRef<number | undefined>(undefined);
   const [ready, setReady] = useState(false);
   const [incoming, setIncoming] = useState<Incoming | null>(null);
   const [outgoing, setOutgoing] = useState<Outgoing | null>(null);
@@ -60,7 +65,22 @@ export function CallProvider({ children }: { children: ReactNode }) {
 
   const markAnswered = useCallback(() => {
     const a = active.current;
-    if (a?.callId && !a.closed) void db.rpc('finish_call', { _call: a.callId, _outcome: 'answered' });
+    if (!a) return;
+    a.joined = true;
+    if (a.callId && !a.closed) void db.rpc('finish_call', { _call: a.callId, _outcome: 'answered' });
+  }, []);
+
+  // True while a call is really in progress. A call that never connected (for example the microphone was refused) must
+  // not block every later call, so it is treated as dead after a short time.
+  const isBusy = useCallback(() => {
+    const a = active.current;
+    if (!a) return false;
+    if (!a.joined && Date.now() - a.startedAt > UNCONNECTED_LIMIT_MS) { active.current = null; return false; }
+    return true;
+  }, []);
+
+  const clearRingTimer = useCallback(() => {
+    if (ringTimer.current !== undefined) { window.clearTimeout(ringTimer.current); ringTimer.current = undefined; }
   }, []);
 
   useEffect(() => {
@@ -87,22 +107,29 @@ export function CallProvider({ children }: { children: ReactNode }) {
           onConfirmDialogWhenReceiving: (callType: number, caller: { userID: string; userName?: string }, refuse: () => void, accept: () => void, extra: string) => {
             void (async () => {
               const type: CallType = callType === Kit.InvitationTypeVideoCall ? 'video' : 'voice';
-              if (active.current) { refuse(); return; }                         // already on a call
+              if (isBusy()) { refuse(); return; }                               // already on a call
+              const gen = ringGen.current;
               let callId: string | undefined;
               try { callId = JSON.parse(extra || '{}')?.callId; } catch { /* no data */ }
-              let row: CallRow | null = null;
+              let info: any = null;
               if (callId && /^[0-9a-f-]{36}$/i.test(callId)) {
-                const res = await db.from('call_logs').select('caller_id, callee_id, call_type, status, ended_at, created_at').eq('id', callId).maybeSingle();
-                row = res.data ?? null;
+                const res = await db.rpc('incoming_call_info', { _call: callId });
+                info = res.data ?? null;
               }
-              // No matching row means the call did not go through start_call (rules and limits), so it is not allowed to ring.
-              if (!isGenuineIncomingCall(row, { me: meId, callerZegoId: caller.userID })) { refuse(); return; }
-              const a: Active = { role: 'callee', callId, peerName: caller.userName || 'Someone', type };
+              if (gen !== ringGen.current) return;                              // the caller already hung up while we were checking
+              // No matching, fresh call record means it did not go through start_call (rules and limits): do not ring.
+              if (!isGenuineIncomingCall(info, { me: meId, callerZegoId: caller.userID })) { refuse(); return; }
+              const a: Active = { role: 'callee', callId, peerName: caller.userName || 'Someone', type, startedAt: Date.now() };
               active.current = a;
+              clearRingTimer();
+              ringTimer.current = window.setTimeout(() => {                     // safety net: never leave a ringing screen stuck on
+                setIncoming(null);
+                if (active.current === a && !a.joined) active.current = null;
+              }, RING_LIMIT_MS);
               setIncoming({
                 callerName: a.peerName, type,
-                accept: () => { setIncoming(null); accept(); },
-                refuse: () => { setIncoming(null); refuse(); void closeCall('declined'); },
+                accept: () => { clearRingTimer(); setIncoming(null); accept(); },
+                refuse: () => { clearRingTimer(); setIncoming(null); refuse(); void closeCall('declined'); },
               });
             })();
           },
@@ -124,6 +151,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
             };
           },
           onCallInvitationEnded: (reason: string) => {
+            ringGen.current++; clearRingTimer();
             setIncoming(null); setOutgoing(null);                                // cancelled, declined or timed out while ringing
             const a = active.current;
             if (!a) return;
@@ -134,7 +162,15 @@ export function CallProvider({ children }: { children: ReactNode }) {
         current = zp;
         kit.current = { zp, Kit };
         setReady(true);
-        renew = window.setTimeout(() => { try { zp.destroy?.(); } catch { /* ignore */ } kit.current = null; setReady(false); void boot(); }, RENEW_MS);
+        const scheduleRenew = (ms: number) => {
+          renew = window.setTimeout(() => {
+            if (cancelled) return;
+            if (active.current) { scheduleRenew(5 * 60 * 1000); return; }      // never cut off a call in progress
+            try { zp.destroy?.(); } catch { /* ignore */ }
+            kit.current = null; setReady(false); void boot();
+          }, ms);
+        };
+        scheduleRenew(RENEW_MS);
       } catch (e) {
         console.warn('Calling is not available', e);
         if (!cancelled) setReady(false);
@@ -145,19 +181,20 @@ export function CallProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       if (renew) window.clearTimeout(renew);
       try { current?.destroy?.(); } catch { /* ignore */ }
+      clearRingTimer();
       kit.current = null; active.current = null; setReady(false); setIncoming(null); setOutgoing(null);
     };
-  }, [meId, enabled, closeCall, markAnswered]);
+  }, [meId, enabled, closeCall, markAnswered, isBusy, clearRingTimer]);
 
   const startCall = useCallback(async (peerUserId: string, peerName: string, type: CallType) => {
     const k = kit.current;
     if (!meId) { toast.error('Sign in to make a call'); return; }
     if (!k) { toast.error('Calling is still connecting. Try again in a few seconds.'); return; }
-    if (active.current) { toast.error('You are already on a call'); return; }
+    if (isBusy()) { toast.error('You are already on a call'); return; }
     const { data: callId, error } = await db.rpc('start_call', { _peer: peerUserId, _type: type });
     if (error || !callId) { toast.error(errText(error) || 'Could not start the call'); return; }
     const { data: row } = await db.from('call_logs').select('conversation_id').eq('id', callId).maybeSingle();
-    active.current = { role: 'caller', callId, peerUserId, peerName, type, conversationId: row?.conversation_id };
+    active.current = { role: 'caller', callId, peerUserId, peerName, type, conversationId: row?.conversation_id, startedAt: Date.now() };
     try {
       const res = await k.zp.sendCallInvitation({
         callees: [{ userID: toZegoUserId(peerUserId), userName: peerName }],
@@ -176,7 +213,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
       toast.error(`Could not place the call${detail ? ` (${detail})` : ''}. Please try again.`);
       await closeCall('failed');
     }
-  }, [meId, closeCall]);
+  }, [meId, closeCall, isBusy]);
 
   // Ring while a call is ringing in either direction, and stop the moment it is answered, declined or ended.
   const ringing = incoming ? 'incoming' : outgoing ? 'outgoing' : null;

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { Fragment, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useConversations, useMessages, useMarkConversationRead, sendMessage, getOrCreateConversation, Conversation } from '@/hooks/useChat';
@@ -17,6 +17,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import CallButtons from '@/components/calls/CallButtons';
 import CallMessageCard from '@/components/calls/CallMessageCard';
 import { parseCallMessage } from '@/lib/zego';
+import ChatShell from '@/components/chat/ChatShell';
+import DayDivider from '@/components/chat/DayDivider';
+import { isNewDay } from '@/lib/chatDays';
 
 export default function SupplierChat() {
   const { user, loading: authLoading } = useAuth();
@@ -130,7 +133,7 @@ export default function SupplierChat() {
         </div>
       </header>
 
-      <div className="flex-1 flex overflow-hidden" style={{ height: 'calc(100vh - 56px)' }}>
+      <div className="flex-1 flex overflow-hidden" style={{ height: 'calc(100dvh - 56px)' }}>
         {/* Sidebar */}
         <div className={`w-full md:w-80 border-r border-border bg-card flex flex-col ${activeConvoId ? 'hidden md:flex' : 'flex'}`}>
           <div className="p-3 border-b border-border">
@@ -205,9 +208,9 @@ export default function SupplierChat() {
               </div>
             </div>
           ) : (
-            <>
-              {/* Chat header */}
-              <div className="px-4 py-3 border-b border-border bg-card flex items-center gap-3">
+              <ChatShell desktopClassName="flex-1"
+                header={
+                  <div className="flex items-center gap-3 px-3 py-2.5 md:px-4 md:py-3">
                 <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setActiveConvoId(null)}>
                   <ArrowLeft className="w-5 h-5" />
                 </Button>
@@ -277,16 +280,35 @@ export default function SupplierChat() {
                 )}
                 {activeConvo && <CallButtons peerUserId={activeConvo.other_user_id} peerName={activeConvo.other_is_vendor ? (activeConvo.other_vendor?.store_name || 'Supplier') : (activeConvo.other_profile?.full_name || 'Buyer')} peerIsVendor={activeConvo.other_is_vendor} />}
               </div>
-
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                }
+                footer={
+                  <div className="p-2 md:p-3">
+                <form onSubmit={e => { e.preventDefault(); handleSend(); }} className="flex items-center gap-1">
+                  <MediaUploadButton onFileSelected={handleMediaUpload} disabled={sending} />
+                  <VoiceRecorder onRecorded={handleVoiceNote} disabled={sending} />
+                  <Input
+                    value={newMessage}
+                    onChange={e => setNewMessage(e.target.value)}
+                    placeholder="Type a message..."
+                    className="flex-1 rounded-full"
+                    disabled={sending}
+                  />
+                  <Button type="submit" size="icon" className="shrink-0 rounded-full" disabled={sending || !newMessage.trim()}>
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </form>
+              </div>
+                }
+              >
                 {msgLoading ? (
                   <p className="text-center text-muted-foreground text-sm">Loading messages...</p>
                 ) : messages.length === 0 ? (
                   <p className="text-center text-muted-foreground text-sm">No messages yet. Say hello!</p>
                 ) : (
-                  messages.map(m => (
-                    <div key={m.id} className={`flex ${m.sender_id === user?.id ? 'justify-end' : 'justify-start'}`}>
+                  messages.map((m, i) => (
+                    <Fragment key={m.id}>
+                    {isNewDay(messages[i - 1]?.created_at, m.created_at) && <DayDivider iso={m.created_at} />}
+                    <div className={`flex ${m.sender_id === user?.id ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm ${
                         m.sender_id === user?.id
                           ? 'bg-primary text-primary-foreground rounded-br-md'
@@ -297,7 +319,7 @@ export default function SupplierChat() {
                             <MediaPreview url={m.media_url} type={m.media_type} isOwn={m.sender_id === user?.id} />
                           </div>
                         ) : (
-                          {parseCallMessage(m.content) ? <CallMessageCard content={m.content} createdAt={m.created_at} own={m.sender_id === user?.id} /> : <p>{m.content}</p>}
+                          parseCallMessage(m.content) ? <CallMessageCard content={m.content} createdAt={m.created_at} own={m.sender_id === user?.id} /> : <p>{m.content}</p>
                         )}
                         <span className={`text-[10px] mt-1 flex items-center gap-1 ${
                           m.sender_id === user?.id ? 'justify-end text-primary-foreground/70' : 'text-muted-foreground'
@@ -307,29 +329,11 @@ export default function SupplierChat() {
                         </span>
                       </div>
                     </div>
+                    </Fragment>
                   ))
                 )}
                 <div ref={messagesEndRef} />
-              </div>
-
-              {/* Input */}
-              <div className="p-3 border-t border-border bg-card">
-                <form onSubmit={e => { e.preventDefault(); handleSend(); }} className="flex items-center gap-1">
-                  <MediaUploadButton onFileSelected={handleMediaUpload} disabled={sending} />
-                  <VoiceRecorder onRecorded={handleVoiceNote} disabled={sending} />
-                  <Input
-                    value={newMessage}
-                    onChange={e => setNewMessage(e.target.value)}
-                    placeholder="Type a message..."
-                    className="flex-1"
-                    disabled={sending}
-                  />
-                  <Button type="submit" size="icon" disabled={sending || !newMessage.trim()}>
-                    <Send className="w-4 h-4" />
-                  </Button>
-                </form>
-              </div>
-            </>
+              </ChatShell>
           )}
         </div>
       </div>

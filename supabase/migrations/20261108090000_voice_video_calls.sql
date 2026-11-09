@@ -92,11 +92,18 @@ BEGIN
       ELSE 'This call is not allowed.' END;
   END IF;
 
+  -- Tidy this person's abandoned calls (a closed tab never reports back): unanswered ones become "missed",
+  -- connected ones that were never closed become "ended" (their length is unknown, so none is recorded).
+  UPDATE public.call_logs SET status = 'missed', ended_at = created_at + interval '60 seconds'
+   WHERE (caller_id = _me OR callee_id = _me) AND ended_at IS NULL AND answered_at IS NULL AND created_at < now() - interval '2 minutes';
+  UPDATE public.call_logs SET status = 'ended', ended_at = now()
+   WHERE (caller_id = _me OR callee_id = _me) AND ended_at IS NULL AND answered_at IS NOT NULL AND answered_at < now() - interval '4 hours';
+
   IF (SELECT count(*) FROM public.call_logs WHERE caller_id = _me AND created_at > now() - interval '1 hour') >= 20 THEN
     RAISE EXCEPTION 'You have made a lot of calls recently. Please try again a little later.';
   END IF;
   IF (SELECT count(*) FROM public.call_logs WHERE caller_id = _me AND callee_id = _peer
-        AND created_at > now() - interval '10 minutes' AND answered_at IS NULL) >= 3 THEN
+        AND created_at > now() - interval '10 minutes' AND answered_at IS NULL AND status <> 'failed') >= 3 THEN
     RAISE EXCEPTION 'They have not picked up. Send a message and try again later.';
   END IF;
 
@@ -134,3 +141,21 @@ BEGIN
 END $$;
 REVOKE ALL ON FUNCTION public.finish_call(uuid, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.finish_call(uuid, text) TO authenticated;
+
+-- ---------------------------------------------------------------------
+-- For the person being called: is this a real, fresh call to me? The age is measured here on the server, so a phone with a
+-- wrong clock still accepts genuine calls. Returns NULL unless the caller is the person it was addressed to.
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.incoming_call_info(_call uuid)
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
+DECLARE _c public.call_logs%ROWTYPE;
+BEGIN
+  IF auth.uid() IS NULL THEN RETURN NULL; END IF;
+  SELECT * INTO _c FROM public.call_logs WHERE id = _call;
+  IF NOT FOUND OR _c.callee_id <> auth.uid() THEN RETURN NULL; END IF;
+  RETURN jsonb_build_object('caller_id', _c.caller_id, 'callee_id', _c.callee_id, 'call_type', _c.call_type,
+                            'status', _c.status, 'ended', _c.ended_at IS NOT NULL,
+                            'age_seconds', extract(epoch FROM (now() - _c.created_at)));
+END $$;
+REVOKE ALL ON FUNCTION public.incoming_call_info(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.incoming_call_info(uuid) TO authenticated;

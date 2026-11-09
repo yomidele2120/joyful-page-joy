@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { Fragment, useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import { useAuth } from '@/hooks/useAuth';
@@ -13,6 +13,9 @@ import MediaPreview from '@/components/chat/MediaPreview';
 import CallButtons from '@/components/calls/CallButtons';
 import CallMessageCard from '@/components/calls/CallMessageCard';
 import { parseCallMessage } from '@/lib/zego';
+import ChatShell from '@/components/chat/ChatShell';
+import DayDivider from '@/components/chat/DayDivider';
+import { isNewDay } from '@/lib/chatDays';
 
 export default function BuyerChat() {
   const { user, loading: authLoading } = useAuth();
@@ -92,9 +95,11 @@ export default function BuyerChat() {
 
   return (
     <Layout>
-      <div className="container max-w-2xl py-4">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-4 pb-3 border-b border-border">
+      <div className="md:container md:max-w-2xl md:py-4">
+        <div className="md:h-[70vh] md:min-h-[420px] md:overflow-hidden md:rounded-lg md:border md:border-border">
+          <ChatShell
+            header={
+              <div className="flex items-center gap-3 px-3 py-2.5 md:p-3">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
@@ -111,10 +116,23 @@ export default function BuyerChat() {
           </div>
           <CallButtons className="ml-auto" peerUserId={vendorUserId} peerName={vendorInfo?.store_name || 'Seller'} peerIsVendor />
         </div>
-
-        {/* Messages */}
-        <div className="bg-secondary/30 rounded-lg p-4 min-h-[400px] max-h-[60vh] overflow-y-auto space-y-3">
-          {productName && messages.length === 0 && (
+            }
+            footer={
+              <form onSubmit={e => { e.preventDefault(); handleSend(); }} className="flex items-center gap-1.5 p-2 md:p-3">
+          <Input
+            value={newMessage}
+            onChange={e => setNewMessage(e.target.value)}
+            placeholder={productName ? `Ask about ${productName}...` : 'Type a message...'}
+            className="flex-1 rounded-full"
+            disabled={sending}
+          />
+          <Button type="submit" size="icon" className="shrink-0 rounded-full" disabled={sending || !newMessage.trim()}>
+            <Send className="w-4 h-4" />
+          </Button>
+        </form>
+            }
+          >
+            {productName && messages.length === 0 && (
             <div className="text-center text-xs text-muted-foreground py-2">
               Inquiring about: <span className="font-medium text-foreground">{productName}</span>
             </div>
@@ -124,8 +142,10 @@ export default function BuyerChat() {
           ) : messages.length === 0 ? (
             <p className="text-center text-muted-foreground text-sm py-8">No messages yet. Say hello!</p>
           ) : (
-            messages.map(m => (
-              <div key={m.id} className={`flex ${m.sender_id === user?.id ? 'justify-end' : 'justify-start'}`}>
+            messages.map((m, i) => (
+              <Fragment key={m.id}>
+              {isNewDay(messages[i - 1]?.created_at, m.created_at) && <DayDivider iso={m.created_at} />}
+              <div className={`flex ${m.sender_id === user?.id ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm ${
                   m.sender_id === user?.id
                     ? 'bg-primary text-primary-foreground rounded-br-md'
@@ -136,7 +156,7 @@ export default function BuyerChat() {
                       <MediaPreview url={m.media_url} type={m.media_type} isOwn={m.sender_id === user?.id} />
                     </div>
                   ) : (
-                    {parseCallMessage(m.content) ? <CallMessageCard content={m.content} createdAt={m.created_at} own={m.sender_id === user?.id} /> : <p>{m.content}</p>}
+                    parseCallMessage(m.content) ? <CallMessageCard content={m.content} createdAt={m.created_at} own={m.sender_id === user?.id} /> : <p>{m.content}</p>
                   )}
                   <span className={`text-[10px] mt-1 flex items-center gap-1 ${
                     m.sender_id === user?.id ? 'justify-end text-primary-foreground/70' : 'text-muted-foreground'
@@ -146,24 +166,12 @@ export default function BuyerChat() {
                   </span>
                 </div>
               </div>
+              </Fragment>
             ))
           )}
           <div ref={messagesEndRef} />
+          </ChatShell>
         </div>
-
-        {/* Input */}
-        <form onSubmit={e => { e.preventDefault(); handleSend(); }} className="flex items-center gap-2 mt-3">
-          <Input
-            value={newMessage}
-            onChange={e => setNewMessage(e.target.value)}
-            placeholder={productName ? `Ask about ${productName}...` : 'Type a message...'}
-            className="flex-1"
-            disabled={sending}
-          />
-          <Button type="submit" size="icon" disabled={sending || !newMessage.trim()}>
-            <Send className="w-4 h-4" />
-          </Button>
-        </form>
       </div>
     </Layout>
   );

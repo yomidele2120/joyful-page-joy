@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, MessageCircle, Send, Store, User as UserIcon, X } from 'lucide-react';
@@ -17,6 +17,9 @@ import { supabase } from '@/integrations/supabase/client';
 import CallButtons from '@/components/calls/CallButtons';
 import CallMessageCard from '@/components/calls/CallMessageCard';
 import { parseCallMessage } from '@/lib/zego';
+import ChatShell from '@/components/chat/ChatShell';
+import DayDivider from '@/components/chat/DayDivider';
+import { isNewDay } from '@/lib/chatDays';
 
 function useChatProducts(ids: string[]) {
   const key = [...new Set(ids)].sort();
@@ -159,9 +162,9 @@ export default function Messages() {
 
   return (
     <Layout>
-      <div className="container max-w-6xl py-4">
+      <div className="md:container md:max-w-6xl md:py-4">
         <h1 className="sr-only">Messages</h1>
-        <div className="grid h-[calc(100dvh-14rem)] min-h-[420px] overflow-hidden rounded-lg border border-border bg-card md:h-[72vh] md:grid-cols-[320px_minmax(0,1fr)]">
+        <div className="grid h-[calc(100dvh-8rem)] overflow-hidden bg-card md:h-[72vh] md:min-h-[420px] md:grid-cols-[320px_minmax(0,1fr)] md:rounded-lg md:border md:border-border">
           {/* Conversation list */}
           <aside className={`${showThread ? 'hidden md:flex' : 'flex'} min-h-0 flex-col border-r border-border`}>
             <div className="border-b border-border p-3 font-heading font-semibold">Messages</div>
@@ -205,15 +208,16 @@ export default function Messages() {
           </aside>
 
           {/* Thread */}
-          <section className={`${showThread ? 'flex' : 'hidden md:flex'} min-h-0 min-w-0 flex-col`}>
+          <section className={`${showThread ? 'block' : 'hidden md:block'} h-full min-h-0 min-w-0`}>
             {!activeId ? (
-              <div className="m-auto p-6 text-center text-sm text-muted-foreground">
+              <div className="flex h-full flex-col items-center justify-center p-6 text-center text-sm text-muted-foreground">
                 <MessageCircle className="mx-auto mb-2 h-10 w-10 opacity-40" />
                 Select a conversation to start messaging.
               </div>
             ) : (
-              <>
-                <header className="flex items-center gap-3 border-b border-border p-3">
+              <ChatShell
+                header={
+                  <div className="flex items-center gap-3 px-3 py-2.5 md:p-3">
                   <Button variant="ghost" size="icon" className="md:hidden" onClick={back} aria-label="Back to conversations">
                     <ArrowLeft className="h-5 w-5" />
                   </Button>
@@ -225,19 +229,49 @@ export default function Messages() {
                     )}
                   </div>
                   {active && <CallButtons peerUserId={active.other_user_id} peerName={displayName(active)} peerIsVendor={active.other_is_vendor} />}
-                </header>
+                </div>
+                }
+                footer={
+                  <>
+                    {pendingProduct && (
+                  <div className="flex items-center justify-between gap-2 border-t border-border bg-card px-3 pt-2">
+                    <ProductChatCard product={pendingProduct} />
+                    <Button variant="ghost" size="icon" onClick={() => setSearchParams({ c: activeId }, { replace: true })} aria-label="Remove product from message">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
 
-                <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-secondary/30 p-4">
+                <form onSubmit={e => { e.preventDefault(); handleSend(); }} className="flex items-center gap-1.5 p-2">
+                  <MediaUploadButton onFileSelected={handleMedia} disabled={sending} />
+                  <VoiceRecorder onRecorded={handleVoice} disabled={sending} />
+                  <Input
+                    value={text}
+                    onChange={e => setText(e.target.value)}
+                    placeholder={pendingProduct ? `Ask about ${pendingProduct.name}...` : 'Type a message...'}
+                    className="flex-1 rounded-full"
+                    disabled={sending}
+                  />
+                  <Button type="submit" size="icon" className="shrink-0 rounded-full" disabled={sending || !text.trim()} aria-label="Send">
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </form>
+                  </>
+                }
+              >
+                
                   {msgLoading ? (
                     <p className="text-center text-sm text-muted-foreground">Loading messages...</p>
                   ) : messages.length === 0 ? (
                     <p className="py-8 text-center text-sm text-muted-foreground">No messages yet. Say hello!</p>
                   ) : (
-                    messages.map(m => {
+                    messages.map((m, i) => {
                       const own = m.sender_id === user.id;
                       const product = m.product_id ? products?.get(m.product_id) : null;
                       return (
-                        <div key={m.id} className={`flex ${own ? 'justify-end' : 'justify-start'}`}>
+                        <Fragment key={m.id}>
+                        {isNewDay(messages[i - 1]?.created_at, m.created_at) && <DayDivider iso={m.created_at} />}
+                        <div className={`flex ${own ? 'justify-end' : 'justify-start'}`}>
                           <div className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${own ? 'rounded-br-md bg-primary text-primary-foreground' : 'rounded-bl-md border border-border bg-card'}`}>
                             {product && <ProductChatCard product={product} dark={own} />}
                             {m.media_url && m.media_type ? (
@@ -251,36 +285,12 @@ export default function Messages() {
                             </span>
                           </div>
                         </div>
+                        </Fragment>
                       );
                     })
                   )}
                   <div ref={endRef} />
-                </div>
-
-                {pendingProduct && (
-                  <div className="flex items-center justify-between gap-2 border-t border-border bg-card px-3 pt-2">
-                    <ProductChatCard product={pendingProduct} />
-                    <Button variant="ghost" size="icon" onClick={() => setSearchParams({ c: activeId }, { replace: true })} aria-label="Remove product from message">
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-
-                <form onSubmit={e => { e.preventDefault(); handleSend(); }} className="flex items-center gap-1 border-t border-border bg-card p-2">
-                  <MediaUploadButton onFileSelected={handleMedia} disabled={sending} />
-                  <VoiceRecorder onRecorded={handleVoice} disabled={sending} />
-                  <Input
-                    value={text}
-                    onChange={e => setText(e.target.value)}
-                    placeholder={pendingProduct ? `Ask about ${pendingProduct.name}...` : 'Type a message...'}
-                    className="flex-1"
-                    disabled={sending}
-                  />
-                  <Button type="submit" size="icon" disabled={sending || !text.trim()} aria-label="Send">
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </form>
-              </>
+              </ChatShell>
             )}
           </section>
         </div>

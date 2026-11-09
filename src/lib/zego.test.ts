@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { toZegoUserId, fromZegoUserId, outcomeForEnd, formatDuration, callMessage, isGenuineIncomingCall, pairMayCall } from './zego';
 
 const A = '3f0c2a52-8a5c-4f0e-9d0a-0d1d3d9d7a11', B = '11111111-2222-3333-4444-555555555555';
-const row = (o = {}) => ({ caller_id: A, callee_id: B, call_type: 'voice' as const, status: 'ringing', ended_at: null, created_at: new Date().toISOString(), ...o });
+const row = (o = {}) => ({ caller_id: A, callee_id: B, call_type: 'voice' as const, status: 'ringing', ended: false, age_seconds: 3, ...o });
 
 test('id mapping round-trips and rejects junk', () => {
   assert.equal(toZegoUserId(A).length, 32);
@@ -30,8 +30,10 @@ test('incoming call gate', () => {
   assert.equal(isGenuineIncomingCall(row({ caller_id: B }), ctx), false, 'row says someone else is the caller');
   assert.equal(isGenuineIncomingCall(row({ callee_id: A }), ctx), false, 'row is not addressed to me');
   assert.equal(isGenuineIncomingCall(row({ status: 'answered' }), ctx), false);
-  assert.equal(isGenuineIncomingCall(row({ ended_at: new Date().toISOString() }), ctx), false);
-  assert.equal(isGenuineIncomingCall(row({ created_at: new Date(Date.now() - 600_000).toISOString() }), ctx), false, 'stale row');
+  assert.equal(isGenuineIncomingCall(row({ ended: true }), ctx), false);
+  assert.equal(isGenuineIncomingCall(row({ age_seconds: 600 }), ctx), false, 'stale row');
+  assert.equal(isGenuineIncomingCall(row({ age_seconds: NaN as any }), ctx), false, 'no age');
+  assert.equal(isGenuineIncomingCall(row({ age_seconds: 119 }), ctx), true, 'just inside the window');
   assert.equal(isGenuineIncomingCall(row(), { me: B, callerZegoId: 'nope' }), false);
 });
 test('buttons only for buyer-supplier or supplier-supplier', () => {

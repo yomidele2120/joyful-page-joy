@@ -43,22 +43,24 @@ export function callMessage(type: CallType, status: string, seconds?: number | n
   }
 }
 
-/** A ringing call row is only believable for a short time. */
+/** A ringing call is only believable for a short time. */
 export const CALL_FRESH_SECONDS = 120;
 
-export interface CallRow { id?: string; caller_id: string; callee_id: string; call_type: CallType; status: string; ended_at: string | null; created_at: string }
+/** What the database says about a call addressed to me (see incoming_call_info). The age is measured on the server. */
+export interface IncomingCallInfo { caller_id: string; callee_id: string; call_type: CallType; status: string; ended: boolean; age_seconds: number }
 
 /**
- * The receiving browser's gate. A call is real only if start_call created a row for it (that is where every rule and
+ * The receiving browser's gate. A call is real only if start_call created a record for it (that is where every rule and
  * rate limit is enforced, and nobody can write that table directly). Anything else is an unsolicited ring: refuse it.
+ * The age comes from the server, so a phone with the wrong clock still accepts real calls.
  */
-export function isGenuineIncomingCall(row: CallRow | null | undefined, ctx: { me: string; callerZegoId: string; nowMs?: number }): boolean {
-  if (!row) return false;
+export function isGenuineIncomingCall(info: IncomingCallInfo | null | undefined, ctx: { me: string; callerZegoId: string }): boolean {
+  if (!info) return false;
   const callerUuid = fromZegoUserId(ctx.callerZegoId);
-  if (!callerUuid || row.caller_id !== callerUuid || row.callee_id !== ctx.me) return false;
-  if (row.ended_at || row.status !== 'ringing') return false;
-  const age = ((ctx.nowMs ?? Date.now()) - new Date(row.created_at).getTime()) / 1000;
-  return age >= -5 && age <= CALL_FRESH_SECONDS;
+  if (!callerUuid || info.caller_id !== callerUuid || info.callee_id !== ctx.me) return false;
+  if (info.ended || info.status !== 'ringing') return false;
+  const age = Number(info.age_seconds);
+  return Number.isFinite(age) && age >= -5 && age <= CALL_FRESH_SECONDS;
 }
 
 /** Can this pair call each other? Mirrors the database rule (which is the real enforcement) so buttons only show when it can work. */

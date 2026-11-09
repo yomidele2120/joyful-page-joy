@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { Fragment, useState, useEffect, useRef } from 'react';
 import { useConversations, useMessages, useMarkConversationRead, sendMessage, Conversation } from '@/hooks/useChat';
 import MessageTicks from '@/components/chat/MessageTicks';
 import { useAuth } from '@/hooks/useAuth';
@@ -12,6 +12,9 @@ import MediaPreview from '@/components/chat/MediaPreview';
 import CallButtons from '@/components/calls/CallButtons';
 import CallMessageCard from '@/components/calls/CallMessageCard';
 import { parseCallMessage } from '@/lib/zego';
+import ChatShell from '@/components/chat/ChatShell';
+import DayDivider from '@/components/chat/DayDivider';
+import { isNewDay } from '@/lib/chatDays';
 
 export default function UserMessages() {
   const { user } = useAuth();
@@ -91,9 +94,10 @@ export default function UserMessages() {
   // Active chat view
   if (activeConvoId && activeConvo) {
     return (
-      <Card className="overflow-hidden">
-        {/* Chat header */}
-        <div className="px-4 py-3 border-b border-border flex items-center gap-3">
+      <Card className="overflow-hidden md:h-[70vh] md:min-h-[420px]">
+        <ChatShell
+          header={
+            <div className="flex items-center gap-3 px-3 py-2.5 md:px-4 md:py-3">
           <Button variant="ghost" size="icon" onClick={() => setActiveConvoId(null)}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
@@ -115,16 +119,33 @@ export default function UserMessages() {
           )}
           <CallButtons peerUserId={activeConvo.other_user_id} peerName={getDisplayName(activeConvo)} peerIsVendor={activeConvo.other_is_vendor} />
         </div>
-
-        {/* Messages */}
-        <div className="p-4 min-h-[350px] max-h-[50vh] overflow-y-auto space-y-3 bg-secondary/20">
+          }
+          footer={
+            <div className="p-2 md:p-3">
+          <form onSubmit={e => { e.preventDefault(); handleSend(); }} className="flex items-center gap-1.5">
+            <Input
+              value={newMessage}
+              onChange={e => setNewMessage(e.target.value)}
+              placeholder="Type a message..."
+              className="flex-1 rounded-full"
+              disabled={sending}
+            />
+            <Button type="submit" size="icon" className="shrink-0 rounded-full" disabled={sending || !newMessage.trim()}>
+              <Send className="w-4 h-4" />
+            </Button>
+          </form>
+        </div>
+          }
+        >
           {msgLoading ? (
             <p className="text-center text-muted-foreground text-sm">Loading messages...</p>
           ) : messages.length === 0 ? (
             <p className="text-center text-muted-foreground text-sm py-8">No messages yet. Say hello!</p>
           ) : (
-            messages.map(m => (
-              <div key={m.id} className={`flex ${m.sender_id === user?.id ? 'justify-end' : 'justify-start'}`}>
+            messages.map((m, i) => (
+              <Fragment key={m.id}>
+              {isNewDay(messages[i - 1]?.created_at, m.created_at) && <DayDivider iso={m.created_at} />}
+              <div className={`flex ${m.sender_id === user?.id ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm ${
                   m.sender_id === user?.id
                     ? 'bg-primary text-primary-foreground rounded-br-md'
@@ -135,7 +156,7 @@ export default function UserMessages() {
                       <MediaPreview url={m.media_url} type={m.media_type} isOwn={m.sender_id === user?.id} />
                     </div>
                   ) : (
-                    {parseCallMessage(m.content) ? <CallMessageCard content={m.content} createdAt={m.created_at} own={m.sender_id === user?.id} /> : <p>{m.content}</p>}
+                    parseCallMessage(m.content) ? <CallMessageCard content={m.content} createdAt={m.created_at} own={m.sender_id === user?.id} /> : <p>{m.content}</p>
                   )}
                   <span className={`text-[10px] mt-1 flex items-center gap-1 ${
                     m.sender_id === user?.id ? 'justify-end text-primary-foreground/70' : 'text-muted-foreground'
@@ -145,26 +166,11 @@ export default function UserMessages() {
                   </span>
                 </div>
               </div>
+              </Fragment>
             ))
           )}
           <div ref={messagesEndRef} />
-        </div>
-
-        {/* Input */}
-        <div className="p-3 border-t border-border">
-          <form onSubmit={e => { e.preventDefault(); handleSend(); }} className="flex items-center gap-2">
-            <Input
-              value={newMessage}
-              onChange={e => setNewMessage(e.target.value)}
-              placeholder="Type a message..."
-              className="flex-1"
-              disabled={sending}
-            />
-            <Button type="submit" size="icon" disabled={sending || !newMessage.trim()}>
-              <Send className="w-4 h-4" />
-            </Button>
-          </form>
-        </div>
+        </ChatShell>
       </Card>
     );
   }

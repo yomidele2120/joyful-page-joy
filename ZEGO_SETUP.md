@@ -7,7 +7,7 @@ It rings only while the other person has the website open; otherwise the caller 
 ## The keys (only two values)
 | Value | What it is | Where it goes |
 |---|---|---|
-| **AppID** (a number) | Public project id | Vercel: `VITE_ZEGO_APP_ID` (optional, not used by the code) and Supabase secret `ZEGO_APP_ID` (**required**) |
+| **AppID** (a number) | Public project id | Supabase secret `ZEGO_APP_ID` |
 | **ServerSecret** (32 characters) | PRIVATE. Signs login tokens | Supabase secret `ZEGO_SERVER_SECRET` **only**. Never on Vercel, never starting with `VITE_` |
 
 The browser never sees the ServerSecret: it asks the `zego-token` function for a 24-hour login token.
@@ -31,7 +31,8 @@ Note: ZEGOCLOUD's console also shows a "Server" URL and a "Callback secret". You
 
 ## Cost and limits
 ZEGOCLOUD bills per minute of audio/video and has a free allowance; check their current pricing page before launch.
-Built-in limits: 20 calls per hour per person, and after 3 unanswered calls to the same person within 10 minutes further attempts are blocked.
+Built-in limits: 20 calls per hour per person, and after 3 unanswered calls to the same person within 10 minutes further attempts are blocked. Technical failures (calls that could not connect at all) do not count towards the 3, so testing is not penalised.
+Abandoned calls (a tab closed mid-call) are tidied automatically the next time that person makes a call.
 Calls are logged in the `call_logs` table (who, type, outcome, duration). Admins can read it; nobody can write it directly.
 
 ## Call times and history
@@ -41,9 +42,10 @@ Calls are logged in the `call_logs` table (who, type, outcome, duration). Admins
 ## How it is protected
 - The admin switch controls everything: when it is off, no tokens are issued and no buttons show.
 - Who may call whom is decided in the database (`start_call`), not in the browser.
-- The receiving browser only rings for a call that has a matching row in `call_logs`. A call sent straight through ZEGO that skipped these rules is refused automatically.
+- The receiving browser only rings for a call that has a matching, fresh row in `call_logs` (its age is measured by the server, so a wrong phone clock does not matter). A call sent straight through ZEGO that skipped these rules is refused automatically.
 
 ## Known limits
+- Use one browser tab or device per account when testing. ZEGO signs an account in once per browser; opening the site in a second tab or on a second device with the SAME account may sign the first one out of calling, so only the newest tab would ring.
 - Rings only while the other person's site is open (no phone-style push when the tab is closed). A mobile app with push (ZEGO offline push) is the next step if you need that.
 - Group calls are not offered (2 people per call).
 - The ringing screens (incoming and "Calling...") are our own WhatsApp-style full-screen design with a ring tone. The in-call screen (video grid, mute and hang-up buttons) is ZEGOCLOUD's own prebuilt screen: we remove the clutter, but its look cannot be fully restyled. A completely custom in-call screen means building on ZEGO's lower-level SDK (a bigger job).
