@@ -18,11 +18,9 @@ export default function SupplierLogin() {
     e.preventDefault();
     setLoading(true);
     try {
-      const { error } = await signIn(email.trim(), password, captcha.token);
+      const { error, user } = await signIn(email.trim(), password, captcha.token);
       if (error) throw error;
 
-      // Check if user is a vendor
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Login failed');
 
       const { data: vendor } = await supabase

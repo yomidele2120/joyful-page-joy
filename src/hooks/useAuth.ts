@@ -90,7 +90,7 @@ export function useAuth() {
     });
     if (error) recordSignInFailure(); else recordSignInSuccess();
     const roles = !error && data.user ? await checkRoles(data.user.id) : [];
-    return { error: error as Error | AuthError | null, roles };
+    return { error: error as Error | AuthError | null, roles, user: data.user };
   };
 
   const signUp = async (
