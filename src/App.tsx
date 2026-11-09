@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { CallProvider } from "@/contexts/CallContext";
 import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from "react-router-dom";
 import { CartProvider } from "@/contexts/CartContext";
 import { InquiryBasketProvider } from "@/contexts/InquiryBasketContext";
@@ -108,6 +109,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+          <CallProvider>
             <ScrollToTop />
             <CookieConsent />
             <Tracker />
@@ -183,6 +185,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
             </Suspense>
+          </CallProvider>
           </BrowserRouter>
           </InquiryBasketProvider>
         </CartProvider>

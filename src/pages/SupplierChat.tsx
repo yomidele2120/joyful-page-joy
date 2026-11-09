@@ -14,6 +14,7 @@ import MediaPreview from '@/components/chat/MediaPreview';
 import VoiceRecorder from '@/components/chat/VoiceRecorder';
 import MediaUploadButton from '@/components/chat/MediaUploadButton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import CallButtons from '@/components/calls/CallButtons';
 
 export default function SupplierChat() {
   const { user, loading: authLoading } = useAuth();
@@ -272,6 +273,7 @@ export default function SupplierChat() {
                     </Button>
                   </Link>
                 )}
+                {activeConvo && <CallButtons peerUserId={activeConvo.other_user_id} peerName={activeConvo.other_is_vendor ? (activeConvo.other_vendor?.store_name || 'Supplier') : (activeConvo.other_profile?.full_name || 'Buyer')} peerIsVendor={activeConvo.other_is_vendor} />}
               </div>
 
               {/* Messages */}

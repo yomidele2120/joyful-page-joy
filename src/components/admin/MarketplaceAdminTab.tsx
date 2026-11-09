@@ -15,6 +15,7 @@ import type { Database } from '@/integrations/supabase/types';
 import { formatNaira } from '@/lib/format';
 import { formatLongDate } from '@/hooks/useMarketplace';
 import { useTikTokEnabled } from '@/hooks/useTikTokEnabled';
+import { useCallsEnabled } from '@/hooks/useCallsEnabled';
 
 const card = 'rounded-lg bg-card p-5 card-shadow';
 
@@ -109,6 +110,75 @@ export function TikTokSwitch() {
   );
 }
 
+type CallKeys = { state: 'ready' } | { state: 'keys_missing'; missing: string[] } | { state: 'unreachable'; detail: string };
+
+export function CallsSwitch() {
+  const queryClient = useQueryClient();
+  const { data: enabled } = useCallsEnabled();
+  const { data: dbReady, isLoading: checkingDb } = useQuery({
+    queryKey: ['calls-db-ready'],
+    retry: false,
+    queryFn: async () => {
+      const { error } = await (supabase as any).from('marketplace_settings').select('calls_enabled').eq('id', true).maybeSingle();
+      return !error;
+    },
+  });
+  const { data: keys, isLoading: checkingKeys } = useQuery<CallKeys>({
+    queryKey: ['calls-configured'],
+    retry: false,
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke('zego-token', { body: { status: true } });
+      if (error) return { state: 'unreachable', detail: error.message || 'no answer from the server' };
+      if (data?.error) return { state: 'unreachable', detail: String(data.error) };
+      return data?.configured === true ? { state: 'ready' } : { state: 'keys_missing', missing: data?.missing ?? [] };
+    },
+  });
+  const ready = dbReady === true && keys?.state === 'ready';
+  const toggle = useMutation({
+    mutationFn: async (value: boolean) => {
+      const { data, error } = await (supabase as any).from('marketplace_settings').update({ calls_enabled: value }).eq('id', true).select('calls_enabled');
+      if (error) throw error;
+      if (!data?.length) throw new Error('Could not save. Run the voice and video calls database update first.');
+    },
+    onSuccess: (_d, value) => { toast.success(value ? 'Calls are on. Buyers and suppliers can now call from chat.' : 'Calls are off.'); queryClient.invalidateQueries({ queryKey: ['calls-enabled'] }); queryClient.invalidateQueries({ queryKey: ['calls-configured'] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const Step = ({ ok, loading, title, fix }: { ok: boolean; loading?: boolean; title: string; fix: string }) => (
+    <li className="flex items-start gap-2 text-sm">
+      {loading ? <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
+        : ok ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" /> : <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />}
+      <div className="min-w-0">
+        <p className="font-medium">{title}</p>
+        {!loading && !ok && <p className="text-xs text-muted-foreground">{fix}</p>}
+      </div>
+    </li>
+  );
+  return (
+    <section className={card}>
+      <h2 className="font-heading text-lg font-bold">Voice and video calls</h2>
+      <p className="mt-1 text-xs text-muted-foreground">Lets buyers call suppliers, and suppliers call each other, from the chat. Buyers cannot call other buyers. A call needs an existing chat, and rings only while the other person has the site open.</p>
+      <ol className="mt-3 space-y-2.5 border-t border-border pt-3">
+        <Step ok={dbReady === true} loading={checkingDb} title="1. Database update is installed"
+          fix="Run supabase/migrations/20261108090000_voice_video_calls.sql once in the Supabase SQL editor, then refresh this page." />
+        <Step ok={keys?.state !== 'unreachable'} loading={checkingKeys} title="2. The call server function is deployed"
+          fix={`Deploy it with: supabase functions deploy zego-token. ${keys?.state === 'unreachable' ? `(Server said: ${keys.detail})` : ''}`} />
+        <Step ok={keys?.state === 'ready'} loading={checkingKeys} title="3. The ZEGOCLOUD keys are set on the server"
+          fix={`Add the Supabase secrets ZEGO_APP_ID and ZEGO_SERVER_SECRET${keys?.state === 'keys_missing' && keys.missing.length ? ` (missing or wrong: ${keys.missing.join(', ')})` : ''}, then deploy the function again. See ZEGO_SETUP.md.`} />
+      </ol>
+      <div className="mt-3 flex items-center justify-between gap-4 border-t border-border pt-3">
+        <div>
+          <Label htmlFor="s-calls" className="font-medium">Allow voice and video calls</Label>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {ready ? (enabled === true ? 'On: call buttons show in chats and on supplier shops.' : 'Everything is set up. Switch on when you are ready.')
+              : 'The switch unlocks when all three steps above are ticked.'}
+          </p>
+        </div>
+        <Switch id="s-calls" checked={enabled === true} disabled={toggle.isPending || (!ready && enabled !== true)} onCheckedChange={v => toggle.mutate(v)} />
+      </div>
+    </section>
+  );
+}
+
 // ------------------------------------------------------------ settings + category visibility
 function SettingsPanel() {
   const queryClient = useQueryClient();
@@ -182,6 +252,7 @@ function SettingsPanel() {
       </section>
 
       <TikTokSwitch />
+      <CallsSwitch />
 
       <section className={card}>
         <h2 className="font-heading text-lg font-bold">Category visibility</h2>

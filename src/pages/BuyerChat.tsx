@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { ArrowLeft, Send, MessageCircle, Store } from 'lucide-react';
 import { toast } from 'sonner';
 import MediaPreview from '@/components/chat/MediaPreview';
+import CallButtons from '@/components/calls/CallButtons';
 
 export default function BuyerChat() {
   const { user, loading: authLoading } = useAuth();
@@ -106,6 +107,7 @@ export default function BuyerChat() {
             <p className="font-heading font-semibold">{vendorInfo?.store_name || 'Seller'}</p>
             <p className="text-xs text-muted-foreground">In-app messaging</p>
           </div>
+          <CallButtons className="ml-auto" peerUserId={vendorUserId} peerName={vendorInfo?.store_name || 'Seller'} peerIsVendor />
         </div>
 
         {/* Messages */}

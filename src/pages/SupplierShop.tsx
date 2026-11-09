@@ -12,6 +12,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useVendorPosts, useVendorFollowerCount, useIsFollowing, useToggleFollow } from '@/hooks/usePosts';
 import { formatCompactNumber } from '@/lib/format';
 import { toast } from 'sonner';
+import CallButtons from '@/components/calls/CallButtons';
 
 export default function SupplierShop() {
   const { vendorId } = useParams();
@@ -115,6 +116,7 @@ export default function SupplierShop() {
               <Button onClick={handleInAppChat} variant="outline" size="sm" className="flex-1 gap-1.5 text-xs">
                 <MessageSquare className="w-3.5 h-3.5" /> Message
               </Button>
+              <CallButtons peerUserId={vendor.user_id} peerName={vendor.store_name} peerIsVendor />
               {whatsappNumber && (
                 <a href={`https://wa.me/${whatsappNumber}`} target="_blank" rel="noopener noreferrer" className="flex-1">
                   <Button size="sm" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5 text-xs">

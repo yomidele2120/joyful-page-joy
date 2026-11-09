@@ -14,6 +14,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { getOrCreateConversation, sendMessage, useConversations, useMarkConversationRead, useMessages, type Conversation } from '@/hooks/useChat';
 import MessageTicks from '@/components/chat/MessageTicks';
 import { supabase } from '@/integrations/supabase/client';
+import CallButtons from '@/components/calls/CallButtons';
 
 function useChatProducts(ids: string[]) {
   const key = [...new Set(ids)].sort();
@@ -221,6 +222,7 @@ export default function Messages() {
                       <Link to={`/shop/${active.other_vendor.vendor_id}`} className="text-xs text-primary hover:underline">View store</Link>
                     )}
                   </div>
+                  {active && <CallButtons peerUserId={active.other_user_id} peerName={displayName(active)} peerIsVendor={active.other_is_vendor} />}
                 </header>
 
                 <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-secondary/30 p-4">

@@ -39,6 +39,9 @@ verify_jwt = false
 [functions.creditdirect-webhook]
 verify_jwt = false
 
+[functions.zego-token]
+verify_jwt = false
+
 [functions.refund-order]
 verify_jwt = false
 

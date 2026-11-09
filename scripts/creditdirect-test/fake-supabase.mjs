@@ -10,6 +10,7 @@ class Q {
   upsert(row, o) { this.op = 'upsert'; this.patch = row; this.conflict = o?.onConflict; return this; }
   eq(k, v) { this.filters.push((r) => r[k] === v); return this; }
   neq(k, v) { this.filters.push((r) => r[k] !== v); return this; }
+  limit() { return this; }
   in(k, vs) { this.filters.push((r) => vs.includes(r[k])); return this; }
   match(r) { return this.filters.every((f) => f(r)); }
   run() {

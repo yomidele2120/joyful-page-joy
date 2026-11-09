@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ArrowLeft, Send, MessageCircle, Store, User, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import MediaPreview from '@/components/chat/MediaPreview';
+import CallButtons from '@/components/calls/CallButtons';
 
 export default function UserMessages() {
   const { user } = useAuth();
@@ -110,6 +111,7 @@ export default function UserMessages() {
               </Button>
             </Link>
           )}
+          <CallButtons peerUserId={activeConvo.other_user_id} peerName={getDisplayName(activeConvo)} peerIsVendor={activeConvo.other_is_vendor} />
         </div>
 
         {/* Messages */}
