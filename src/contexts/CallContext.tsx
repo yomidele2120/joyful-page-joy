@@ -26,6 +26,11 @@ interface Incoming { callerName: string; type: CallType; accept: () => void; ref
 
 const RENEW_MS = 20 * 60 * 60 * 1000;   // tokens last 24h; sign in again well before that
 const db = supabase as any;
+const zegoErrorText = (e: any) => {
+  const code = e?.code ?? e?.errorCode ?? e?.ret;
+  const msg = e?.message ?? e?.msg ?? (typeof e === 'string' ? e : '');
+  return [code, msg].filter(Boolean).join(' ').slice(0, 120);
+};
 const errText = (e: any) => String(e?.message ?? e ?? 'Something went wrong').replace(/^.*?:\s*/, '');
 
 export function CallProvider({ children }: { children: ReactNode }) {
@@ -44,6 +49,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
     a.closed = true; active.current = null;
     if (!a.callId) return;
     await db.rpc('finish_call', { _call: a.callId, _outcome: outcome });
+    if (outcome === 'failed') return;      // a technical failure is not something to leave in the chat
     if (a.role !== 'caller' || !meId || !a.peerUserId || !a.conversationId) return;
     const { data: row } = await db.from('call_logs').select('status, duration_seconds').eq('id', a.callId).maybeSingle();
     if (row) await sendMessage(a.conversationId, meId, a.peerUserId, callMessage(a.type, row.status, row.duration_seconds));
@@ -154,8 +160,9 @@ export function CallProvider({ children }: { children: ReactNode }) {
         await closeCall('missed');
       }
     } catch (e) {
-      console.warn('sendCallInvitation failed', e);
-      toast.error('Could not place the call. Please try again.');
+      console.error('ZEGO sendCallInvitation failed', e);
+      const detail = zegoErrorText(e);
+      toast.error(`Could not place the call${detail ? ` (${detail})` : ''}. Please try again.`);
       await closeCall('failed');
     }
   }, [meId, closeCall]);

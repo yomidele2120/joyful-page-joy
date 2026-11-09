@@ -100,7 +100,8 @@ export default function SupplierShop() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            {/* Phones: a tidy 2-column grid (Connect | Message, Call | Video, WhatsApp full width). Wider screens: one row. */}
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
               {!isOwnShop && (
                 <Button
                   onClick={handleFollow}
@@ -113,12 +114,12 @@ export default function SupplierShop() {
                   {isFollowing ? 'Connected' : 'Connect'}
                 </Button>
               )}
-              <Button onClick={handleInAppChat} variant="outline" size="sm" className="flex-1 gap-1.5 text-xs">
+              <Button onClick={handleInAppChat} variant="outline" size="sm" className={`flex-1 gap-1.5 text-xs ${isOwnShop ? 'col-span-2 sm:col-span-1' : ''}`}>
                 <MessageSquare className="w-3.5 h-3.5" /> Message
               </Button>
-              <CallButtons peerUserId={vendor.user_id} peerName={vendor.store_name} peerIsVendor />
+              <CallButtons layout="labelled" peerUserId={vendor.user_id} peerName={vendor.store_name} peerIsVendor />
               {whatsappNumber && (
-                <a href={`https://wa.me/${whatsappNumber}`} target="_blank" rel="noopener noreferrer" className="flex-1">
+                <a href={`https://wa.me/${whatsappNumber}`} target="_blank" rel="noopener noreferrer" className="col-span-2 sm:col-span-1 sm:flex-1">
                   <Button size="sm" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5 text-xs">
                     <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
                   </Button>
