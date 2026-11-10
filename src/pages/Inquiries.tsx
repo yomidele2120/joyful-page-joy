@@ -75,6 +75,7 @@ function InquiryCard({ inquiry, children }: { inquiry: InquiryRow; children?: Re
             ) : (
               <span className="text-sm font-semibold">General inquiry</span>
             )}
+            {inquiry.inquiry_type === 'sample' && <Badge variant="outline" className="text-[10px]">Sample request</Badge>}
             <Badge className={`border-none text-[10px] capitalize ${STATUS_STYLE[inquiry.status]}`}>{inquiry.status}</Badge>
           </div>
           <p className="mt-0.5 text-xs text-muted-foreground">

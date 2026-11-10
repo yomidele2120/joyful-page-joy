@@ -15,6 +15,7 @@ export interface InquiryRow {
   quantity: number;
   message: string;
   status: InquiryStatus;
+  inquiry_type: 'general' | 'sample';
   created_at: string;
   products: { name: string; slug: string; image_url: string | null; unit: string | null } | null;
   vendors: { store_name: string; logo_url: string | null; user_id: string } | null;
@@ -84,6 +85,7 @@ export interface InquiryTarget {
   productId: string | null;
   productName: string | null;
   quantity: number;
+  inquiryType?: 'general' | 'sample';
 }
 
 /**
@@ -99,6 +101,7 @@ export async function submitInquiry(buyerId: string, target: InquiryTarget, mess
     product_id: target.productId,
     quantity: target.quantity,
     message: text,
+    inquiry_type: target.inquiryType ?? 'general',
   });
   if (error) throw error;
   trackLead('inquiry', target.productId ?? undefined);

@@ -28,9 +28,10 @@ interface InquiryDialogProps {
   onOpenChange: (open: boolean) => void;
   target: InquiryDialogTarget | null;
   defaultQuantity?: number;
+  intent?: 'general' | 'sample';
 }
 
-export default function InquiryDialog({ open, onOpenChange, target, defaultQuantity }: InquiryDialogProps) {
+export default function InquiryDialog({ open, onOpenChange, target, defaultQuantity, intent = 'general' }: InquiryDialogProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -40,12 +41,14 @@ export default function InquiryDialog({ open, onOpenChange, target, defaultQuant
 
   useEffect(() => {
     if (open && target) {
-      setQuantity(Math.max(defaultQuantity ?? target.moq, target.moq, 1));
+      setQuantity(intent === 'sample' ? 1 : Math.max(defaultQuantity ?? target.moq, target.moq, 1));
       setMessage(target.productName
-        ? `Hello, I am interested in "${target.productName}". Please send me your best price, availability and delivery time.`
+        ? intent === 'sample'
+          ? `Hello, I would like to request a sample of "${target.productName}". Please share sample availability, cost and delivery options.`
+          : `Hello, I am interested in "${target.productName}". Please send me your best price, availability and delivery time.`
         : '');
     }
-  }, [open, target, defaultQuantity]);
+  }, [open, target, defaultQuantity, intent]);
 
   if (!target) return null;
 
@@ -65,7 +68,7 @@ export default function InquiryDialog({ open, onOpenChange, target, defaultQuant
       toast.error('You cannot send an inquiry to your own store');
       return;
     }
-    if (quantity < target.moq) {
+    if (intent !== 'sample' && quantity < target.moq) {
       toast.error(`The supplier's minimum order is ${target.moq} ${target.unit}(s)`);
       return;
     }
@@ -82,6 +85,7 @@ export default function InquiryDialog({ open, onOpenChange, target, defaultQuant
         productId: target.productId,
         productName: target.productName,
         quantity,
+        inquiryType: intent,
       }, message);
       queryClient.invalidateQueries({ queryKey: ['inquiries'] });
       toast.success('Inquiry sent to the supplier');
@@ -99,7 +103,7 @@ export default function InquiryDialog({ open, onOpenChange, target, defaultQuant
       <DialogContent className="max-w-lg">
         <form onSubmit={handleSubmit} className="space-y-4">
           <DialogHeader>
-            <DialogTitle>Send inquiry</DialogTitle>
+            <DialogTitle>{intent === 'sample' ? 'Request a product sample' : 'Send inquiry'}</DialogTitle>
             <DialogDescription>
               To <span className="font-medium text-foreground">{target.vendorName || 'the supplier'}</span>
               {target.productName && <> about <span className="font-medium text-foreground">{target.productName}</span></>}
@@ -107,16 +111,16 @@ export default function InquiryDialog({ open, onOpenChange, target, defaultQuant
           </DialogHeader>
 
           <div className="space-y-1.5">
-            <Label htmlFor="inquiry-qty">Quantity needed ({target.unit}s)</Label>
+          <Label htmlFor="inquiry-qty">{intent === 'sample' ? 'Sample quantity' : `Quantity needed (${target.unit}s)`}</Label>
             <Input
               id="inquiry-qty"
               type="number"
-              min={target.moq}
+            min={intent === 'sample' ? 1 : target.moq}
               value={quantity}
               onChange={e => setQuantity(Math.floor(Number(e.target.value)) || 0)}
               required
             />
-            {target.moq > 1 && <p className="text-xs text-muted-foreground">Minimum order: {target.moq} {target.unit}s</p>}
+          {intent !== 'sample' && target.moq > 1 && <p className="text-xs text-muted-foreground">Minimum order: {target.moq} {target.unit}s</p>}
           </div>
 
           <div className="space-y-1.5">
@@ -136,7 +140,7 @@ export default function InquiryDialog({ open, onOpenChange, target, defaultQuant
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button type="submit" disabled={sending}>
               {sending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-              Send inquiry
+              {intent === 'sample' ? 'Send sample request' : 'Send inquiry'}
             </Button>
           </DialogFooter>
         </form>

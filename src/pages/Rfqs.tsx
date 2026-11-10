@@ -11,7 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { useMyVendor } from '@/hooks/useMyVendor';
 import {
-  useCloseRfq, useMyQuotes, useMyRfqs, useOpenRfqs, useRfqQuotes, useSubmitQuote, type RfqRow,
+  useAddNegotiationEvent, useCloseRfq, useMyQuotes, useMyRfqs, useNegotiationHistory,
+  useOpenRfqs, useRfqQuotes, useSubmitQuote, type RfqRow,
 } from '@/hooks/useRfqs';
 import { formatNaira } from '@/lib/format';
 
@@ -105,7 +106,7 @@ function MyRequests({ highlightId }: { highlightId: string | null }) {
                 </Button>
               )}
             </div>
-            {openId === rfq.id && <Quotes rfqId={rfq.id} />}
+            {openId === rfq.id && <Quotes rfqId={rfq.id} quantity={rfq.quantity} />}
           </div>
         );
       })}
@@ -113,7 +114,7 @@ function MyRequests({ highlightId }: { highlightId: string | null }) {
   );
 }
 
-function Quotes({ rfqId }: { rfqId: string }) {
+function Quotes({ rfqId, quantity }: { rfqId: string; quantity: number }) {
   const { data, isLoading } = useRfqQuotes(rfqId);
   if (isLoading) return <p className="mt-3 text-sm text-muted-foreground">Loading quotes...</p>;
   if (!data?.length) return <p className="mt-3 text-sm text-muted-foreground">No quotes yet. Suppliers usually respond within a few days.</p>;
@@ -132,6 +133,7 @@ function Quotes({ rfqId }: { rfqId: string }) {
             {quote.moq ? `MOQ ${quote.moq}` : 'MOQ not stated'}{quote.lead_time ? ` - Lead time: ${quote.lead_time}` : ''}
           </p>
           {quote.message && <p className="mt-2 whitespace-pre-wrap break-words text-sm text-muted-foreground">{quote.message}</p>}
+          <QuoteNegotiation quoteId={quote.id} initialPrice={quote.unit_price} initialQuantity={quantity} buyer />
           {quote.vendors?.user_id && (
             <Link to={`/messages?vendor=${quote.vendors.user_id}`}>
               <Button size="sm" variant="outline" className="mt-2 gap-1.5"><MessageSquare className="h-3.5 w-3.5" /> Chat with supplier</Button>
@@ -149,6 +151,7 @@ function OpenRequests() {
   const { data: myQuotes } = useMyQuotes();
   const [quotingId, setQuotingId] = useState<string | null>(null);
   const quoted = new Set((myQuotes ?? []).map(q => q.rfq_id));
+  const myQuoteByRfq = new Map((myQuotes ?? []).map(q => [q.rfq_id, q]));
 
   if (vendor && !vendor.is_approved) {
     return <p className="mt-4 rounded-lg border border-border p-5 text-sm text-muted-foreground">Your store must be approved before you can view and answer buyer requests.</p>;
@@ -164,7 +167,17 @@ function OpenRequests() {
           <p className="mt-2 text-xs text-muted-foreground">Expires {new Date(rfq.expires_at).toLocaleDateString()}</p>
           <div className="mt-3 border-t border-border pt-3">
             {quoted.has(rfq.id) ? (
-              <Badge className="border-none bg-primary/10 text-primary">You have sent a quote</Badge>
+              <>
+                <Badge className="border-none bg-primary/10 text-primary">You have sent a quote</Badge>
+                {myQuoteByRfq.get(rfq.id) && (
+                  <QuoteNegotiation
+                    quoteId={myQuoteByRfq.get(rfq.id)!.id}
+                    initialPrice={myQuoteByRfq.get(rfq.id)!.unit_price}
+                    initialQuantity={rfq.quantity}
+                    buyer={false}
+                  />
+                )}
+              </>
             ) : quotingId === rfq.id ? (
               <QuoteForm rfqId={rfq.id} onDone={() => setQuotingId(null)} />
             ) : (
@@ -173,6 +186,86 @@ function OpenRequests() {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function QuoteNegotiation({ quoteId, initialPrice, initialQuantity, buyer }: {
+  quoteId: string;
+  initialPrice: number;
+  initialQuantity: number;
+  buyer: boolean;
+}) {
+  const { user } = useAuth();
+  const { data: history, isLoading } = useNegotiationHistory(quoteId);
+  const addEvent = useAddNegotiationEvent();
+  const [price, setPrice] = useState('');
+  const [quantity, setQuantity] = useState(String(initialQuantity));
+  const [message, setMessage] = useState('');
+  const last = history?.[history.length - 1];
+  const finished = last?.action === 'accepted' || last?.action === 'rejected';
+  const canAccept = buyer || (last?.action === 'counter' && last.actor_id !== user?.id);
+
+  const submit = (action: 'counter' | 'accepted' | 'rejected') => {
+    if (action === 'counter') {
+      const amount = Number(price);
+      const qty = Math.floor(Number(quantity));
+      if (!price.trim() || !Number.isFinite(amount) || amount < 0 || qty < 1) {
+        toast.error('Enter a valid unit price and quantity');
+        return;
+      }
+      addEvent.mutate({
+        quote_id: quoteId, action, unit_price: amount, quantity: qty, message: message.trim() || null,
+      }, {
+        onSuccess: () => { setPrice(''); setMessage(''); toast.success('Counteroffer sent'); },
+        onError: (error: Error) => toast.error(error.message || 'Could not send counteroffer'),
+      });
+      return;
+    }
+    addEvent.mutate({ quote_id: quoteId, action }, {
+      onSuccess: () => toast.success(action === 'accepted' ? 'Quotation accepted' : 'Quotation declined'),
+      onError: (error: Error) => toast.error(error.message || 'Could not update quotation'),
+    });
+  };
+
+  return (
+    <div className="mt-3 rounded-md border border-border p-3">
+      <p className="text-sm font-medium">Negotiation history</p>
+      {isLoading ? <p className="mt-2 text-xs text-muted-foreground">Loading negotiation...</p> : (
+        <ol className="mt-2 space-y-2">
+          <li className="rounded bg-secondary/60 p-2 text-xs">
+            Supplier's original offer: {formatNaira(initialPrice)} per unit for {initialQuantity}
+          </li>
+          {(history ?? []).map(event => (
+            <li key={event.id} className="rounded bg-secondary/60 p-2 text-xs">
+              <span className="font-medium">{event.actor_id === user?.id ? 'You' : buyer ? 'Supplier' : 'Buyer'}: </span>
+              {event.action === 'counter' && event.unit_price !== null
+                ? `Counteroffer ${formatNaira(event.unit_price)} per unit for ${event.quantity} units`
+                : event.action === 'accepted' ? 'Accepted the quotation'
+                  : event.action === 'rejected' ? 'Declined the quotation' : 'Message'}
+              {event.message && <p className="mt-1 whitespace-pre-wrap text-muted-foreground">{event.message}</p>}
+              <time className="mt-1 block text-[10px] text-muted-foreground">{new Date(event.created_at).toLocaleString()}</time>
+            </li>
+          ))}
+        </ol>
+      )}
+      {!isLoading && !finished && (
+        <div className="mt-3 space-y-2 border-t border-border pt-3">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Input type="number" min={0} step="0.01" value={price} onChange={event => setPrice(event.target.value)} placeholder="Counteroffer unit price (NGN)" />
+            <Input type="number" min={1} step={1} value={quantity} onChange={event => setQuantity(event.target.value)} placeholder="Quantity" />
+          </div>
+          <Textarea rows={2} maxLength={4000} value={message} onChange={event => setMessage(event.target.value)} placeholder="Add a note (optional)" />
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" disabled={addEvent.isPending} onClick={() => submit('counter')}>Send counteroffer</Button>
+            {canAccept && <Button size="sm" disabled={addEvent.isPending} onClick={() => submit('accepted')}>Accept</Button>}
+            {buyer && <>
+              <Button size="sm" variant="ghost" disabled={addEvent.isPending} onClick={() => submit('rejected')}>Decline</Button>
+            </>}
+          </div>
+        </div>
+      )}
+      {finished && <Badge className="mt-2">{last.action === 'accepted' ? 'Accepted' : 'Declined'}</Badge>}
     </div>
   );
 }

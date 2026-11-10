@@ -6,13 +6,14 @@ import ProductPager from '@/components/ProductPager';
 import { usePagedProducts } from '@/hooks/usePagedProducts';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
-import { MessageCircle, MapPin, Phone, Store, MessageSquare, Heart, Images, Film, UserPlus, UserCheck } from 'lucide-react';
+import { MessageCircle, MapPin, Phone, Store, MessageSquare, Heart, Images, Film, UserPlus, UserCheck, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useVendorPosts, useVendorFollowerCount, useIsFollowing, useToggleFollow } from '@/hooks/usePosts';
 import { formatCompactNumber } from '@/lib/format';
 import { toast } from 'sonner';
 import CallButtons from '@/components/calls/CallButtons';
+import { formatResponseTime, useVendorReputation } from '@/hooks/useVendorReputation';
 
 export default function SupplierShop() {
   const { vendorId } = useParams();
@@ -29,6 +30,7 @@ export default function SupplierShop() {
     },
     enabled: !!vendorId,
   });
+  const { data: reputation } = useVendorReputation(vendor?.id);
 
   // A shop can hold hundreds of thousands of products, so it loads one page at a time from the database.
   const [page, setPage] = useState(1);
@@ -97,6 +99,15 @@ export default function SupplierShop() {
                   {vendor.address && <span className="flex items-center gap-1"><MapPin className="w-3 h-3 shrink-0" /><span className="truncate">{vendor.address}</span></span>}
                   {vendor.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3 shrink-0" />{vendor.phone}</span>}
                   <span className="font-medium text-foreground">{formatCompactNumber(followerCount ?? 0)} Shoppers</span>
+                  {reputation?.average_rating != null && reputation.review_count > 0 && (
+                    <span className="inline-flex items-center gap-1 font-medium text-foreground">
+                      <Star className="h-3.5 w-3.5 fill-current text-amber-500" />
+                      {reputation.average_rating.toFixed(1)} ({reputation.review_count} review{reputation.review_count === 1 ? '' : 's'})
+                    </span>
+                  )}
+                  {formatResponseTime(reputation?.average_response_minutes) && (
+                    <span>{formatResponseTime(reputation?.average_response_minutes)}</span>
+                  )}
                 </div>
               </div>
             </div>

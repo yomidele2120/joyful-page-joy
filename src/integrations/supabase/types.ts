@@ -477,7 +477,9 @@ export type Database = {
         Row: {
           buyer_id: string
           created_at: string
+          first_response_at: string | null
           id: string
+          inquiry_type: string
           message: string
           product_id: string | null
           quantity: number
@@ -488,7 +490,9 @@ export type Database = {
         Insert: {
           buyer_id: string
           created_at?: string
+          first_response_at?: string | null
           id?: string
+          inquiry_type?: string
           message: string
           product_id?: string | null
           quantity?: number
@@ -499,7 +503,9 @@ export type Database = {
         Update: {
           buyer_id?: string
           created_at?: string
+          first_response_at?: string | null
           id?: string
+          inquiry_type?: string
           message?: string
           product_id?: string | null
           quantity?: number
@@ -1749,6 +1755,47 @@ export type Database = {
           },
         ]
       }
+      rfq_negotiation_events: {
+        Row: {
+          action: string
+          actor_id: string
+          created_at: string
+          id: string
+          message: string | null
+          quantity: number | null
+          quote_id: string
+          unit_price: number | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string
+          created_at?: string
+          id?: string
+          message?: string | null
+          quantity?: number | null
+          quote_id: string
+          unit_price?: number | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          created_at?: string
+          id?: string
+          message?: string | null
+          quantity?: number | null
+          quote_id?: string
+          unit_price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfq_negotiation_events_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "rfq_quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rfqs: {
         Row: {
           buyer_id: string
@@ -2422,6 +2469,14 @@ export type Database = {
         }[]
       }
       get_public_finance_settings: { Args: never; Returns: Json }
+      get_vendor_reputation: {
+        Args: { _vendor: string }
+        Returns: {
+          average_rating: number | null
+          average_response_minutes: number | null
+          review_count: number
+        }[]
+      }
       get_ranked_feed: {
         Args: { page_limit: number; page_offset: number }
         Returns: {

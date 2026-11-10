@@ -16,6 +16,7 @@ import { formatNaira } from '@/lib/format';
 import { formatLongDate } from '@/hooks/useMarketplace';
 import { useTikTokEnabled } from '@/hooks/useTikTokEnabled';
 import { useCallsEnabled } from '@/hooks/useCallsEnabled';
+import DisputeEvidence from '@/components/disputes/DisputeEvidence';
 
 const card = 'rounded-lg bg-card p-5 card-shadow';
 
@@ -435,6 +436,7 @@ function DisputesPanel() {
           </div>
           <p className="mt-1 text-xs text-muted-foreground">Seller: {d.vendors?.store_name ?? '-'} - wants: {String(d.desired_outcome)} - {new Date(d.created_at).toLocaleString()}</p>
           <p className="mt-2 whitespace-pre-wrap text-sm"><strong>Buyer:</strong> {d.details}</p>
+          <DisputeEvidence disputeId={d.id} buyerId={d.buyer_id} />
           {d.seller_response && <p className="mt-2 whitespace-pre-wrap text-sm"><strong>Seller:</strong> {d.seller_response}</p>}
           <Textarea className="mt-3" rows={2} placeholder="Your decision (shown to buyer and seller)" aria-label="Decision" value={notes[d.id] ?? d.resolution ?? ''} onChange={e => setNotes(n => ({ ...n, [d.id]: e.target.value }))} />
           <div className="mt-2 flex gap-2">

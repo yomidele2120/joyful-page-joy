@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
+import DisputeEvidence from '@/components/disputes/DisputeEvidence';
 
 const STATUS: Record<string, string> = { open: 'Needs your response', seller_responded: 'You responded', under_review: 'Under review', resolved: 'Resolved', closed: 'Closed' };
 const REASONS: Record<string, string> = {
@@ -55,6 +56,7 @@ export default function SellerDisputes({ vendorId }: { vendorId: string }) {
             </div>
             <p className="mt-1 text-xs text-muted-foreground">{new Date(d.created_at).toLocaleDateString()} - the buyer wants {OUTCOMES[d.desired_outcome] ?? d.desired_outcome}</p>
             <p className="mt-3 whitespace-pre-wrap text-sm">{d.details}</p>
+            <DisputeEvidence disputeId={d.id} buyerId={d.buyer_id} />
             {d.resolution && <p className="mt-3 border-l-2 border-primary pl-3 text-sm text-muted-foreground">Our decision: {d.resolution}</p>}
             {!closed && (
               <div className="mt-3 space-y-2">

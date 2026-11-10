@@ -18,18 +18,20 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   ShoppingCart, ShieldCheck, MessageCircle, Store, MessageSquare, ChevronRight, PackageCheck,
-  Minus, Plus, Send, Play, ClipboardList, BadgeCheck, CreditCard, Wallet,
+  Minus, Plus, Send, Play, ClipboardList, BadgeCheck, CreditCard, Wallet, Star,
 } from 'lucide-react';
 import { formatNaira } from '@/lib/format';
 import { formatQtyRange, getMoq, parseSpecs, pluralUnit, tierRows, unitPriceFor } from '@/lib/pricing';
 import { toast } from 'sonner';
 import { trackViewContent } from '@/lib/tracking';
+import { formatResponseTime, useVendorReputation } from '@/hooks/useVendorReputation';
 
 const KLUMP_PUBLIC_KEY = import.meta.env.VITE_KLUMP_PUBLIC_KEY as string | undefined;
 
 export default function ProductDetail() {
   const { slug } = useParams<{ slug: string }>();
   const { data: product, isLoading } = useProduct(slug || '');
+  const { data: reputation } = useVendorReputation(product?.vendors?.id);
   const { data: recommendations } = useProducts({ categorySlug: product?.categories?.slug, limit: 8 });
   const { addItem, items: cartItems } = useCart();
   const basket = useInquiryBasket();
@@ -39,6 +41,7 @@ export default function ProductDetail() {
   const [showVideo, setShowVideo] = useState(false);
   const [qty, setQty] = useState<number | null>(null);
   const [inquiryOpen, setInquiryOpen] = useState(false);
+  const [sampleRequestOpen, setSampleRequestOpen] = useState(false);
   const { data: marketplace } = useMarketplaceSettings();
   const { data: preorderTaken } = usePreorderTaken(product?.is_preorder ? [product.id] : []);
   const { data: finance } = useQuery({
@@ -246,10 +249,20 @@ export default function ProductDetail() {
             )}
 
             {vendor && (
-              <Link to={`/shop/${vendor.id}`} className="mt-2 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary">
-                {vendor.is_approved && <BadgeCheck className="h-4 w-4 text-primary" aria-label="Verified supplier" />}
-                <span className="underline-offset-2 hover:underline">{vendor.store_name}</span>
-              </Link>
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                <Link to={`/shop/${vendor.id}`} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary">
+                  {vendor.is_approved && <BadgeCheck className="h-4 w-4 text-primary" aria-label="Verified supplier" />}
+                  <span className="underline-offset-2 hover:underline">{vendor.store_name}</span>
+                </Link>
+                {reputation?.average_rating != null && reputation.review_count > 0 && (
+                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    <Star className="h-3 w-3 fill-current text-amber-500" /> {reputation.average_rating.toFixed(1)} ({reputation.review_count})
+                  </span>
+                )}
+                {formatResponseTime(reputation?.average_response_minutes) && (
+                  <span className="text-xs text-muted-foreground">{formatResponseTime(reputation?.average_response_minutes)}</span>
+                )}
+              </div>
             )}
 
             {/* Tiered pricing */}
@@ -344,6 +357,9 @@ export default function ProductDetail() {
                 <>
                   <Button size="lg" variant="outline" className="h-12 font-semibold" onClick={() => setInquiryOpen(true)}>
                     <Send className="mr-2 h-4 w-4" /> Send inquiry
+                  </Button>
+                  <Button size="lg" variant="outline" className="h-12 font-semibold" onClick={() => setSampleRequestOpen(true)}>
+                    <PackageCheck className="mr-2 h-4 w-4" /> Request a sample
                   </Button>
                   <Button size="lg" variant="outline" className="h-12 font-semibold" onClick={() => handleInAppChat(vendor.user_id || '', product.id)}>
                     <MessageSquare className="mr-2 h-4 w-4" /> Chat now
@@ -449,22 +465,28 @@ export default function ProductDetail() {
 
       {/* Mobile sticky action bar (sits above the bottom tab bar) */}
       <div className="fixed inset-x-0 bottom-14 z-40 border-t border-border bg-background/95 p-2 backdrop-blur md:hidden pb-2">
-        <div className="grid grid-cols-[auto_1fr_1fr] gap-2">
+        <div className={`grid gap-2 ${vendor ? 'grid-cols-[auto_auto_1fr_1fr]' : 'grid-cols-2'}`}>
           {vendor && (
             <Button variant="outline" size="icon" className="h-11 w-11" onClick={() => handleInAppChat(vendor.user_id || '', product.id)} aria-label="Chat now">
               <MessageSquare className="h-5 w-5" />
             </Button>
           )}
           {vendor ? (
-            <Button variant="outline" className="h-11 font-semibold" onClick={() => setInquiryOpen(true)}>Send inquiry</Button>
+            <>
+              <Button variant="outline" size="icon" className="h-11 w-11" onClick={() => setSampleRequestOpen(true)} aria-label="Request a sample">
+                <PackageCheck className="h-5 w-5" />
+              </Button>
+              <Button variant="outline" className="h-11 px-2 text-xs font-semibold" onClick={() => setInquiryOpen(true)}>Inquiry</Button>
+            </>
           ) : (
             <Button variant="outline" className="h-11 font-semibold" disabled={!canBuy} onClick={handleAddToCart}>Add to cart</Button>
           )}
-          <Button className="h-11 font-semibold" disabled={!canBuy} onClick={handleBuyNow}>{preorderOpen ? 'Preorder now' : 'Buy now'}</Button>
+          <Button className="h-11 px-2 text-xs font-semibold" disabled={!canBuy} onClick={handleBuyNow}>{preorderOpen ? 'Preorder' : 'Buy now'}</Button>
         </div>
       </div>
 
       <InquiryDialog open={inquiryOpen} onOpenChange={setInquiryOpen} target={inquiryTarget} defaultQuantity={quantity} />
+      <InquiryDialog open={sampleRequestOpen} onOpenChange={setSampleRequestOpen} target={inquiryTarget} intent="sample" />
     </Layout>
   );
 }

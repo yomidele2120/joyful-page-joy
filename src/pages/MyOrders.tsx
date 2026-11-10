@@ -3,7 +3,7 @@ import { imgSrc } from '@/lib/images';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CalendarClock, Loader2, Wallet } from 'lucide-react';
+import { CalendarClock, Loader2, RotateCw, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import Layout from '@/components/layout/Layout';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +14,8 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/hooks/useAuth';
+import { useCart } from '@/contexts/CartContext';
+import DisputeEvidence from '@/components/disputes/DisputeEvidence';
 import { supabase } from '@/integrations/supabase/client';
 import { formatNaira } from '@/lib/format';
 import { formatLongDate } from '@/hooks/useMarketplace';
@@ -24,6 +26,8 @@ interface OrderItem {
   products: {
     id: string; name: string; slug: string; image_url: string | null; vendor_id: string | null;
     is_preorder: boolean; preorder_release_date: string | null; preorder_delivery_estimate: string | null; preorder_status: string;
+    price: number; moq: number; unit: string; price_tiers: import('@/integrations/supabase/types').Json;
+    is_active: boolean | null; stock_quantity: number; preorder_approved: boolean;
     vendors: { id: string; store_name: string } | null;
   } | null;
 }
@@ -50,6 +54,7 @@ const PAID_STATES = ['paid', 'processing', 'shipped', 'delivered'];
 
 export default function MyOrders() {
   const { user, loading: authLoading } = useAuth();
+  const { addItem, items: cartItems } = useCart();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState('all');
   const [requestFor, setRequestFor] = useState<{ order: OrderRow; kind: 'cancel' | 'refund' } | null>(null);
@@ -61,7 +66,7 @@ export default function MyOrders() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('orders')
-        .select('id, status, total, created_at, payment_method, is_preorder, order_items(quantity, price, products(id, name, slug, image_url, vendor_id, is_preorder, preorder_release_date, preorder_delivery_estimate, preorder_status, vendors(id, store_name)))')
+        .select('id, status, total, created_at, payment_method, is_preorder, order_items(quantity, price, products(id, name, slug, image_url, vendor_id, is_preorder, preorder_release_date, preorder_delivery_estimate, preorder_status, price, moq, unit, price_tiers, is_active, stock_quantity, preorder_approved, vendors(id, store_name)))')
         .eq('user_id', user!.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -107,6 +112,45 @@ export default function MyOrders() {
     onSuccess: () => { toast.success('Dispute withdrawn'); queryClient.invalidateQueries({ queryKey: ['my-disputes'] }); },
     onError: () => toast.error('Could not withdraw the dispute'),
   });
+
+  const reorder = (order: OrderRow) => {
+    let added = 0;
+    let unavailable = 0;
+    const availableItems = order.order_items.filter(item => {
+      const product = item.products;
+      const available = !!product && product.is_active !== false && (
+        product.is_preorder
+          ? product.preorder_approved && product.preorder_status === 'open'
+          : product.stock_quantity > 0
+      );
+      if (!available) unavailable++;
+      return available;
+    });
+    const orderTypes = new Set(availableItems.map(item => !!item.products?.is_preorder));
+    if (orderTypes.size > 1 || (orderTypes.size === 1 && cartItems.some(existing => !!existing.is_preorder !== [...orderTypes][0]))) {
+      toast.error('Preorder items must be ordered separately from in-stock items. Check out your current cart first.');
+      return;
+    }
+    for (const item of availableItems) {
+      const product = item.products!;
+      const itemIsPreorder = product.is_preorder;
+      addItem({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image_url: product.image_url,
+        slug: product.slug,
+        moq: product.moq,
+        unit: product.unit,
+        price_tiers: product.price_tiers,
+        is_preorder: itemIsPreorder,
+        preorder_release_date: product.preorder_release_date,
+      }, item.quantity);
+      added++;
+    }
+    if (added) toast.success(`${added} item${added === 1 ? '' : 's'} added to your cart${unavailable ? `; ${unavailable} unavailable item${unavailable === 1 ? '' : 's'} skipped` : ''}`);
+    else toast.error('None of the products in this order are currently available');
+  };
 
   const shown = (orders ?? []).filter(o => filter === 'all' || (filter === 'preorder' ? o.is_preorder : o.payment_method === 'bnpl'));
 
@@ -212,6 +256,7 @@ export default function MyOrders() {
                         <p>Dispute ({REASONS[d.reason] ?? d.reason}): <strong className="text-foreground">{DISPUTE_STATUS[d.status] ?? d.status}</strong></p>
                         {d.seller_response && <p className="mt-1 whitespace-pre-wrap">Seller: {d.seller_response}</p>}
                         {d.resolution && <p className="mt-1 whitespace-pre-wrap">Our decision: {d.resolution}</p>}
+                        <DisputeEvidence disputeId={d.id} buyerId={d.buyer_id} />
                         {!['resolved', 'closed'].includes(d.status) && (
                           <button type="button" onClick={() => withdraw.mutate(d.id)} className="mt-1 text-primary hover:underline">Withdraw dispute</button>
                         )}
@@ -222,6 +267,7 @@ export default function MyOrders() {
                       {canCancel && <Button size="sm" variant="outline" onClick={() => setRequestFor({ order, kind: 'cancel' })}>Request cancellation</Button>}
                       {canRefund && <Button size="sm" variant="outline" onClick={() => setRequestFor({ order, kind: 'refund' })}>Request refund</Button>}
                       {canDispute && <Button size="sm" variant="outline" onClick={() => setDisputeFor(order)}>Open a dispute</Button>}
+                      {PAID_STATES.includes(order.status) && order.order_items.length > 0 && <Button size="sm" variant="outline" onClick={() => reorder(order)}><RotateCw className="mr-1.5 h-3.5 w-3.5" /> Reorder</Button>}
                       <Link to={`/contact?type=order&order=${order.id}`}><Button size="sm" variant="ghost">Contact support</Button></Link>
                     </div>
                   </div>
@@ -282,6 +328,7 @@ function DisputeDialog({ order, onClose, onDone, userId }: { order: OrderRow | n
   const [reason, setReason] = useState('not_as_described');
   const [outcome, setOutcome] = useState('refund');
   const [details, setDetails] = useState('');
+  const [evidence, setEvidence] = useState<File[]>([]);
 
   const vendors = useMemo(() => {
     const map = new Map<string, string>();
@@ -292,15 +339,26 @@ function DisputeDialog({ order, onClose, onDone, userId }: { order: OrderRow | n
 
   const send = useMutation({
     mutationFn: async () => {
+      const disputeId = crypto.randomUUID();
       const { error } = await supabase.from('disputes').insert({
-        order_id: order!.id, buyer_id: userId, vendor_id: chosen, reason, desired_outcome: outcome, details: details.trim(),
+        id: disputeId, order_id: order!.id, buyer_id: userId, vendor_id: chosen, reason, desired_outcome: outcome, details: details.trim(),
       });
       if (error) {
         if (error.code === '23505') throw new Error('You already have an open dispute with this seller on this order.');
         throw error;
       }
+      const uploads = await Promise.all(evidence.map(file => {
+        const safeName = file.name.replace(/[^A-Za-z0-9._-]/g, '_');
+        return supabase.storage.from('dispute-evidence')
+          .upload(`${disputeId}/${userId}/${crypto.randomUUID()}-${safeName}`, file, { contentType: file.type, upsert: false });
+      }));
+      return { uploadFailed: uploads.some(upload => !!upload.error) };
     },
-    onSuccess: () => { toast.success('Dispute opened. The seller has been asked to respond.'); setDetails(''); onDone(); },
+    onSuccess: result => {
+      if (result.uploadFailed) toast.warning('Dispute opened, but at least one evidence file could not be uploaded. You can try again by contacting support.');
+      else toast.success('Dispute opened. The seller has been asked to respond.');
+      setDetails(''); setEvidence([]); onDone();
+    },
     onError: (err: Error) => toast.error(err.message || 'Could not open the dispute'),
   });
   if (!order) return null;
@@ -337,6 +395,23 @@ function DisputeDialog({ order, onClose, onDone, userId }: { order: OrderRow | n
           </div>
           <div className="space-y-1.5"><Label htmlFor="disp-details">Tell us what happened</Label>
             <Textarea id="disp-details" rows={5} maxLength={4000} value={details} onChange={e => setDetails(e.target.value)} placeholder="Dates, what you agreed, what you received..." />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="disp-evidence">Evidence (up to 5 images or PDF files, 10 MB each)</Label>
+            <input
+              id="disp-evidence"
+              type="file"
+              accept="image/jpeg,image/png,image/webp,application/pdf"
+              multiple
+              onChange={event => {
+                const files = Array.from(event.target.files ?? []);
+                const valid = files.filter(file => ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].includes(file.type) && file.size <= 10 * 1024 * 1024);
+                if (files.length > 5 || valid.length !== files.length) toast.error('Choose up to 5 JPG, PNG, WebP or PDF files no larger than 10 MB each.');
+                setEvidence(valid.slice(0, 5));
+              }}
+              className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2"
+            />
+            {!!evidence.length && <p className="text-xs text-muted-foreground">{evidence.length} file{evidence.length === 1 ? '' : 's'} selected</p>}
           </div>
         </div>
         <DialogFooter>

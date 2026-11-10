@@ -5,7 +5,8 @@ Built on top of your VS Code version of the project.
 ## Deploy in this order (they depend on each other)
 
 1. **Database** - apply `supabase/migrations/20261014090000_b2b_marketplace.sql`
-   (`supabase db push`, or paste it into the Supabase SQL editor).
+   and then `supabase/migrations/20261109210000_marketplace_scope_features.sql`
+   (`supabase db push`, or paste them into the Supabase SQL editor in timestamp order).
 2. **Edge functions** - redeploy `initialize-payment`, `verify-payment`, `paystack-webhook`.
 3. **Frontend** - `npm install && npm run build`, then deploy.
 
@@ -14,6 +15,10 @@ Do all three together. After step 1, checkout only works through the new
 old frontend can no longer place orders.
 
 ## What is new
+
+This follow-up includes the remaining supplier, negotiation and buyer-protection
+workflows. AI sourcing, landed-cost estimation, currency conversion and logistics
+integrations are intentionally out of scope for now.
 
 | Area | Files |
 |---|---|
@@ -24,7 +29,11 @@ old frontend can no longer place orders.
 | Cart / checkout (tier pricing, MOQ enforced) | `contexts/CartContext.tsx`, `pages/Cart.tsx`, `pages/Checkout.tsx` |
 | Inquiries + basket | `pages/Inquiries.tsx`, `components/InquiryDialog.tsx`, `hooks/useInquiries.ts`, `contexts/InquiryBasketContext.tsx` |
 | RFQ + supplier quotes | `pages/RfqNew.tsx`, `pages/Rfqs.tsx`, `hooks/useRfqs.ts` |
+| RFQ counteroffers and negotiation history | `pages/Rfqs.tsx`, `hooks/useRfqs.ts`, `20261109210000_marketplace_scope_features.sql` |
 | Chat (one inbox for buyers and vendors, photo/video/voice for everyone, product card on inquiries) | `pages/Messages.tsx`, `components/chat/*`, `hooks/useChat.ts` |
+| Product samples, supplier reputation and reply-time indicators | `components/InquiryDialog.tsx`, `pages/ProductDetail.tsx`, `pages/SupplierShop.tsx`, `hooks/useVendorReputation.ts` |
+| Dispute evidence uploads and private review links | `pages/MyOrders.tsx`, `components/disputes/DisputeEvidence.tsx`, `20261109210000_marketplace_scope_features.sql` |
+| Smart reordering of currently available products | `pages/MyOrders.tsx`, `contexts/CartContext.tsx` |
 | Vendor dashboard (MOQ, unit, price breaks, specs, extra photos, video, business info) | `pages/SupplierDashboard.tsx` |
 | Footer / mobile tab bar | `components/layout/Footer.tsx`, `BottomNav.tsx` |
 

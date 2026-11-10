@@ -32,6 +32,56 @@ export interface QuoteRow {
   vendors: { store_name: string; logo_url: string | null; user_id: string; is_approved: boolean | null } | null;
 }
 
+export interface NegotiationEvent {
+  id: string;
+  quote_id: string;
+  actor_id: string;
+  action: 'counter' | 'accepted' | 'rejected' | 'message';
+  unit_price: number | null;
+  quantity: number | null;
+  message: string | null;
+  created_at: string;
+}
+
+export function useNegotiationHistory(quoteId: string) {
+  return useQuery({
+    queryKey: ['rfq-negotiation', quoteId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('rfq_negotiation_events')
+        .select('*')
+        .eq('quote_id', quoteId)
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as NegotiationEvent[];
+    },
+    enabled: !!quoteId,
+  });
+}
+
+export function useAddNegotiationEvent() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (event: {
+      quote_id: string;
+      action: NegotiationEvent['action'];
+      unit_price?: number | null;
+      quantity?: number | null;
+      message?: string | null;
+    }) => {
+      if (!user) throw new Error('Sign in to negotiate this quotation');
+      const { error } = await supabase.from('rfq_negotiation_events').insert({
+        ...event,
+        actor_id: user.id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: (_data, event) => queryClient.invalidateQueries({ queryKey: ['rfq-negotiation', event.quote_id] }),
+  });
+}
+
 // RFQs the signed-in buyer posted, with a quote count for each.
 export function useMyRfqs() {
   const { user } = useAuth();
