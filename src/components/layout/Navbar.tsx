@@ -68,7 +68,6 @@ export default function Navbar() {
   };
 
   const accountHref = isAdmin ? '/admin' : isVendor ? '/supplier-dashboard' : '/user-dashboard';
-  const topCategories = (categories ?? []).slice(0, 7);
 
   return (
     <>
@@ -252,12 +251,12 @@ export default function Navbar() {
         </nav>
       )}
 
-      {/* Row 2: categories and primary links (desktop) */}
-      <nav className="hidden md:block border-t border-border">
-        <div className="container flex items-center gap-5 h-10 text-sm">
+      {/* Desktop category and marketplace links */}
+      <nav aria-label="Primary navigation" className="hidden border-t border-border md:block">
+        <div className="container flex h-11 items-center justify-between gap-3 text-xs lg:text-sm">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-1.5 font-medium hover:text-primary">
+              <button className="flex shrink-0 items-center gap-1.5 whitespace-nowrap font-semibold transition-colors hover:text-primary">
                 <LayoutGrid className="h-4 w-4" /> All Categories <ChevronDown className="h-3.5 w-3.5" />
               </button>
             </DropdownMenuTrigger>
@@ -271,18 +270,15 @@ export default function Navbar() {
               <DropdownMenuItem asChild><Link to="/products" className="font-medium text-primary">View all products</Link></DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <span className="h-4 w-px bg-border" aria-hidden="true" />
-          <Link to="/products?tab=suppliers" className="hover:text-primary">Suppliers</Link>
-          <Link to="/rfq/new" className="hover:text-primary">Request for Quotation</Link>
-          {payLaterOn && <Link to="/pay-later" className="hover:text-primary">Pay Later</Link>}
-          {preordersOn && <Link to="/preorders" className="hover:text-primary">Preorders</Link>}
-          <Link to="/feed" className="hover:text-primary">Watch &amp; Shop</Link>
-          <span className="h-4 w-px bg-border" aria-hidden="true" />
-          <div className="flex items-center gap-5 overflow-x-auto text-xs text-muted-foreground">
-            {topCategories.map(cat => (
-              <Link key={cat.id} to={`/category/${cat.slug}`} className="whitespace-nowrap hover:text-primary transition-colors">{cat.name}</Link>
-            ))}
-          </div>
+          <span className="h-5 w-px shrink-0 bg-border" aria-hidden="true" />
+          <Link to="/products?tab=suppliers" className="shrink-0 whitespace-nowrap transition-colors hover:text-primary">Suppliers</Link>
+          <Link to="/rfq/new" className="shrink-0 whitespace-nowrap transition-colors hover:text-primary">
+            <span className="lg:hidden">Request a Quote</span>
+            <span className="hidden lg:inline">Request for Quotation</span>
+          </Link>
+          {payLaterOn && <Link to="/pay-later" className="shrink-0 whitespace-nowrap transition-colors hover:text-primary">Pay Later</Link>}
+          {preordersOn && <Link to="/preorders" className="shrink-0 whitespace-nowrap transition-colors hover:text-primary">Preorders</Link>}
+          <Link to="/feed" className="shrink-0 whitespace-nowrap transition-colors hover:text-primary">Watch &amp; Shop</Link>
         </div>
       </nav>
     </header>
