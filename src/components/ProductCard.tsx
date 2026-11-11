@@ -5,6 +5,7 @@ import { prefetchProduct } from '@/hooks/useProducts';
 import { BadgeCheck, ImageOff } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { formatNaira } from '@/lib/format';
+import { useCurrency } from '@/hooks/useCurrency';
 import { listImage } from '@/lib/images';
 import { formatMoq, priceRange } from '@/lib/pricing';
 import type { Json } from '@/integrations/supabase/types';
@@ -36,13 +37,14 @@ export interface ProductCardProps {
 export function ProductPrice({ product, className = '', compact = false }: { product: Pick<ProductCardProps, 'price' | 'price_tiers' | 'compare_at_price'>; className?: string; compact?: boolean }) {
   const { min, max } = priceRange({ price: product.price, price_tiers: product.price_tiers });
   const hasRange = max > min;
+  const { format } = useCurrency();
   return (
     <div className={`flex flex-wrap items-baseline gap-x-1.5 ${className}`}>
       <span className={`font-heading font-bold tabular-nums text-foreground ${compact ? 'text-sm leading-tight sm:text-base' : 'text-base'}`}>
-        {hasRange ? `${formatNaira(min)} - ${formatNaira(max)}` : formatNaira(min)}
+        {hasRange ? `${format(min)} - ${format(max)}` : format(min)}
       </span>
       {!hasRange && product.compare_at_price && (
-        <span className={`text-muted-foreground line-through text-xs`}>{formatNaira(product.compare_at_price)}</span>
+        <span className={`text-muted-foreground line-through text-xs`}>{format(product.compare_at_price)}</span>
       )}
     </div>
   );

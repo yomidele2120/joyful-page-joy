@@ -35,6 +35,7 @@ import { useUnreadCount } from '@/hooks/useChat';
 import VendorVideosTab from '@/components/dashboard/VendorVideosTab';
 import VendorOrdersTab, { type VendorOrder } from '@/components/dashboard/VendorOrdersTab';
 import SupplierAgreementPanel from '@/components/dashboard/SupplierAgreementPanel';
+import SupplierVerification from '@/components/verification/SupplierVerification';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 export default function SupplierDashboard() {
@@ -506,13 +507,17 @@ export default function SupplierDashboard() {
             )}
 
             {activeTab === 'shop-settings' && (
-              <ShopSettings vendor={vendor} onUpdate={() => queryClient.invalidateQueries({ queryKey: ['vendor-profile'] })} />
+              <>
+                <ShopSettings vendor={vendor} onUpdate={() => queryClient.invalidateQueries({ queryKey: ['vendor-profile'] })} />
+                <SupplierVerification vendor={vendor} />
+              </>
             )}
           </>
         ) : (
           /* Show limited settings for pending suppliers */
           <div className="mt-4">
             <ShopSettings vendor={vendor} onUpdate={() => queryClient.invalidateQueries({ queryKey: ['vendor-profile'] })} />
+            <SupplierVerification vendor={vendor} />
           </div>
         )}
     </DashboardShell>

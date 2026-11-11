@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   ShoppingCart, Search, User, Menu, Heart, LogOut, Store, Clapperboard, Bell, MessageSquare,
-  FileText, ClipboardList, ChevronDown, LayoutGrid, Inbox, Package, Wallet, CalendarClock } from 'lucide-react';
+  FileText, ClipboardList, ChevronDown, LayoutGrid, Inbox, Package, Wallet, CalendarClock, Phone } from 'lucide-react';
 import { BrandLogo } from '@/components/BrandLogo';
+import CurrencySwitcher from '@/components/currency/CurrencySwitcher';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from '@/components/ui/sheet';
@@ -145,11 +146,13 @@ export default function Navbar() {
           {user && <NotificationBell />}
           <AccountMenu user={!!user} isAdmin={isAdmin} isVendor={isVendor} accountHref={accountHref} signOut={signOut} />
           <span className="w-px h-5 bg-border mx-1" aria-hidden="true" />
+          <CurrencySwitcher className="mr-1" />
           <ThemeToggle />
         </div>
 
         {/* Mobile: quick icons + menu */}
         <div className="flex items-center gap-1 md:hidden">
+          <CurrencySwitcher />
           <Link to="/messages" className="relative p-2" aria-label="Messages">
             <MessageSquare className="h-5 w-5" /><CountBadge count={unreadMessages} />
           </Link>
@@ -175,6 +178,7 @@ export default function Navbar() {
                   <MenuTile to="/feed" icon={<Clapperboard className="w-5 h-5" />} label="Watch" />
                   <MenuTile to="/wishlist" icon={<Heart className="w-5 h-5" />} label="Wishlist" />
                   <MenuTile to="/messages" icon={<MessageSquare className="w-5 h-5" />} label="Messages" badge={unreadMessages} />
+                  <MenuTile to="/calls" icon={<Phone className="w-5 h-5" />} label="Calls" />
                   <MenuTile to="/cart" icon={<ShoppingCart className="w-5 h-5" />} label="Cart" badge={totalItems} />
                   <MenuTile to="/products?tab=suppliers" icon={<Store className="w-5 h-5" />} label="Suppliers" />
                   {payLaterOn && <MenuTile to="/pay-later" icon={<Wallet className="w-5 h-5" />} label="Pay later" />}

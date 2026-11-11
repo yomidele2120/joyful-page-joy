@@ -12,9 +12,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { useMyVendor } from '@/hooks/useMyVendor';
 import {
   useAddNegotiationEvent, useCloseRfq, useMyQuotes, useMyRfqs, useNegotiationHistory,
-  useOpenRfqs, useRfqQuotes, useSubmitQuote, type RfqRow,
+  useOpenRfqs, useRfqQuotes, useSubmitQuote, type QuoteRow, type RfqRow,
 } from '@/hooks/useRfqs';
 import { formatNaira } from '@/lib/format';
+import { compareQuotes, type QuoteCompared } from '@/lib/quoteCompare';
+import { formatResponseTime, useVendorReputation } from '@/hooks/useVendorReputation';
+import { Star } from 'lucide-react';
 
 export default function Rfqs() {
   const { user, isVendor, loading } = useAuth();
@@ -120,6 +123,7 @@ function Quotes({ rfqId, quantity }: { rfqId: string; quantity: number }) {
   if (!data?.length) return <p className="mt-3 text-sm text-muted-foreground">No quotes yet. Suppliers usually respond within a few days.</p>;
   return (
     <div className="mt-3 space-y-2">
+      {data.length > 1 && <QuoteComparison quotes={data} quantity={quantity} />}
       {data.map(quote => (
         <div key={quote.id} className="rounded-md border border-border bg-background p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -142,6 +146,39 @@ function Quotes({ rfqId, quantity }: { rfqId: string; quantity: number }) {
         </div>
       ))}
     </div>
+  );
+}
+
+function QuoteComparison({ quotes, quantity }: { quotes: QuoteRow[]; quantity: number }) {
+  const rows = compareQuotes(quotes, quantity);
+  return (
+    <div className="overflow-x-auto rounded-md border border-border">
+      <table className="w-full min-w-[560px] text-left text-xs">
+        <caption className="bg-secondary/50 px-3 py-2 text-left text-sm font-medium">Compare quotes for {quantity} units</caption>
+        <thead className="text-muted-foreground">
+          <tr><th className="px-3 py-2 font-medium">Supplier</th><th className="px-3 py-2 font-medium">Unit price</th><th className="px-3 py-2 font-medium">Total</th><th className="px-3 py-2 font-medium">MOQ</th><th className="px-3 py-2 font-medium">Lead time</th><th className="px-3 py-2 font-medium">Rating</th><th className="px-3 py-2 font-medium">Replies</th></tr>
+        </thead>
+        <tbody>
+          {rows.map(r => <CompareRow key={r.quote.id} row={r} />)}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function CompareRow({ row }: { row: QuoteCompared<QuoteRow> }) {
+  const { quote } = row;
+  const { data: rep } = useVendorReputation(quote.vendor_id);
+  return (
+    <tr className={`border-t border-border ${row.lowest ? 'bg-primary/5' : ''}`}>
+      <td className="px-3 py-2 font-medium"><span className="flex items-center gap-1">{quote.vendors?.is_approved && <BadgeCheck className="h-3.5 w-3.5 text-primary" aria-label="Verified supplier" />}{quote.vendors?.store_name || 'Supplier'}</span></td>
+      <td className="px-3 py-2 tabular-nums">{formatNaira(quote.unit_price)}{row.lowest ? <span className="ml-1 rounded bg-primary px-1 py-0.5 text-[10px] text-primary-foreground">Lowest</span> : row.vsLowestPercent > 0 ? <span className="ml-1 text-muted-foreground">+{row.vsLowestPercent}%</span> : null}</td>
+      <td className="px-3 py-2 tabular-nums">{formatNaira(row.total)}</td>
+      <td className={`px-3 py-2 ${row.moqTooHigh ? 'text-destructive' : ''}`}>{quote.moq ?? '-'}{row.moqTooHigh ? ' (above your quantity)' : ''}</td>
+      <td className="px-3 py-2">{quote.lead_time || '-'}</td>
+      <td className="px-3 py-2">{rep?.average_rating != null && rep.review_count > 0 ? <span className="inline-flex items-center gap-0.5"><Star className="h-3 w-3 fill-current text-amber-500" />{rep.average_rating.toFixed(1)} ({rep.review_count})</span> : '-'}</td>
+      <td className="px-3 py-2">{formatResponseTime(rep?.average_response_minutes)?.replace('Replies in about ', '') ?? '-'}</td>
+    </tr>
   );
 }
 

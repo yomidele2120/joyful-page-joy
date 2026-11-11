@@ -7,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Send, MessageCircle, Store, Search, User, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Send, MessageCircle, Store, Search, User, ExternalLink, Phone } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import MediaPreview from '@/components/chat/MediaPreview';
@@ -130,6 +130,7 @@ export default function SupplierChat() {
             <MessageCircle className="w-5 h-5 text-primary" />
             <h1 className="font-heading font-bold text-lg">Supplier Chat</h1>
           </div>
+          <Link to="/calls" className="inline-flex items-center gap-1 text-sm text-primary"><Phone className="h-4 w-4" /> Call history</Link>
         </div>
       </header>
 

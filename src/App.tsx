@@ -21,6 +21,7 @@ import { persistQueryCache, restoreQueryCache } from "@/lib/queryPersist";
 // Every page except the home page is loaded only when it is visited, so a first-time visitor downloads
 // the home page and not the admin dashboard, charts, video feed and so on.
 const Feed = lazyPage(() => import("./pages/Feed"));
+const CallHistory = lazyPage(() => import("./pages/CallHistory"));
 const Products = lazyPage(() => import("./pages/Products"));
 const ProductDetail = lazyPage(() => import("./pages/ProductDetail"));
 const CategoryPage = lazyPage(() => import("./pages/CategoryPage"));
@@ -135,6 +136,7 @@ const App = () => (
               <Route path="/messages" element={<Messages />} />
               <Route path="/inquiries" element={<Inquiries />} />
               <Route path="/rfq" element={<Rfqs />} />
+              <Route path="/calls" element={<CallHistory />} />
               <Route path="/pay-later" element={<PayLater />} />
               <Route path="/pay-later/return" element={<PayLaterReturn />} />
               <Route path="/preorders" element={<Preorders />} />

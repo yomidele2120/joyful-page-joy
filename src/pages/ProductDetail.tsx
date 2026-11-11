@@ -21,6 +21,8 @@ import {
   Minus, Plus, Send, Play, ClipboardList, BadgeCheck, CreditCard, Wallet, Star,
 } from 'lucide-react';
 import { formatNaira } from '@/lib/format';
+import { useCurrency } from '@/hooks/useCurrency';
+import LandedCostCalculator from '@/components/currency/LandedCostCalculator';
 import { formatQtyRange, getMoq, parseSpecs, pluralUnit, tierRows, unitPriceFor } from '@/lib/pricing';
 import { toast } from 'sonner';
 import { trackViewContent } from '@/lib/tracking';
@@ -32,6 +34,7 @@ export default function ProductDetail() {
   const { slug } = useParams<{ slug: string }>();
   const { data: product, isLoading } = useProduct(slug || '');
   const { data: reputation } = useVendorReputation(product?.vendors?.id);
+  const { currency, format: formatDisplay } = useCurrency();
   const { data: recommendations } = useProducts({ categorySlug: product?.categories?.slug, limit: 8 });
   const { addItem, items: cartItems } = useCart();
   const basket = useInquiryBasket();
@@ -269,14 +272,15 @@ export default function ProductDetail() {
             <div className="mt-5 grid gap-px overflow-hidden rounded-lg border border-border bg-border" style={{ gridTemplateColumns: `repeat(${Math.min(rows.length, 3)}, minmax(0, 1fr))` }}>
               {rows.map((row, index) => (
                 <div key={row.from} className={`bg-card p-3 ${index === activeRowIndex && rows.length > 1 ? 'ring-2 ring-inset ring-primary' : ''}`}>
-                  <p className="font-heading text-lg font-bold sm:text-xl">{formatNaira(row.price)}</p>
+                  <p className="font-heading text-lg font-bold sm:text-xl">{formatDisplay(row.price)}</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">{formatQtyRange(row, unit)}</p>
                 </div>
               ))}
             </div>
+            {currency !== 'NGN' && <p className="mt-1.5 text-[11px] text-muted-foreground">Shown in {currency} as an estimate. You are charged in Naira ({formatNaira(unitNow)} per {unit} at your quantity).</p>}
             {product.compare_at_price && product.compare_at_price > product.price && rows.length === 1 && (
               <p className="mt-2 text-xs text-muted-foreground">
-                <span className="line-through">{formatNaira(product.compare_at_price)}</span>{' '}
+                <span className="line-through">{formatDisplay(product.compare_at_price)}</span>{' '}
                 <span className="font-semibold text-primary">Save {Math.round((1 - product.price / product.compare_at_price) * 100)}%</span>
               </p>
             )}
@@ -344,6 +348,8 @@ export default function ProductDetail() {
               {belowMoq && <p className="mt-2 text-xs text-destructive">Minimum order is {moq} {pluralUnit(unit)}.</p>}
               {overStock && !outOfStock && <p className="mt-2 text-xs text-destructive">{limitText}</p>}
             </div>
+
+            <LandedCostCalculator unitPrice={unitNow} quantity={Math.max(quantity, 1)} unit={unit} />
 
             {/* Actions */}
             <div className="mt-5 hidden gap-2 md:grid md:grid-cols-2">

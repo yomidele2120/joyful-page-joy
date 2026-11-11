@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Play, Maximize2 } from 'lucide-react';
+import { Play, Maximize2, Download } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useSignedMediaUrl } from '@/hooks/useSignedMedia';
 
@@ -11,6 +11,7 @@ interface MediaPreviewProps {
 
 export default function MediaPreview({ url: storedUrl, type }: MediaPreviewProps) {
   const [fullscreen, setFullscreen] = useState(false);
+  const [broken, setBroken] = useState(false);
   const url = useSignedMediaUrl(storedUrl);
 
   if (!url) {
@@ -44,17 +45,29 @@ export default function MediaPreview({ url: storedUrl, type }: MediaPreviewProps
   }
 
   if (type === 'video') {
+    // #t=0.1 makes phones paint the first frame (iOS ignores preload="metadata"); playsInline stops iPhones forcing full screen.
+    const shown = `${url}${url.includes('#') ? '' : '#t=0.1'}`;
+    if (broken) {
+      return (
+        <div className="max-w-[220px] rounded-lg bg-secondary p-3 text-xs text-muted-foreground">
+          <p>This video uses a format your phone cannot play.</p>
+          <a href={url} download target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 font-medium text-primary">
+            <Download className="h-3.5 w-3.5" /> Download video
+          </a>
+        </div>
+      );
+    }
     return (
       <>
         <div className="relative cursor-pointer group" onClick={() => setFullscreen(true)}>
-          <video src={url} className="max-w-[220px] max-h-[200px] rounded-lg object-cover" preload="metadata" />
+          <video src={shown} className="max-w-[220px] max-h-[200px] min-h-[100px] rounded-lg bg-black object-cover" preload="metadata" playsInline muted onError={() => setBroken(true)} />
           <div className="absolute inset-0 bg-black/30 rounded-lg flex items-center justify-center group-hover:bg-black/40 transition-colors">
             <Play className="w-8 h-8 text-white fill-white" />
           </div>
         </div>
         <Dialog open={fullscreen} onOpenChange={setFullscreen}>
           <DialogContent className="max-w-[95vw] max-h-[95vh] p-2 border-none bg-black">
-            <video src={url} controls autoPlay className="w-full max-h-[85vh] rounded-lg" />
+            <video src={url} controls autoPlay playsInline className="w-full max-h-[85vh] rounded-lg" onError={() => { setFullscreen(false); setBroken(true); }} />
           </DialogContent>
         </Dialog>
       </>

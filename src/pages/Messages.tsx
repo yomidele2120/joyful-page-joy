@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, MessageCircle, Send, Store, User as UserIcon, X } from 'lucide-react';
+import { ArrowLeft, MessageCircle, Phone, Send, Store, User as UserIcon, X } from 'lucide-react';
 import { toast } from 'sonner';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
@@ -167,7 +167,7 @@ export default function Messages() {
         <div className="grid h-[calc(100dvh-8rem)] overflow-hidden bg-card md:h-[72vh] md:min-h-[420px] md:grid-cols-[320px_minmax(0,1fr)] md:rounded-lg md:border md:border-border">
           {/* Conversation list */}
           <aside className={`${showThread ? 'hidden md:flex' : 'flex'} min-h-0 flex-col border-r border-border`}>
-            <div className="border-b border-border p-3 font-heading font-semibold">Messages</div>
+            <div className="flex items-center justify-between border-b border-border p-3 font-heading font-semibold">Messages<Link to="/calls" className="inline-flex items-center gap-1 text-xs font-normal text-primary"><Phone className="h-3.5 w-3.5" /> Call history</Link></div>
             <div className="min-h-0 flex-1 overflow-y-auto">
               {convosLoading ? (
                 <p className="p-4 text-sm text-muted-foreground">Loading conversations...</p>

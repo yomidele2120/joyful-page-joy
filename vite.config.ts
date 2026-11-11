@@ -17,6 +17,7 @@ export default defineConfig(({ mode }) => ({
     // Changes on every build so saved public data (see src/lib/queryPersist.ts) never outlives a deploy.
     __BUILD_ID__: JSON.stringify(Date.now().toString(36)),
   },
+  optimizeDeps: { exclude: ["@ffmpeg/ffmpeg", "@ffmpeg/util"] },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

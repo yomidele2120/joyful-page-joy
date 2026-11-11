@@ -17,6 +17,8 @@ import { formatLongDate } from '@/hooks/useMarketplace';
 import { useTikTokEnabled } from '@/hooks/useTikTokEnabled';
 import { useCallsEnabled } from '@/hooks/useCallsEnabled';
 import DisputeEvidence from '@/components/disputes/DisputeEvidence';
+import CurrencyRatesPanel from '@/components/admin/CurrencyRatesPanel';
+import VendorVerificationPanel from '@/components/admin/VendorVerificationPanel';
 
 const card = 'rounded-lg bg-card p-5 card-shadow';
 
@@ -29,12 +31,16 @@ export default function MarketplaceAdminTab() {
         <TabsTrigger value="support">Support</TabsTrigger>
         <TabsTrigger value="disputes">Disputes</TabsTrigger>
         <TabsTrigger value="requests">Cancellations and refunds</TabsTrigger>
+        <TabsTrigger value="verification">Supplier verification</TabsTrigger>
+        <TabsTrigger value="currency">Currency rates</TabsTrigger>
       </TabsList>
       <TabsContent value="settings"><SettingsPanel /></TabsContent>
       <TabsContent value="listings"><ListingsPanel /></TabsContent>
       <TabsContent value="support"><SupportPanel /></TabsContent>
       <TabsContent value="disputes"><DisputesPanel /></TabsContent>
       <TabsContent value="requests"><RequestsPanel /></TabsContent>
+      <TabsContent value="verification"><VendorVerificationPanel /></TabsContent>
+      <TabsContent value="currency"><CurrencyRatesPanel /></TabsContent>
     </Tabs>
   );
 }

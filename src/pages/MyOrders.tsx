@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import SmartReorder from '@/components/orders/SmartReorder';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/hooks/useAuth';
@@ -175,6 +176,7 @@ export default function MyOrders() {
           <Link to="/returns-policy" className="text-primary hover:underline">Return, Refund and Cancellation Policy</Link>.
         </p>
 
+        <SmartReorder />
         <Tabs value={filter} onValueChange={setFilter} className="mt-5">
           <TabsList>
             <TabsTrigger value="all">All</TabsTrigger>
