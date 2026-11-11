@@ -15,13 +15,17 @@ import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import SubscriptionsTab from '@/components/admin/SubscriptionsTab';
+import SubscriptionAlertBanner from '@/components/admin/SubscriptionAlertBanner';
+import { useSubscriptionOverview } from '@/hooks/useSubscriptions';
+import { alertsOf } from '@/lib/subscriptions';
 import { formatNaira } from '@/lib/format';
 import { useCategories } from '@/hooks/useProducts';
 import {
   Package, ShoppingCart, Users, DollarSign, Plus, LogOut, ArrowLeft,
   Trash2, Store, CheckCircle, XCircle, Eye, BarChart3, CreditCard,
   FileText, AlertCircle, TrendingUp, Layers, FolderPlus, Pencil, Flag, Image as ImageIcon,
-  LayoutDashboard, Megaphone, Settings, Wallet, ChevronRight, Landmark, Percent, Activity, Video, Copy, Phone
+  LayoutDashboard, Megaphone, Settings, Wallet, ChevronRight, Landmark, Percent, Activity, Video, Copy, Phone, CalendarClock
 } from 'lucide-react';
 import DashboardShell, { Panel, StatCard, StatusDot, WelcomeBanner, useTabParam, type DashNavItem } from '@/components/dashboard/DashboardShell';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -45,6 +49,8 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useTabParam('overview');
+  const { data: subscriptionRows } = useSubscriptionOverview(isAdmin);
+  const subscriptionAlerts = alertsOf(subscriptionRows ?? []).length;
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) {
@@ -258,6 +264,7 @@ export default function AdminDashboard() {
     { key: 'disputes', label: 'Disputes & refunds', icon: AlertCircle, group: 'Sales' },
     { key: 'users', label: 'Users', icon: Users, group: 'Community' },
     { key: 'moderation', label: 'Moderation', icon: Flag, badge: pendingReports?.length ?? 0, group: 'Community' },
+    { key: 'subscriptions', label: 'Subscriptions', icon: CalendarClock, badge: subscriptionAlerts, group: 'System' },
     { key: 'settings', label: 'Settings', icon: Settings, group: 'System' },
   ];
 
@@ -273,6 +280,7 @@ export default function AdminDashboard() {
       onSelect={setActiveTab}
       onSignOut={() => { signOut(); navigate('/'); }}
     >
+        {activeTab !== 'subscriptions' && <SubscriptionAlertBanner onOpen={() => setActiveTab('subscriptions')} />}
         {hasAdminDataError && (
           <div className="mb-6 rounded-lg border border-destructive/30 bg-destructive/5 p-4 flex items-center gap-3">
             <AlertCircle className="w-5 h-5 text-destructive shrink-0" />
@@ -606,6 +614,7 @@ export default function AdminDashboard() {
         {activeTab === 'marketplace' && <MarketplaceAdminTab />}
         {activeTab === 'tiktok' && <div className="max-w-2xl"><TikTokSwitch /></div>}
         {activeTab === 'calls' && <div className="max-w-2xl"><CallsSwitch /></div>}
+        {activeTab === 'subscriptions' && <SubscriptionsTab />}
 
         {activeTab === 'finance' && <FinanceTab />}
         {activeTab === 'commission' && <SupplierCommissionTab />}

@@ -20,3 +20,18 @@
 Notes
 - Video conversion runs in the sender's browser (downloads ~30 MB converter the first time it is needed). Files over 150 MB are sent unconverted. Older videos already sent in HEVC/WebM will still not play on some phones.
 - Verifying a supplier sets the same "approved" flag the admin already used, so the Verified badge and RFQ access follow from it.
+
+# Subscriptions (Admin > Subscriptions)
+
+Run `supabase/migrations/20261111090000_platform_subscriptions.sql`. It adds:
+- **Vercel** and **Supabase**: one year each, started 3 Nov 2026, expiring 3 Nov 2027 (edit the dates on the dashboard if the real dates differ).
+- **ZEGOCLOUD**: 10,000 call minutes. Minutes are counted from the moment you run the update (calls made while testing before that are not counted).
+
+How it works
+- Every connected call is added to "Used", rounded up to a whole minute. The card shows bought / used / left and the number of calls counted.
+- Warnings go to every admin in the notification bell: expiring terms at 30, 14, 7 and 1 day(s) and on expiry; call minutes at 80%, 90%, 95% and when used up. One notification per stage. A red/amber banner also shows on every admin page.
+- When the minutes are used up, new calls are refused with "Calling is paused" (switch this off on the card if you prefer calls to continue). After buying more minutes, use "Add minutes". After renewing Vercel or Supabase, save the new expiry date.
+- Check your ZEGOCLOUD plan: if it bills each person's minutes separately, turn on "Count both people on a call" (a 3 minute call then uses 6).
+- Video and voice are counted the same. ZEGOCLOUD may price video differently, so the dashboard figure is an estimate. Compare it with the ZEGOCLOUD console now and then.
+- Warnings are sent when an admin opens the dashboard. To also send them when nobody is logged in, enable the `pg_cron` extension in Supabase and run once:
+  `select cron.schedule('subscription-alerts', '0 7 * * *', $$select public.check_subscription_alerts()$$);`
