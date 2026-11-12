@@ -19,9 +19,13 @@ The integration uses Google's current Merchant API (`products/v1`) through the V
 
    Never add the service-account JSON or service-role key to a `VITE_` variable, source file, or browser storage.
 5. Deploy the application. In Admin > **Google Merchant Center**, enter the account ID and API data-source name, keep the target defaults as appropriate (`NG`, `en`, `NGN`), test the connection, save, then enable automatic synchronization.
-6. Use **Sync first 10 products** for the initial import. It pauses bulk synchronization, submits at most 10 products, and only enables **Continue catalogue sync** after all first-batch API submissions succeed. Review Google's returned product issues and use the explicit continue action to release the remaining queue; the configured Vercel Cron then drains it in batches every five minutes.
+6. Use **Sync first 10 products** for the initial import. It pauses bulk synchronization, submits at most 10 products, and only enables **Continue catalogue sync** after all first-batch API submissions succeed. Review Google's returned product issues and use the explicit continue action to release the remaining queue.
 
-Vercel Cron sends the configured `CRON_SECRET` as a bearer token when present. Ensure the deployment plan supports the five-minute schedule and the configured 60-second function duration. If it does not, use a plan-supported interval or an external scheduler to request `/api/merchant-center?cron=1` with `Authorization: Bearer <CRON_SECRET>`.
+## Scheduled synchronization
+
+`vercel.json` schedules `/api/merchant-center?cron=1` once daily at 00:00 UTC. This frequency is compatible with Vercel Hobby, which permits at most one cron execution per day and may invoke it within the scheduled hour. Each scheduled invocation processes up to 10 queued products and refreshes up to 10 Google product statuses. On Hobby, larger queues will therefore take multiple days to drain; use the admin actions for immediate processing. Vercel Pro and Enterprise support more frequent schedules if faster automatic reconciliation is needed.
+
+Configure `CRON_SECRET` in the Vercel production environment. Vercel Cron uses it to authorize the scheduled request; the endpoint rejects requests without a matching bearer token.
 
 ## Synchronization behavior
 
