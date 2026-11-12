@@ -4,7 +4,7 @@ The integration uses Google's current Merchant API (`products/v1`) through the V
 
 ## One-time setup
 
-1. Apply `supabase/migrations/20261112090000_google_merchant_center.sql` to the production Supabase project.
+1. Apply `supabase/migrations/20261112090000_google_merchant_center.sql`, `supabase/migrations/20261112130000_google_merchant_center_dashboard_summary.sql`, and `supabase/migrations/20261112140000_google_merchant_center_initial_batch.sql` to the production Supabase project.
 2. In Google Cloud, enable the **Merchant API** for the project that owns the service account. Create a service account, download its JSON key, and add its email as a user with product-management access in the target Merchant Center account.
 3. Create a **primary API data source** in Merchant Center. Record the numeric Merchant Center account ID and full data-source name, such as `accounts/123456789/dataSources/987654321`.
 4. Add these server-side environment variables to Vercel for every environment that should run the integration:
@@ -19,7 +19,7 @@ The integration uses Google's current Merchant API (`products/v1`) through the V
 
    Never add the service-account JSON or service-role key to a `VITE_` variable, source file, or browser storage.
 5. Deploy the application. In Admin > **Google Merchant Center**, enter the account ID and API data-source name, keep the target defaults as appropriate (`NG`, `en`, `NGN`), test the connection, save, then enable automatic synchronization.
-6. Use **Sync eligible catalogue** for the initial import. The route enqueues the full eligible set and immediately processes a batch; the configured Vercel Cron drains the remainder every five minutes.
+6. Use **Sync first 10 products** for the initial import. It pauses bulk synchronization, submits at most 10 products, and only enables **Continue catalogue sync** after all first-batch API submissions succeed. Review Google's returned product issues and use the explicit continue action to release the remaining queue; the configured Vercel Cron then drains it in batches every five minutes.
 
 Vercel Cron sends the configured `CRON_SECRET` as a bearer token when present. Ensure the deployment plan supports the five-minute schedule and the configured 60-second function duration. If it does not, use a plan-supported interval or an external scheduler to request `/api/merchant-center?cron=1` with `Authorization: Bearer <CRON_SECRET>`.
 

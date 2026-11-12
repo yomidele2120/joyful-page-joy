@@ -33,7 +33,18 @@ type Dashboard = {
   settings: Settings;
   credentialsConfigured: boolean;
   cronConfigured: boolean;
+  bulkSyncPaused: boolean;
+  initialBatchReady: boolean;
   pendingJobs: number;
+  summary: {
+    totalEligible: number;
+    successfullySubmitted: number;
+    pendingSynchronization: number;
+    failedSubmissions: number;
+    awaitingGoogleProcessing: number;
+    disapproved: number;
+    lastSynchronizationAt: string | null;
+  };
   products: ProductStatus[];
   history: Array<{ id: number; product_title: string; operation: string; result: string; message: string | null; created_at: string }>;
 };
@@ -83,10 +94,17 @@ export default function GoogleMerchantCenterTab() {
   });
   const action = useMutation({
     mutationFn: ({ name, payload }: { name: string; payload?: Record<string, unknown> }) => merchantCenterRequest(name, payload),
-    onSuccess: (_result, variables) => {
+    onSuccess: (result, variables) => {
+      if (variables.name === 'sync_all' && result.initialBatchReady !== true) {
+        toast.error('The first batch was incomplete or had submission failures. Review product errors and retry before continuing.');
+        void refresh();
+        return;
+      }
       const messages: Record<string, string> = {
         verify_connection: 'Merchant Center account and API data source verified.',
-        sync_all: 'Catalogue synchronization started. Remaining products will be processed by the scheduled worker.',
+        sync_all: 'The first product batch has been submitted. Review its status before continuing.',
+        continue_catalogue: 'The remaining catalogue has been released for synchronization.',
+        sync_product: 'Product synchronization request completed.',
         retry_failed: 'Failed products have been re-queued.',
         refresh_status: 'Product approval statuses refreshed.',
       };
@@ -178,6 +196,8 @@ export default function GoogleMerchantCenterTab() {
             <h2 className="font-heading text-lg font-bold">Catalogue synchronization</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               {data?.pendingJobs ?? 0} queued. Product changes and seller approval changes are queued automatically; the Vercel scheduled worker retries transient failures.
+              {data?.bulkSyncPaused && !data.initialBatchReady && ' Bulk synchronization is paused; review errors and retry the first batch.'}
+              {data?.bulkSyncPaused && data.initialBatchReady && ' The first batch was accepted by the Merchant API; review the results before continuing.'}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -187,10 +207,33 @@ export default function GoogleMerchantCenterTab() {
             <Button variant="outline" disabled={action.isPending || !settings.enabled} onClick={() => action.mutate({ name: 'retry_failed' })}>
               Retry failed
             </Button>
-            <Button disabled={action.isPending || !settings.enabled} onClick={() => action.mutate({ name: 'sync_all' })}>
-              <Send className="mr-2 h-4 w-4" />Sync eligible catalogue
+            <Button
+              disabled={action.isPending || !settings.enabled}
+              onClick={() => action.mutate({ name: data?.initialBatchReady ? 'continue_catalogue' : 'sync_all' })}
+            >
+              <Send className="mr-2 h-4 w-4" />{data?.initialBatchReady ? 'Continue catalogue sync' : data?.bulkSyncPaused ? 'Retry first batch' : 'Sync first 10 products'}
             </Button>
           </div>
+        </div>
+      </section>
+
+      <section className={`${panel} grid gap-4 sm:grid-cols-2 lg:grid-cols-4`}>
+        {[
+          ['Eligible products', data?.summary.totalEligible],
+          ['Successfully submitted', data?.summary.successfullySubmitted],
+          ['Pending synchronization', data?.summary.pendingSynchronization],
+          ['Failed submissions', data?.summary.failedSubmissions],
+          ['Awaiting Google processing', data?.summary.awaitingGoogleProcessing],
+          ['Rejected / disapproved', data?.summary.disapproved],
+        ].map(([label, count]) => (
+          <div key={label} className="rounded-lg border border-border p-3">
+            <p className="text-sm text-muted-foreground">{label}</p>
+            <p className="mt-1 text-2xl font-semibold">{count ?? '—'}</p>
+          </div>
+        ))}
+        <div className="sm:col-span-2 lg:col-span-4">
+          <p className="text-sm text-muted-foreground">Last synchronization</p>
+          <p className="mt-1 text-sm">{dateLabel(data?.summary.lastSynchronizationAt ?? null)}</p>
         </div>
       </section>
 
@@ -219,6 +262,15 @@ export default function GoogleMerchantCenterTab() {
                   <td className="py-3 pr-3 whitespace-nowrap">{dateLabel(product.last_synced_at)}</td>
                   <td className="max-w-sm py-3 text-xs text-muted-foreground">
                     {product.last_error || product.status_error || product.issues?.map((issue) => issue.description || issue.detail || issue.code).filter(Boolean).join('; ') || '—'}
+                    <Button
+                      className="mt-2"
+                      variant="outline"
+                      size="sm"
+                      disabled={action.isPending || !settings.enabled}
+                      onClick={() => action.mutate({ name: 'sync_product', payload: { productId: product.product_id } })}
+                    >
+                      <RefreshCw className="mr-2 h-3.5 w-3.5" />Sync product
+                    </Button>
                   </td>
                 </tr>
               ))}

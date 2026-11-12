@@ -36,6 +36,21 @@ interface QueueJob {
   version: number;
 }
 
+interface DashboardSummary {
+  totalEligible: number;
+  successfullySubmitted: number;
+  pendingSynchronization: number;
+  failedSubmissions: number;
+  awaitingGoogleProcessing: number;
+  disapproved: number;
+  lastSynchronizationAt: string | null;
+}
+
+interface SyncControl {
+  bulk_sync_paused: boolean;
+  initial_batch_ready: boolean;
+}
+
 class HttpError extends Error {
   constructor(message: string, public statusCode = 400) {
     super(message);
@@ -386,10 +401,12 @@ async function processQueue(
   settings: Settings,
   limit: number,
   productId?: string,
+  bulkOnly: boolean | null = null,
 ) {
   const { data, error } = await db.rpc('merchant_claim_product_sync_jobs', {
     _limit: limit,
     _product_id: productId ?? null,
+    _bulk_only: bulkOnly,
   });
   if (error) throw new Error(`Could not claim Merchant Center sync jobs: ${error.message}`);
 
@@ -415,6 +432,15 @@ async function processQueue(
     ineligible: results.filter((item) => item.result === 'ineligible').length,
     failed: results.filter((item) => item.result === 'failed').length,
   };
+}
+
+async function syncControl(db: ReturnType<typeof database>): Promise<SyncControl> {
+  const { data, error } = await db.from('merchant_center_sync_control')
+    .select('bulk_sync_paused,initial_batch_ready')
+    .eq('id', true)
+    .maybeSingle();
+  if (error) throw new HttpError(`Could not load catalogue sync state: ${error.message}`, 503);
+  return data ?? { bulk_sync_paused: false, initial_batch_ready: false };
 }
 
 async function refreshProductStatuses(db: ReturnType<typeof database>, settings: Settings, limit: number) {
@@ -465,19 +491,29 @@ async function refreshProductStatuses(db: ReturnType<typeof database>, settings:
 }
 
 async function dashboardData(db: ReturnType<typeof database>, settings: Settings) {
-  const [{ data: history, error: historyError }, { data: products, error: productsError }, { count: pending, error: queueError }] = await Promise.all([
+  const [
+    { data: history, error: historyError },
+    { data: products, error: productsError },
+    { data: summaryData, error: summaryError },
+    control,
+  ] = await Promise.all([
     db.from('merchant_center_sync_history').select('*').order('created_at', { ascending: false }).limit(50),
     db.from('merchant_center_product_status').select('*').order('updated_at', { ascending: false }).limit(100),
-    db.from('merchant_center_sync_queue').select('*', { count: 'exact', head: true }).neq('status', 'failed'),
+    db.rpc('merchant_center_dashboard_summary'),
+    syncControl(db),
   ]);
-  if (historyError || productsError || queueError) {
-    throw new HttpError(`Could not load Merchant Center dashboard data: ${historyError?.message || productsError?.message || queueError?.message}`, 503);
+  if (historyError || productsError || summaryError) {
+    throw new HttpError(`Could not load Merchant Center dashboard data: ${historyError?.message || productsError?.message || summaryError?.message}`, 503);
   }
+  const summary = summaryData as DashboardSummary;
   return {
     settings,
     credentialsConfigured: serviceAccountConfigured(),
     cronConfigured: Boolean(process.env.CRON_SECRET),
-    pendingJobs: pending ?? 0,
+    summary,
+    bulkSyncPaused: control.bulk_sync_paused,
+    initialBatchReady: control.initial_batch_ready,
+    pendingJobs: summary.pendingSynchronization,
     history: history ?? [],
     products: products ?? [],
   };
@@ -500,7 +536,8 @@ async function handleCron(res: Response) {
       return;
     }
     validateSettings(settings);
-    const synchronization = await processQueue(db, settings, 10);
+    const control = await syncControl(db);
+    const synchronization = await processQueue(db, settings, 10, undefined, control.bulk_sync_paused ? false : null);
     const statuses = await refreshProductStatuses(db, settings, 10);
     response(res, 200, { synchronization, statuses });
   } catch (error) {
@@ -576,10 +613,49 @@ export default async function handler(req: Request, res: Response) {
     if (action === 'sync_all') {
       if (!settings.enabled) throw new HttpError('Save and enable the Merchant Center connection first.', 409);
       validateSettings(settings);
+      const { error: pauseError } = await db.from('merchant_center_sync_control').upsert({
+        id: true,
+        bulk_sync_paused: true,
+        initial_batch_ready: false,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'id' });
+      if (pauseError) throw new HttpError(`Could not pause the bulk catalogue queue: ${pauseError.message}`, 503);
+      const { data: summaryData, error: summaryError } = await db.rpc('merchant_center_dashboard_summary');
+      if (summaryError) throw new HttpError(`Could not count eligible catalogue products: ${summaryError.message}`, 503);
+      const expectedEligible = Number((summaryData as DashboardSummary).totalEligible) || 0;
       const { data: queued, error } = await db.rpc('merchant_queue_all_eligible_products');
       if (error) throw new HttpError(`Could not queue the catalogue: ${error.message}`, 503);
+      const queuedCount = Number(queued) || 0;
+      const synchronization = await processQueue(db, settings, Math.min(10, Math.max(1, queuedCount)), undefined, true);
+      const expectedFirstBatch = Math.min(10, expectedEligible);
+      const initialBatchReady = queuedCount === 0
+        || (synchronization.submitted >= expectedFirstBatch && synchronization.failed === 0);
+      if (initialBatchReady) {
+        const { error: readyError } = await db.from('merchant_center_sync_control').update({
+          initial_batch_ready: true,
+          updated_at: new Date().toISOString(),
+        }).eq('id', true);
+        if (readyError) throw new HttpError(`Could not save first-batch status: ${readyError.message}`, 503);
+      }
+      response(res, 200, { queued: queuedCount, synchronization, initialBatchReady });
+      return;
+    }
+
+    if (action === 'continue_catalogue') {
+      if (!settings.enabled) throw new HttpError('Save and enable the Merchant Center connection first.', 409);
+      validateSettings(settings);
+      const control = await syncControl(db);
+      if (!control.bulk_sync_paused || !control.initial_batch_ready) {
+        throw new HttpError('Submit the first batch of up to 10 products successfully before continuing the catalogue.', 409);
+      }
+      const { error } = await db.from('merchant_center_sync_control').update({
+        bulk_sync_paused: false,
+        initial_batch_ready: false,
+        updated_at: new Date().toISOString(),
+      }).eq('id', true);
+      if (error) throw new HttpError(`Could not resume the catalogue queue: ${error.message}`, 503);
       const synchronization = await processQueue(db, settings, 15);
-      response(res, 200, { queued: Number(queued) || 0, synchronization });
+      response(res, 200, { synchronization });
       return;
     }
 
@@ -593,7 +669,7 @@ export default async function handler(req: Request, res: Response) {
         _operation: 'upsert',
       });
       if (error) throw new HttpError(`Could not queue the product: ${error.message}`, 503);
-      const synchronization = await processQueue(db, settings, 1, productId);
+      const synchronization = await processQueue(db, settings, 1, productId, false);
       response(res, 200, { synchronization });
       return;
     }
@@ -601,10 +677,21 @@ export default async function handler(req: Request, res: Response) {
     if (action === 'retry_failed') {
       if (!settings.enabled) throw new HttpError('Save and enable the Merchant Center connection first.', 409);
       validateSettings(settings);
-      const { error } = await db.rpc('merchant_retry_failed_sync_jobs');
+      const { data: retried, error } = await db.rpc('merchant_retry_failed_sync_jobs');
       if (error) throw new HttpError(`Could not requeue failed products: ${error.message}`, 503);
-      const synchronization = await processQueue(db, settings, 15);
-      response(res, 200, { synchronization });
+      const control = await syncControl(db);
+      const retryCount = Number(retried) || 0;
+      const synchronization = await processQueue(db, settings, Math.min(100, Math.max(1, retryCount)), undefined, control.bulk_sync_paused ? true : null);
+      let initialBatchReady = control.initial_batch_ready;
+      if (control.bulk_sync_paused && retryCount > 0 && synchronization.failed === 0 && synchronization.claimed >= retryCount) {
+        const { error: readyError } = await db.from('merchant_center_sync_control').update({
+          initial_batch_ready: true,
+          updated_at: new Date().toISOString(),
+        }).eq('id', true);
+        if (readyError) throw new HttpError(`Could not save first-batch status: ${readyError.message}`, 503);
+        initialBatchReady = true;
+      }
+      response(res, 200, { synchronization, initialBatchReady });
       return;
     }
 
