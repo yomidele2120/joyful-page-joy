@@ -25,7 +25,8 @@ import {
   Package, ShoppingCart, Users, DollarSign, Plus, LogOut, ArrowLeft,
   Trash2, Store, CheckCircle, XCircle, Eye, BarChart3, CreditCard,
   FileText, AlertCircle, TrendingUp, Layers, FolderPlus, Pencil, Flag, Image as ImageIcon,
-  LayoutDashboard, Megaphone, Settings, Wallet, ChevronRight, Landmark, Percent, Activity, Video, Copy, Phone, CalendarClock
+  LayoutDashboard, Megaphone, Settings, Wallet, ChevronRight, Landmark, Percent, Activity, Video, Copy, Phone, CalendarClock,
+  RefreshCw, ShoppingBag,
 } from 'lucide-react';
 import DashboardShell, { Panel, StatCard, StatusDot, WelcomeBanner, useTabParam, type DashNavItem } from '@/components/dashboard/DashboardShell';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -43,6 +44,8 @@ import { useManagedProducts, MANAGE_PAGE_SIZE, MAX_MANAGE_PAGES } from '@/hooks/
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { formatProductCount } from '@/lib/productSearch';
 import { usePendingReports, useResolveReport, useDeactivatePost, useDeleteComment } from '@/hooks/useReports';
+import GoogleMerchantCenterTab from '@/components/admin/GoogleMerchantCenterTab';
+import { merchantCenterRequest } from '@/lib/googleMerchantCenter';
 
 export default function AdminDashboard() {
   const { user, isAdmin, loading, signOut } = useAuth();
@@ -63,6 +66,7 @@ export default function AdminDashboard() {
   // One page of products at a time, searched and paged by the database (millions of products).
   const [productPage, setProductPage] = useState(1);
   const [productSearch, setProductSearch] = useState('');
+  const [syncingMerchantProduct, setSyncingMerchantProduct] = useState<string | null>(null);
   const debouncedProductSearch = useDebouncedValue(productSearch.trim(), 350);
   const { data: productData, isLoading: productsLoading, error: productsError, isPlaceholderData: productsRefreshing } = useManagedProducts({
     scope: 'admin', page: productPage, search: debouncedProductSearch, enabled: canFetchAdminData && activeTab === 'products',
@@ -243,6 +247,25 @@ export default function AdminDashboard() {
     }
   };
 
+  const syncMerchantProduct = async (productId: string) => {
+    setSyncingMerchantProduct(productId);
+    try {
+      const result = await merchantCenterRequest<{
+        synchronization?: { submitted?: number; ineligible?: number; failed?: number };
+      }>('sync_product', { productId });
+      const sync = result.synchronization;
+      if (sync?.failed) toast.error('The product sync failed. Review Google Merchant Center for the error.');
+      else if (sync?.ineligible) toast.success('The product was excluded because it is not eligible. Review Merchant Center status for details.');
+      else if (sync?.submitted) toast.success('Product submitted to Google Merchant Center.');
+      else toast.success('Product sync was queued. Check the Merchant Center dashboard for status.');
+      queryClient.invalidateQueries({ queryKey: ['merchant-center-admin'] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not synchronize this product.');
+    } finally {
+      setSyncingMerchantProduct(null);
+    }
+  };
+
   const navItems: DashNavItem[] = [
     { key: 'overview', label: 'Overview', icon: LayoutDashboard, group: 'Dashboard' },
     { key: 'analytics', label: 'Analytics', icon: BarChart3, group: 'Dashboard' },
@@ -256,6 +279,7 @@ export default function AdminDashboard() {
     { key: 'flyers', label: 'Flyers', icon: Megaphone, group: 'Marketplace' },
     { key: 'marketplace', label: 'Pay later, preorders and support', icon: Wallet, group: 'Marketplace' },
     { key: 'tiktok', label: 'TikTok for sellers', icon: Video, group: 'Marketplace' },
+    { key: 'merchant-center', label: 'Google Merchant Center', icon: ShoppingBag, group: 'Marketplace' },
     { key: 'calls', label: 'Voice and video calls', icon: Phone, group: 'Marketplace' },
     { key: 'orders', label: 'Orders', icon: ShoppingCart, group: 'Sales' },
     { key: 'payments', label: 'Payments', icon: CreditCard, group: 'Sales' },
@@ -587,9 +611,20 @@ export default function AdminDashboard() {
                           </td>
                           <td className="p-3"><StatusBadge status={p.is_active ? 'active' : 'inactive'} /></td>
                           <td className="p-3">
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteProduct(p.id)}>
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                title="Sync product to Google Merchant Center"
+                                aria-label={`Sync ${p.name} to Google Merchant Center`}
+                                disabled={syncingMerchantProduct === p.id}
+                                onClick={() => void syncMerchantProduct(p.id)}
+                              >
+                                <RefreshCw className={`h-3.5 w-3.5 ${syncingMerchantProduct === p.id ? 'animate-spin' : ''}`} />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteProduct(p.id)}>
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
                           </td>
                         </tr>
                       ))}
@@ -613,6 +648,7 @@ export default function AdminDashboard() {
         {activeTab === 'flyers' && <FlyersTab />}
         {activeTab === 'marketplace' && <MarketplaceAdminTab />}
         {activeTab === 'tiktok' && <div className="max-w-2xl"><TikTokSwitch /></div>}
+        {activeTab === 'merchant-center' && <GoogleMerchantCenterTab />}
         {activeTab === 'calls' && <div className="max-w-2xl"><CallsSwitch /></div>}
         {activeTab === 'subscriptions' && <SubscriptionsTab />}
 

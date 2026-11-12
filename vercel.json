@@ -118,5 +118,16 @@
         }
       ]
     }
-  ]
+  ],
+  "crons": [
+    {
+      "path": "/api/merchant-center?cron=1",
+      "schedule": "*/5 * * * *"
+    }
+  ],
+  "functions": {
+    "api/merchant-center.ts": {
+      "maxDuration": 60
+    }
+  }
 }
