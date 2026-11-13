@@ -12,8 +12,12 @@ export interface MerchantProduct {
   is_public: boolean | null;
   is_preorder?: boolean | null;
   specs?: unknown;
-  vendors?: { is_approved: boolean | null } | null;
-  categories?: { name: string | null } | null;
+  vendors?: { is_approved: boolean | null } | { is_approved: boolean | null }[] | null;
+  categories?: { name: string | null } | { name: string | null }[] | null;
+}
+
+function relationValue<T>(value: T | T[] | null | undefined): T | null {
+  return Array.isArray(value) ? value[0] ?? null : value ?? null;
 }
 
 export interface MerchantProductOptions {
@@ -23,9 +27,36 @@ export interface MerchantProductOptions {
   currencyCode: string;
 }
 
+export interface MerchantDataSource {
+  name?: string;
+  dataSourceId?: string;
+  displayName?: string;
+  input?: string;
+  primaryProductDataSource?: {
+    countries?: string[];
+    feedLabel?: string;
+    contentLanguage?: string;
+  };
+}
+
+export function isMatchingPrimaryApiDataSource(
+  source: MerchantDataSource,
+  options: { countryCode: string; feedLabel: string; contentLanguage: string },
+): boolean {
+  const primary = source.primaryProductDataSource;
+  if (source.input !== 'API' || !primary) return false;
+  const countries = primary.countries ?? [];
+  const acceptsAnyLabelAndLanguage = !primary.feedLabel && !primary.contentLanguage;
+  const matchesConfiguredLabelAndLanguage = primary.feedLabel === options.feedLabel
+    && primary.contentLanguage === options.contentLanguage;
+  return countries.length === 1
+    && countries[0].toUpperCase() === options.countryCode
+    && (acceptsAnyLabelAndLanguage || matchesConfiguredLabelAndLanguage);
+}
+
 export function merchantEligibilityError(product: MerchantProduct): string | null {
   if (!product.is_active || product.is_public !== true) return 'The listing is inactive or hidden.';
-  if (product.vendor_id && product.vendors?.is_approved !== true) return 'The seller is not approved.';
+  if (product.vendor_id && relationValue(product.vendors)?.is_approved !== true) return 'The seller is not approved.';
   if (product.is_preorder) return 'Preorder listings are not synchronized.';
   if (!product.name?.trim() || !product.description?.trim() || !product.brand?.trim()) {
     return 'A title, description, and brand are required.';
@@ -57,7 +88,8 @@ function productCondition(specs: unknown): 'NEW' | 'USED' | 'REFURBISHED' {
 export function buildMerchantProductInput(product: MerchantProduct, options: MerchantProductOptions) {
   const baseUrl = options.siteUrl.replace(/\/+$/, '');
   const amountMicros = Math.round(Number(product.price) * 1_000_000);
-  const productTypes = product.categories?.name?.trim() ? [product.categories.name.trim()] : undefined;
+  const categoryName = relationValue(product.categories)?.name?.trim();
+  const productTypes = categoryName ? [categoryName] : undefined;
 
   return {
     offerId: product.id,

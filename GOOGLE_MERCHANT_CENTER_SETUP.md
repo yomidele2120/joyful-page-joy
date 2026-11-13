@@ -4,9 +4,9 @@ The integration uses Google's current Merchant API (`products/v1`) through the V
 
 ## One-time setup
 
-1. Apply `supabase/migrations/20261112090000_google_merchant_center.sql`, `supabase/migrations/20261112130000_google_merchant_center_dashboard_summary.sql`, and `supabase/migrations/20261112140000_google_merchant_center_initial_batch.sql` to the production Supabase project.
+1. Apply `supabase/migrations/20261112090000_google_merchant_center.sql`, `supabase/migrations/20261112130000_google_merchant_center_dashboard_summary.sql`, `supabase/migrations/20261112140000_google_merchant_center_initial_batch.sql`, and `supabase/migrations/20261112150000_google_merchant_center_data_source.sql` to the production Supabase project.
 2. In Google Cloud, enable the **Merchant API** for the project that owns the service account. Create a service account, download its JSON key, and add its email as a user with product-management access in the target Merchant Center account.
-3. Create a **primary API data source** in Merchant Center. Record the numeric Merchant Center account ID and full data-source name, such as `accounts/123456789/dataSources/987654321`.
+3. Configure the numeric Merchant Center account ID in Admin > **Google Merchant Center** and save it. Click **Create or reuse Nigeria API source**. The server lists existing data sources first and reuses a primary API source targeting only Nigeria (`NG`) that either accepts any feed label/language or matches English (`en`) and the configured feed label; otherwise it creates **ITHUBAFRICA Primary API Product Source** through the current Merchant API `datasources/v1` endpoint. The dashboard displays both the numeric data-source ID and full resource name. Google's response determines whether Nigeria is currently eligible for this account; API eligibility errors are shown in the admin action and no source is saved as configured on failure.
 4. Add these server-side environment variables to Vercel for every environment that should run the integration:
 
    | Variable | Value |
@@ -18,8 +18,8 @@ The integration uses Google's current Merchant API (`products/v1`) through the V
    | `SITE_URL` | Canonical HTTPS storefront URL, for example `https://www.ithubafrica.com` |
 
    Never add the service-account JSON or service-role key to a `VITE_` variable, source file, or browser storage.
-5. Deploy the application. In Admin > **Google Merchant Center**, enter the account ID and API data-source name, keep the target defaults as appropriate (`NG`, `en`, `NGN`), test the connection, save, then enable automatic synchronization.
-6. Use **Sync first 10 products** for the initial import. It pauses bulk synchronization, submits at most 10 products, and only enables **Continue catalogue sync** after all first-batch API submissions succeed. Review Google's returned product issues and use the explicit continue action to release the remaining queue.
+5. Deploy the application. In Admin > **Google Merchant Center**, verify the source, save and enable automatic synchronization. The data source must be a primary API source targeting Nigeria and matching the configured feed label and language.
+6. Use **Sync first 10 products** for the initial import. It verifies the data-source configuration, pauses bulk synchronization, and submits at most 10 products. **Continue catalogue sync** stays unavailable until those actual product submissions succeed. Review Google's returned product issues and use the explicit continue action to release the remaining queue.
 
 ## Scheduled synchronization
 
@@ -45,6 +45,9 @@ The Vercel API route and cron are not served by Vite's development server. Use `
 ## Google API references
 
 - [Merchant API Products overview](https://developers.google.com/merchant/api/guides/products/overview)
+- [Create primary API data sources](https://developers.google.com/merchant/api/guides/data-sources/api-sources#create-primary-data-source)
+- [List data sources](https://developers.google.com/merchant/api/reference/rest/datasources_v1/accounts.dataSources/list)
+- [Create data sources](https://developers.google.com/merchant/api/reference/rest/datasources_v1/accounts.dataSources/create)
 - [Add and manage products](https://developers.google.com/merchant/api/guides/products/add-manage)
 - [Insert a product input](https://developers.google.com/merchant/api/reference/rest/products_v1/accounts.productInputs/insert)
 - [Delete a product input](https://developers.google.com/merchant/api/reference/rest/products_v1/accounts.productInputs/delete)

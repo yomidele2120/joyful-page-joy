@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildMerchantProductInput,
   classifyMerchantApproval,
+  isMatchingPrimaryApiDataSource,
   merchantEligibilityError,
   type MerchantProduct,
 } from './googleMerchant';
@@ -27,6 +28,22 @@ const product: MerchantProduct = {
 describe('Google Merchant product mapping', () => {
   it('accepts a complete public listing from an approved seller', () => {
     expect(merchantEligibilityError(product)).toBeNull();
+  });
+
+  it('handles Supabase joined relations returned as arrays', () => {
+    const joinedProduct = {
+      ...product,
+      vendors: [{ is_approved: true }],
+      categories: [{ name: 'Laptops' }],
+    };
+
+    expect(merchantEligibilityError(joinedProduct)).toBeNull();
+    expect(buildMerchantProductInput(joinedProduct, {
+      siteUrl: 'https://www.ithubafrica.com',
+      feedLabel: 'NG',
+      contentLanguage: 'en',
+      currencyCode: 'NGN',
+    }).productAttributes.productTypes).toEqual(['Laptops']);
   });
 
   it('excludes hidden, unapproved, incomplete, and non-Cloudinary listings', () => {
@@ -77,5 +94,40 @@ describe('Google Merchant product mapping', () => {
     expect(classifyMerchantApproval({ destinationStatuses: [{ approvedCountries: ['NG'] }] }, 'NG').status).toBe('approved');
     expect(classifyMerchantApproval({ destinationStatuses: [{ disapprovedCountries: ['NG'] }] }, 'NG').status).toBe('disapproved');
     expect(classifyMerchantApproval({ destinationStatuses: [{ pendingCountries: ['NG'] }] }, 'NG').status).toBe('pending');
+  });
+
+  it('only reuses a primary API data source matching Nigeria, feed label, and language', () => {
+    const source = {
+      input: 'API',
+      primaryProductDataSource: {
+        countries: ['NG'],
+        feedLabel: 'NG',
+        contentLanguage: 'en',
+      },
+    };
+    const configuration = { countryCode: 'NG', feedLabel: 'NG', contentLanguage: 'en' };
+
+    expect(isMatchingPrimaryApiDataSource(source, configuration)).toBe(true);
+    expect(isMatchingPrimaryApiDataSource({
+      input: 'API',
+      primaryProductDataSource: { countries: ['NG'] },
+    }, configuration)).toBe(true);
+    expect(isMatchingPrimaryApiDataSource({ ...source, input: 'FILE' }, configuration)).toBe(false);
+    expect(isMatchingPrimaryApiDataSource({
+      ...source,
+      primaryProductDataSource: { ...source.primaryProductDataSource, countries: ['GB'] },
+    }, configuration)).toBe(false);
+    expect(isMatchingPrimaryApiDataSource({
+      ...source,
+      primaryProductDataSource: { ...source.primaryProductDataSource, countries: ['NG', 'GH'] },
+    }, configuration)).toBe(false);
+    expect(isMatchingPrimaryApiDataSource({
+      ...source,
+      primaryProductDataSource: { ...source.primaryProductDataSource, contentLanguage: 'fr' },
+    }, configuration)).toBe(false);
+    expect(isMatchingPrimaryApiDataSource({
+      ...source,
+      primaryProductDataSource: { ...source.primaryProductDataSource, feedLabel: 'OTHER' },
+    }, configuration)).toBe(false);
   });
 });

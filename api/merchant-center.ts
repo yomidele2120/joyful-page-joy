@@ -3,7 +3,9 @@ import { createClient } from '@supabase/supabase-js';
 import {
   buildMerchantProductInput,
   classifyMerchantApproval,
+  isMatchingPrimaryApiDataSource,
   merchantEligibilityError,
+  type MerchantDataSource,
   type MerchantProduct,
 } from './_lib/googleMerchant';
 
@@ -23,6 +25,7 @@ interface Response {
 interface Settings {
   merchant_account_id: string | null;
   data_source_id: string | null;
+  data_source_name: string | null;
   feed_label: string;
   content_language: string;
   currency_code: string;
@@ -67,6 +70,8 @@ const GOOGLE_SCOPE = 'https://www.googleapis.com/auth/content';
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const GOOGLE_PRODUCTS_API = 'https://merchantapi.googleapis.com/products/v1';
 const GOOGLE_DATA_SOURCES_API = 'https://merchantapi.googleapis.com/datasources/v1';
+const GOOGLE_DATA_SOURCE_DISPLAY_NAME = 'ITHUBAFRICA Primary API Product Source';
+const GOOGLE_TARGET_COUNTRY = 'NG';
 const SERVICE_ACCOUNT_ENV = 'GOOGLE_MERCHANT_SERVICE_ACCOUNT_JSON';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -171,6 +176,7 @@ async function settingsFromDatabase(db: ReturnType<typeof database>): Promise<Se
   return data ?? {
     merchant_account_id: null,
     data_source_id: null,
+    data_source_name: null,
     feed_label: 'NG',
     content_language: 'en',
     currency_code: 'NGN',
@@ -182,14 +188,19 @@ function validateSettings(settings: Partial<Settings>): asserts settings is Sett
   if (!settings.merchant_account_id || !/^\d+$/.test(settings.merchant_account_id)) {
     throw new HttpError('Enter the numeric Merchant Center account ID.');
   }
-  if (!settings.data_source_id || !/^accounts\/\d+\/dataSources\/\d+$/.test(settings.data_source_id)) {
-    throw new HttpError('Enter the API data source name, for example accounts/123456789/dataSources/987654321.');
+  const resourceName = settings.data_source_name
+    || (settings.data_source_id?.startsWith('accounts/') ? settings.data_source_id : null);
+  const dataSourceId = settings.data_source_id?.startsWith('accounts/')
+    ? settings.data_source_id.split('/').at(-1)
+    : settings.data_source_id;
+  if (!resourceName || !/^accounts\/\d+\/dataSources\/\d+$/.test(resourceName) || !dataSourceId || !/^\d+$/.test(dataSourceId)) {
+    throw new HttpError('Create or enter the API data source resource name, for example accounts/123456789/dataSources/987654321.');
   }
-  if (settings.data_source_id.split('/')[1] !== settings.merchant_account_id) {
+  if (resourceName.split('/')[1] !== settings.merchant_account_id || resourceName.split('/').at(-1) !== dataSourceId) {
     throw new HttpError('The data source must belong to the configured Merchant Center account.');
   }
-  if (!settings.feed_label || !/^[A-Z0-9_-]{1,20}$/.test(settings.feed_label)) {
-    throw new HttpError('Feed label must contain only uppercase letters, numbers, hyphens, or underscores (max 20 characters).');
+  if (!settings.feed_label || !/^[A-Z0-9-]{1,20}$/.test(settings.feed_label)) {
+    throw new HttpError('Feed label must contain only uppercase letters, numbers, or hyphens (max 20 characters).');
   }
   if (!settings.content_language || !/^[a-z]{2}$/.test(settings.content_language)) {
     throw new HttpError('Content language must be a two-letter lowercase language code.');
@@ -206,7 +217,63 @@ function accountPath(settings: Settings): string {
 
 function dataSourceName(settings: Settings): string {
   validateSettings(settings);
-  return settings.data_source_id!;
+  return settings.data_source_name
+    || (settings.data_source_id!.startsWith('accounts/')
+      ? settings.data_source_id!
+      : `${accountPath(settings)}/dataSources/${settings.data_source_id}`);
+}
+
+function dataSourceId(source: MerchantDataSource): string | null {
+  const fromResourceName = source.name?.match(/^accounts\/\d+\/dataSources\/(\d+)$/)?.[1];
+  const id = source.dataSourceId || fromResourceName;
+  return id && /^\d+$/.test(id) ? id : null;
+}
+
+async function listDataSources(accountId: string): Promise<MerchantDataSource[]> {
+  const sources: MerchantDataSource[] = [];
+  let pageToken: string | undefined;
+  do {
+    const query = new URLSearchParams({ pageSize: '100' });
+    if (pageToken) query.set('pageToken', pageToken);
+    const page = await googleRequest<{ dataSources?: MerchantDataSource[]; nextPageToken?: string }>(
+      `${GOOGLE_DATA_SOURCES_API}/accounts/${accountId}/dataSources?${query.toString()}`,
+    );
+    sources.push(...(page.dataSources ?? []));
+    pageToken = page.nextPageToken || undefined;
+  } while (pageToken);
+  return sources;
+}
+
+async function verifyDataSource(settings: Settings): Promise<MerchantDataSource> {
+  const name = dataSourceName(settings);
+  const source = await googleRequest<MerchantDataSource>(
+    `${GOOGLE_DATA_SOURCES_API}/${name}`,
+  );
+  if (source.input !== 'API' || !source.primaryProductDataSource) {
+    throw new HttpError('The selected source is not a primary API product data source.', 400);
+  }
+  if (!isMatchingPrimaryApiDataSource(source, {
+    countryCode: GOOGLE_TARGET_COUNTRY,
+    feedLabel: settings.feed_label,
+    contentLanguage: settings.content_language,
+  })) {
+    throw new HttpError('The selected API source must target Nigeria (NG) and match the configured feed label and content language.', 400);
+  }
+  return source;
+}
+
+async function persistSettings(
+  db: ReturnType<typeof database>,
+  userId: string,
+  settings: Settings,
+): Promise<void> {
+  const { error } = await db.from('merchant_center_settings').upsert({
+    id: true,
+    ...settings,
+    updated_at: new Date().toISOString(),
+    updated_by: userId,
+  }, { onConflict: 'id' });
+  if (error) throw new HttpError(`Could not save Merchant Center settings: ${error.message}`, 503);
 }
 
 function productKey(settings: Settings, offerId: string): string {
@@ -571,9 +638,20 @@ export default async function handler(req: Request, res: Response) {
 
     if (action === 'save_settings') {
       const submitted = body.settings as Partial<Settings> | undefined;
+      const merchantAccountId = String(submitted?.merchant_account_id ?? '').trim() || null;
+      const rawSourceName = String(submitted?.data_source_name ?? submitted?.data_source_id ?? '').trim() || null;
+      const resourceMatch = rawSourceName?.match(/^accounts\/(\d+)\/dataSources\/(\d+)$/);
+      const submittedId = String(submitted?.data_source_id ?? '').trim();
       const updated: Settings = {
-        merchant_account_id: String(submitted?.merchant_account_id ?? '').trim() || null,
-        data_source_id: String(submitted?.data_source_id ?? '').trim() || null,
+        merchant_account_id: merchantAccountId,
+        data_source_id: resourceMatch?.[2] || (submittedId.startsWith('accounts/') ? submittedId.split('/').at(-1) ?? null : submittedId || null),
+        data_source_name: resourceMatch
+          ? rawSourceName
+          : submittedId.startsWith('accounts/')
+            ? submittedId
+            : submittedId && merchantAccountId
+              ? `accounts/${merchantAccountId}/dataSources/${submittedId}`
+              : null,
         feed_label: String(submitted?.feed_label ?? 'NG').trim().toUpperCase(),
         content_language: String(submitted?.content_language ?? 'en').trim().toLowerCase(),
         currency_code: String(submitted?.currency_code ?? 'NGN').trim().toUpperCase(),
@@ -583,16 +661,81 @@ export default async function handler(req: Request, res: Response) {
         throw new HttpError(`Add ${SERVICE_ACCOUNT_ENV} to the Vercel server environment before enabling synchronization.`, 503);
       }
       if (updated.enabled) validateSettings(updated);
-      if (updated.merchant_account_id || updated.data_source_id) validateSettings({ ...updated, enabled: true });
+      if (updated.data_source_name || updated.data_source_id) validateSettings({ ...updated, enabled: true });
 
-      const { error } = await db.from('merchant_center_settings').upsert({
-        id: true,
-        ...updated,
-        updated_at: new Date().toISOString(),
-        updated_by: user.id,
-      }, { onConflict: 'id' });
-      if (error) throw new HttpError(`Could not save Merchant Center settings: ${error.message}`, 503);
+      await persistSettings(db, user.id, updated);
       response(res, 200, { settings: updated });
+      return;
+    }
+
+    if (action === 'setup_data_source') {
+      const accountId = String(settings.merchant_account_id ?? '').trim();
+      if (!/^\d+$/.test(accountId)) throw new HttpError('Enter and save the numeric Merchant Center account ID first.');
+      const candidate: Settings = {
+        ...settings,
+        merchant_account_id: accountId,
+        data_source_id: null,
+        data_source_name: null,
+        feed_label: 'NG',
+        content_language: 'en',
+        currency_code: String(settings.currency_code ?? 'NGN').trim().toUpperCase(),
+        enabled: settings.enabled,
+      };
+      if (!serviceAccountConfigured()) {
+        throw new HttpError(`Add ${SERVICE_ACCOUNT_ENV} to the Vercel server environment before creating a data source.`, 503);
+      }
+
+      const sources = await listDataSources(accountId);
+      let source = sources.find((item) => isMatchingPrimaryApiDataSource(item, {
+        countryCode: GOOGLE_TARGET_COUNTRY,
+        feedLabel: candidate.feed_label,
+        contentLanguage: candidate.content_language,
+      }));
+      const created = !source;
+      if (!source) {
+        source = await googleRequest<MerchantDataSource>(
+          `${GOOGLE_DATA_SOURCES_API}/accounts/${accountId}/dataSources`,
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              displayName: GOOGLE_DATA_SOURCE_DISPLAY_NAME,
+              primaryProductDataSource: {
+                countries: [GOOGLE_TARGET_COUNTRY],
+                feedLabel: candidate.feed_label,
+                contentLanguage: candidate.content_language,
+              },
+            }),
+          },
+        );
+      }
+
+      const id = dataSourceId(source);
+      const name = source.name || (id ? `accounts/${accountId}/dataSources/${id}` : null);
+      if (!id || !name) throw new HttpError('Google created or returned a data source without a valid ID and resource name.', 502);
+      const configured: Settings = {
+        ...candidate,
+        data_source_id: id,
+        data_source_name: name,
+        enabled: settings.merchant_account_id === accountId
+          && (settings.data_source_name
+            || (settings.data_source_id?.startsWith('accounts/')
+              ? settings.data_source_id
+              : settings.data_source_id
+                ? `accounts/${settings.merchant_account_id}/dataSources/${settings.data_source_id}`
+                : null)) === name
+          ? settings.enabled
+          : false,
+      };
+      await verifyDataSource(configured);
+      await persistSettings(db, user.id, configured);
+      response(res, 200, {
+        created,
+        dataSourceId: id,
+        dataSourceName: name,
+        displayName: source.displayName || GOOGLE_DATA_SOURCE_DISPLAY_NAME,
+        countries: source.primaryProductDataSource?.countries ?? [],
+        settings: configured,
+      });
       return;
     }
 
@@ -600,19 +743,24 @@ export default async function handler(req: Request, res: Response) {
       const candidate = body.settings
         ? { ...settings, ...(body.settings as Partial<Settings>) }
         : settings;
-      validateSettings(candidate);
-      const url = `${GOOGLE_DATA_SOURCES_API}/${accountPath(candidate)}/dataSources/${candidate.data_source_id!.split('/').at(-1)}`;
-      const source = await googleRequest<{ name?: string; dataSourceType?: string }>(url);
-      if (source.dataSourceType && source.dataSourceType !== 'API') {
-        throw new HttpError('The selected Merchant Center data source is not an API data source.', 400);
+      const sourceName = String(candidate.data_source_name ?? candidate.data_source_id ?? '').trim();
+      const match = sourceName.match(/^accounts\/\d+\/dataSources\/(\d+)$/);
+      if (match) {
+        candidate.data_source_name = sourceName;
+        candidate.data_source_id = match[1];
+      } else if (candidate.data_source_id && candidate.merchant_account_id) {
+        candidate.data_source_name = `accounts/${candidate.merchant_account_id}/dataSources/${candidate.data_source_id}`;
       }
-      response(res, 200, { verified: true, dataSource: source.name ?? candidate.data_source_id });
+      validateSettings(candidate);
+      const verified = await verifyDataSource(candidate);
+      response(res, 200, { verified: true, dataSource: verified.name ?? dataSourceName(candidate) });
       return;
     }
 
     if (action === 'sync_all') {
       if (!settings.enabled) throw new HttpError('Save and enable the Merchant Center connection first.', 409);
       validateSettings(settings);
+      await verifyDataSource(settings);
       const { error: pauseError } = await db.from('merchant_center_sync_control').upsert({
         id: true,
         bulk_sync_paused: true,
@@ -628,8 +776,9 @@ export default async function handler(req: Request, res: Response) {
       const queuedCount = Number(queued) || 0;
       const synchronization = await processQueue(db, settings, Math.min(10, Math.max(1, queuedCount)), undefined, true);
       const expectedFirstBatch = Math.min(10, expectedEligible);
-      const initialBatchReady = queuedCount === 0
-        || (synchronization.submitted >= expectedFirstBatch && synchronization.failed === 0);
+      const initialBatchReady = expectedFirstBatch > 0
+        && synchronization.submitted >= expectedFirstBatch
+        && synchronization.failed === 0;
       if (initialBatchReady) {
         const { error: readyError } = await db.from('merchant_center_sync_control').update({
           initial_batch_ready: true,
@@ -644,6 +793,7 @@ export default async function handler(req: Request, res: Response) {
     if (action === 'continue_catalogue') {
       if (!settings.enabled) throw new HttpError('Save and enable the Merchant Center connection first.', 409);
       validateSettings(settings);
+      await verifyDataSource(settings);
       const control = await syncControl(db);
       if (!control.bulk_sync_paused || !control.initial_batch_ready) {
         throw new HttpError('Submit the first batch of up to 10 products successfully before continuing the catalogue.', 409);
@@ -704,7 +854,7 @@ export default async function handler(req: Request, res: Response) {
 
     throw new HttpError('Unknown Merchant Center action.');
   } catch (error) {
-    const statusCode = error instanceof HttpError ? error.statusCode : 500;
+    const statusCode = error instanceof HttpError || error instanceof GoogleError ? error.statusCode : 500;
     if (statusCode >= 500) console.error('Merchant Center API request failed', errorMessage(error));
     response(res, statusCode, { error: errorMessage(error) });
   }

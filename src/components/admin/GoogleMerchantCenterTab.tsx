@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertCircle, CheckCircle2, Loader2, RefreshCw, Save, Send } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Database, Loader2, RefreshCw, Save, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,10 +12,18 @@ import { merchantCenterRequest } from '@/lib/googleMerchantCenter';
 type Settings = {
   merchant_account_id: string | null;
   data_source_id: string | null;
+  data_source_name: string | null;
   feed_label: string;
   content_language: string;
   currency_code: string;
   enabled: boolean;
+};
+
+type ActionResponse = {
+  settings?: Settings;
+  dataSourceId?: string;
+  created?: boolean;
+  initialBatchReady?: boolean;
 };
 
 type ProductStatus = {
@@ -53,6 +61,7 @@ const panel = 'rounded-xl border border-border bg-card p-5';
 const initialSettings: Settings = {
   merchant_account_id: '',
   data_source_id: '',
+  data_source_name: '',
   feed_label: 'NG',
   content_language: 'en',
   currency_code: 'NGN',
@@ -93,10 +102,17 @@ export default function GoogleMerchantCenterTab() {
     onError: (cause: Error) => toast.error(cause.message),
   });
   const action = useMutation({
-    mutationFn: ({ name, payload }: { name: string; payload?: Record<string, unknown> }) => merchantCenterRequest(name, payload),
+    mutationFn: ({ name, payload }: { name: string; payload?: Record<string, unknown> }) =>
+      merchantCenterRequest<ActionResponse>(name, payload),
     onSuccess: (result, variables) => {
       if (variables.name === 'sync_all' && result.initialBatchReady !== true) {
         toast.error('The first batch was incomplete or had submission failures. Review product errors and retry before continuing.');
+        void refresh();
+        return;
+      }
+      if (variables.name === 'setup_data_source' && result.settings) {
+        setSettings(result.settings);
+        toast.success(`${result.created ? 'Created' : 'Reused'} primary API data source ${result.dataSourceId}.`);
         void refresh();
         return;
       }
@@ -141,15 +157,45 @@ export default function GoogleMerchantCenterTab() {
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="merchant-account">Merchant Center account ID</Label>
-            <Input id="merchant-account" inputMode="numeric" value={settings.merchant_account_id ?? ''} onChange={(event) => setSettings({ ...settings, merchant_account_id: event.target.value })} placeholder="123456789" />
+            <Input
+              id="merchant-account"
+              inputMode="numeric"
+              value={settings.merchant_account_id ?? ''}
+              onChange={(event) => {
+                const merchantAccountId = event.target.value;
+                const sourceAccountId = settings.data_source_name?.match(/^accounts\/(\d+)\/dataSources\/\d+$/)?.[1];
+                setSettings({
+                  ...settings,
+                  merchant_account_id: merchantAccountId,
+                  ...(sourceAccountId && sourceAccountId !== merchantAccountId
+                    ? { data_source_id: null, data_source_name: '' }
+                    : {}),
+                });
+              }}
+              placeholder="123456789"
+            />
+            <p className="text-xs text-muted-foreground">Save the account ID before creating or reusing its API data source.</p>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="merchant-data-source">Primary API data source</Label>
-            <Input id="merchant-data-source" value={settings.data_source_id ?? ''} onChange={(event) => setSettings({ ...settings, data_source_id: event.target.value })} placeholder="accounts/123456789/dataSources/987654321" />
+            <Label htmlFor="merchant-data-source">Primary API data source resource name</Label>
+            <Input
+              id="merchant-data-source"
+              value={settings.data_source_name ?? ''}
+              onChange={(event) => {
+                const dataSourceName = event.target.value;
+                const id = dataSourceName.match(/^accounts\/\d+\/dataSources\/(\d+)$/)?.[1] ?? null;
+                setSettings({ ...settings, data_source_name: dataSourceName, data_source_id: id });
+              }}
+              placeholder="accounts/123456789/dataSources/987654321"
+            />
+            <p className="text-xs text-muted-foreground">
+              Data source ID: <span className="font-mono">{settings.data_source_id || 'Not configured'}</span>
+            </p>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="merchant-feed-label">Feed label / target</Label>
+            <Label htmlFor="merchant-feed-label">Feed label</Label>
             <Input id="merchant-feed-label" maxLength={20} value={settings.feed_label} onChange={(event) => setSettings({ ...settings, feed_label: event.target.value.toUpperCase() })} />
+            <p className="text-xs text-muted-foreground">The API source targets Nigeria (NG); the feed label does not set the target country.</p>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="merchant-language">Content language</Label>
@@ -167,6 +213,16 @@ export default function GoogleMerchantCenterTab() {
             <Label htmlFor="merchant-enabled">Enable automatic product synchronization</Label>
           </div>
           <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              disabled={action.isPending
+                || !settings.merchant_account_id
+                || settings.merchant_account_id !== data?.settings.merchant_account_id}
+              onClick={() => action.mutate({ name: 'setup_data_source' })}
+            >
+              {action.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Database className="mr-2 h-4 w-4" />}
+              Create or reuse Nigeria API source
+            </Button>
             <Button variant="outline" disabled={action.isPending} onClick={() => action.mutate({ name: 'verify_connection', payload: { settings } })}>
               {action.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
               Test connection
