@@ -1,4 +1,4 @@
-import { buildGoogleMerchantFeed, type MerchantFeedProduct } from '../src/lib/productFeed';
+import { buildGoogleMerchantFeed, type MerchantFeedProduct } from '../src/lib/productFeed.js';
 
 interface Req { method?: string; query?: Record<string, string | string[] | undefined> }
 interface Res { status(code: number): Res; setHeader(name: string, value: string): Res; send(body: string): void }

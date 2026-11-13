@@ -74,9 +74,7 @@ export default async function handler(req: Req, res: Res) {
   try {
     let xml: string;
     if (section === 'static') {
-      const staticPaths = ['/', '/products', '/about', '/contact', '/faq', '/terms', '/privacy-policy', '/cookie-policy', '/shipping-policy', '/returns-policy', '/seller-agreement', '/dispute-resolution'];
-        const staticPaths = ['/', '/products', '/about', '/contact', '/faq', '/terms', '/privacy-policy', '/cookie-policy', '/shipping-policy', '/returns-policy', '/seller-agreement', '/bnpl-terms', '/preorder-policy', '/dispute-resolution'];
-        if (!Number.isSafeInteger(page) || page < 0 || page > 9999) return res.status(400).send('Invalid page');
+      const staticPaths = ['/', '/products', '/about', '/contact', '/faq', '/terms', '/privacy-policy', '/cookie-policy', '/shipping-policy', '/returns-policy', '/seller-agreement', '/bnpl-terms', '/preorder-policy', '/dispute-resolution'];
       const categories = await loadCategories();
       xml = urlset([
         ...staticPaths.map(path => ({ loc: `${SITE_URL}${path}` })),

@@ -7,7 +7,7 @@ import {
   merchantEligibilityError,
   type MerchantDataSource,
   type MerchantProduct,
-} from './_lib/googleMerchant';
+} from './_lib/googleMerchant.js';
 
 interface Request {
   method?: string;

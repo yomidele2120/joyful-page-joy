@@ -1,4 +1,4 @@
-import { escapeHtml, SITE_NAME } from './shareOg';
+import { escapeHtml, SITE_NAME } from './shareOg.js';
 
 export interface ProductSeoInput {
   name: string;

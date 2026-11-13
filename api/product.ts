@@ -1,4 +1,4 @@
-import { buildProductPreviewHtml, type ProductSeoInput } from '../src/lib/productSeo';
+import { buildProductPreviewHtml, type ProductSeoInput } from '../src/lib/productSeo.js';
 
 interface Req { method?: string; query?: Record<string, string | string[] | undefined> }
 interface Res { status(code: number): Res; setHeader(name: string, value: string): Res; send(body: string): void }

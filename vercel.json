@@ -140,12 +140,6 @@
       ]
     }
   ],
-  "crons": [
-    {
-      "path": "/api/merchant-center?cron=1",
-      "schedule": "0 0 * * *"
-    }
-  ],
   "functions": {
     "api/merchant-center.ts": {
       "maxDuration": 60

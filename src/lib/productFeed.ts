@@ -1,4 +1,4 @@
-import { productAvailability } from './productSeo';
+import { productAvailability } from './productSeo.js';
 
 export interface MerchantFeedProduct {
   id: string;

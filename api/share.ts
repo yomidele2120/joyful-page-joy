@@ -1,6 +1,6 @@
 // Vercel serverless function: link-preview page for a shared video (/feed?post=ID).
 // vercel.json sends only link-preview robots here; everyone else gets the normal app.
-import { buildShareHtml, type SharePost } from '../src/lib/shareOg';
+import { buildShareHtml, type SharePost } from '../src/lib/shareOg.js';
 
 interface Req { query?: Record<string, string | string[] | undefined>; headers: Record<string, string | string[] | undefined> }
 interface Res { status(code: number): Res; setHeader(name: string, value: string): Res; send(body: string): void }
