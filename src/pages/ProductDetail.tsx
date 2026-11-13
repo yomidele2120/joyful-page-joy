@@ -27,6 +27,9 @@ import { formatQtyRange, getMoq, parseSpecs, pluralUnit, tierRows, unitPriceFor 
 import { toast } from 'sonner';
 import { trackViewContent } from '@/lib/tracking';
 import { formatResponseTime, useVendorReputation } from '@/hooks/useVendorReputation';
+import { buildProductSeo, serializeProductStructuredData } from '@/lib/productSeo';
+import { BUSINESS } from '@/config/business';
+const CANONICAL_ORIGIN = BUSINESS.website.startsWith('http') ? BUSINESS.website : `https://${BUSINESS.website}`;
 
 const KLUMP_PUBLIC_KEY = import.meta.env.VITE_KLUMP_PUBLIC_KEY as string | undefined;
 
@@ -62,6 +65,77 @@ export default function ProductDetail() {
     if (product) trackViewContent({ id: product.id, name: product.name, price: Number(product.price) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product?.id]);
+
+  useEffect(() => {
+    if (!product) return;
+    const seo = buildProductSeo({
+      name: product.name,
+      slug: product.slug,
+      description: product.description,
+      price: Number(product.price),
+      image_url: product.image_url,
+      images: product.images,
+      brand: product.brand,
+      sku: product.sku,
+      stock_quantity: product.stock_quantity,
+      is_public: product.is_public,
+      is_preorder: product.is_preorder,
+      preorder_approved: product.preorder_approved,
+      preorder_status: product.preorder_status,
+      category_name: product.categories?.name ?? null,
+      vendor_name: product.vendors?.store_name ?? null,
+    }, CANONICAL_ORIGIN);
+    const previousTitle = document.title;
+    const changed: { node: Element; created: boolean; attribute: string; previous: string | null }[] = [];
+    const setHeadValue = (selector: string, tag: 'meta' | 'link', attribute: string, key: string, value: string) => {
+      let node = document.head.querySelector(selector);
+      const created = !node;
+      if (!node) {
+        node = document.createElement(tag);
+        node.setAttribute(key, attribute);
+        document.head.appendChild(node);
+      }
+      changed.push({ node, created, attribute, previous: node.getAttribute(attribute) });
+      node.setAttribute(attribute, value);
+    };
+
+    setHeadValue('meta[name="description"]', 'meta', 'content', 'name', seo.description);
+    setHeadValue('meta[name="robots"]', 'meta', 'content', 'name', seo.robots);
+    setHeadValue('meta[property="og:type"]', 'meta', 'content', 'property', 'product');
+    setHeadValue('meta[property="og:title"]', 'meta', 'content', 'property', seo.title);
+    setHeadValue('meta[property="og:description"]', 'meta', 'content', 'property', seo.description);
+    setHeadValue('meta[property="og:url"]', 'meta', 'content', 'property', seo.canonicalUrl);
+    setHeadValue('meta[property="og:image"]', 'meta', 'content', 'property', seo.imageUrl ?? '');
+    setHeadValue('meta[property="og:image:alt"]', 'meta', 'content', 'property', seo.title);
+    setHeadValue('meta[name="twitter:card"]', 'meta', 'content', 'name', seo.imageUrl ? 'summary_large_image' : 'summary');
+    setHeadValue('meta[name="twitter:title"]', 'meta', 'content', 'name', seo.title);
+    setHeadValue('meta[name="twitter:description"]', 'meta', 'content', 'name', seo.description);
+    setHeadValue('meta[name="twitter:image"]', 'meta', 'content', 'name', seo.imageUrl ?? '');
+    setHeadValue('link[rel="canonical"]', 'link', 'href', 'rel', seo.canonicalUrl);
+    document.title = seo.title;
+
+    let jsonLd = document.head.querySelector<HTMLScriptElement>('script[data-product-jsonld]');
+    const createdJsonLd = !jsonLd;
+    const previousJsonLd = jsonLd?.textContent ?? null;
+    if (!jsonLd) {
+      jsonLd = document.createElement('script');
+      jsonLd.type = 'application/ld+json';
+      jsonLd.dataset.productJsonld = 'true';
+      document.head.appendChild(jsonLd);
+    }
+    jsonLd.textContent = seo.structuredData ? serializeProductStructuredData(seo.structuredData) : '';
+
+    return () => {
+      document.title = previousTitle;
+      for (const entry of changed.reverse()) {
+        if (entry.created) entry.node.remove();
+        else if (entry.previous === null) entry.node.removeAttribute(entry.attribute);
+        else entry.node.setAttribute(entry.attribute, entry.previous);
+      }
+      if (createdJsonLd) jsonLd?.remove();
+      else if (previousJsonLd !== null && jsonLd) jsonLd.textContent = previousJsonLd;
+    };
+  }, [product]);
 
   const handleInAppChat = (vendorUserId: string, productId: string) => {
     if (!user) {

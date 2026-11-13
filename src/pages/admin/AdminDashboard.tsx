@@ -16,6 +16,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import SubscriptionsTab from '@/components/admin/SubscriptionsTab';
+import SupplierPlansTab from '@/components/admin/SupplierPlansTab';
+import AiProductIntelligenceTab from '@/components/admin/AiProductIntelligenceTab';
+import CampaignManagerTab from '@/components/admin/CampaignManagerTab';
+import RiskReviewTab from '@/components/admin/RiskReviewTab';
+import SocialSeoTab from '@/components/admin/SocialSeoTab';
+import GoogleMerchantTab from '@/components/admin/GoogleMerchantTab';
+import CallQuotasTab from '@/components/admin/CallQuotasTab';
+import EmailNotificationsTab from '@/components/admin/EmailNotificationsTab';
 import SubscriptionAlertBanner from '@/components/admin/SubscriptionAlertBanner';
 import { useSubscriptionOverview } from '@/hooks/useSubscriptions';
 import { alertsOf } from '@/lib/subscriptions';
@@ -26,7 +34,7 @@ import {
   Trash2, Store, CheckCircle, XCircle, Eye, BarChart3, CreditCard,
   FileText, AlertCircle, TrendingUp, Layers, FolderPlus, Pencil, Flag, Image as ImageIcon,
   LayoutDashboard, Megaphone, Settings, Wallet, ChevronRight, Landmark, Percent, Activity, Video, Copy, Phone, CalendarClock,
-  RefreshCw, ShoppingBag,
+  RefreshCw, Mail, Sparkles, BadgeDollarSign, ShieldAlert, Globe, ShoppingBag,
 } from 'lucide-react';
 import DashboardShell, { Panel, StatCard, StatusDot, WelcomeBanner, useTabParam, type DashNavItem } from '@/components/dashboard/DashboardShell';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -278,6 +286,12 @@ export default function AdminDashboard() {
     { key: 'categories', label: 'Categories', icon: Layers, group: 'Marketplace' },
     { key: 'flyers', label: 'Flyers', icon: Megaphone, group: 'Marketplace' },
     { key: 'marketplace', label: 'Pay later, preorders and support', icon: Wallet, group: 'Marketplace' },
+    { key: 'supplier-plans', label: 'Supplier plans', icon: CreditCard, group: 'Marketplace' },
+    { key: 'ai-intelligence', label: 'AI listing tools', icon: Sparkles, group: 'Marketplace' },
+    { key: 'campaigns', label: 'Campaign manager', icon: BadgeDollarSign, group: 'Marketplace' },
+    { key: 'risk-review', label: 'Risk review', icon: ShieldAlert, group: 'Marketplace' },
+    { key: 'social-seo', label: 'Social & SEO', icon: Globe, group: 'Marketplace' },
+    { key: 'google-merchant', label: 'Google Merchant', icon: ShoppingBag, group: 'Marketplace' },
     { key: 'tiktok', label: 'TikTok for sellers', icon: Video, group: 'Marketplace' },
     { key: 'merchant-center', label: 'Google Merchant Center', icon: ShoppingBag, group: 'Marketplace' },
     { key: 'calls', label: 'Voice and video calls', icon: Phone, group: 'Marketplace' },
@@ -289,6 +303,7 @@ export default function AdminDashboard() {
     { key: 'users', label: 'Users', icon: Users, group: 'Community' },
     { key: 'moderation', label: 'Moderation', icon: Flag, badge: pendingReports?.length ?? 0, group: 'Community' },
     { key: 'subscriptions', label: 'Subscriptions', icon: CalendarClock, badge: subscriptionAlerts, group: 'System' },
+    { key: 'email-notifications', label: 'Email notifications', icon: Mail, group: 'System' },
     { key: 'settings', label: 'Settings', icon: Settings, group: 'System' },
   ];
 
@@ -649,8 +664,15 @@ export default function AdminDashboard() {
         {activeTab === 'marketplace' && <MarketplaceAdminTab />}
         {activeTab === 'tiktok' && <div className="max-w-2xl"><TikTokSwitch /></div>}
         {activeTab === 'merchant-center' && <GoogleMerchantCenterTab />}
-        {activeTab === 'calls' && <div className="max-w-2xl"><CallsSwitch /></div>}
+        {activeTab === 'calls' && <div className="max-w-4xl space-y-4"><CallsSwitch /><CallQuotasTab /></div>}
+        {activeTab === 'email-notifications' && <EmailNotificationsTab />}
         {activeTab === 'subscriptions' && <SubscriptionsTab />}
+        {activeTab === 'supplier-plans' && <SupplierPlansTab />}
+        {activeTab === 'ai-intelligence' && <AiProductIntelligenceTab />}
+        {activeTab === 'campaigns' && <CampaignManagerTab />}
+        {activeTab === 'risk-review' && <RiskReviewTab />}
+        {activeTab === 'social-seo' && <SocialSeoTab />}
+        {activeTab === 'google-merchant' && <GoogleMerchantTab />}
 
         {activeTab === 'finance' && <FinanceTab />}
         {activeTab === 'commission' && <SupplierCommissionTab />}

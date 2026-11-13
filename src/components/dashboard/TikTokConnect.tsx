@@ -28,6 +28,14 @@ export default function TikTokConnect({ vendorId, switchedOn = true }: { vendorI
   const [pickerOpen, setPickerOpen] = useState(false);
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
 
+  const { data: effectivePlan, isLoading: planLoading } = useQuery({
+    queryKey: ['supplier-effective-plan', vendorId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('effective_supplier_plan', { _vendor_id: vendorId });
+      if (error) throw error;
+      return data as string;
+    },
+  });
   const { data: conn, isLoading } = useQuery({
     queryKey: ['tiktok-connection', vendorId],
     queryFn: async () => {
@@ -71,9 +79,12 @@ export default function TikTokConnect({ vendorId, switchedOn = true }: { vendorI
     finally { setBusy(null); setConfirmDisconnect(false); }
   };
 
-  if (isLoading) return null;
+  if (isLoading || planLoading) return null;
+  const hasSocialPlan = effectivePlan === 'silver' || effectivePlan === 'premium';
+  const canManageIntegration = switchedOn && hasSocialPlan;
   // Switched off by the admin: nothing new can be connected or chosen. A connected seller can still disconnect.
   if (!switchedOn && !conn) return null;
+  if (!hasSocialPlan && !conn) return null;
 
   return (
     <div className="rounded-lg bg-card p-4 card-shadow">
@@ -88,12 +99,13 @@ export default function TikTokConnect({ vendorId, switchedOn = true }: { vendorI
             </p>
           )}
         </div>
-        {!conn && switchedOn && <Button size="sm" onClick={connect} disabled={busy === 'start'}>{busy === 'start' ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Play className="mr-1.5 h-4 w-4" />}Connect TikTok</Button>}
+        {!conn && canManageIntegration && <Button size="sm" onClick={connect} disabled={busy === 'start'}>{busy === 'start' ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Play className="mr-1.5 h-4 w-4" />}Connect TikTok</Button>}
       </div>
 
+      {conn && !hasSocialPlan && <p className="mt-3 rounded-md bg-secondary p-2.5 text-sm text-muted-foreground">TikTok features require an active Silver or Premium membership. Your connection and existing videos are retained; upgrade to resume syncing or disconnect at any time.</p>}
       {!switchedOn && conn && <p className="mt-3 rounded-md bg-secondary p-2.5 text-sm text-muted-foreground">TikTok is paused for now. Your TikTok videos stay visible, but you cannot add or change them until it is switched back on.</p>}
 
-      {switchedOn && conn?.needs_reconnect && (
+      {canManageIntegration && conn?.needs_reconnect && (
         <div className="mt-3 flex items-start gap-2 rounded-md bg-destructive/10 p-2.5 text-sm text-destructive">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>Your TikTok connection needs to be renewed. Your videos stay visible, but they will not update until you connect again.</span>
@@ -102,10 +114,10 @@ export default function TikTokConnect({ vendorId, switchedOn = true }: { vendorI
 
       {conn && (
         <div className="mt-3 flex flex-wrap gap-2">
-          {switchedOn && (conn.needs_reconnect
+          {canManageIntegration && (conn.needs_reconnect
             ? <Button size="sm" onClick={connect} disabled={busy === 'start'}>{busy === 'start' && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}Connect again</Button>
             : <Button size="sm" onClick={() => setPickerOpen(true)}>Choose videos</Button>)}
-          {switchedOn && (
+          {canManageIntegration && (
             <Button size="sm" variant="outline" onClick={sync} disabled={busy !== null || conn.needs_reconnect}>
               {busy === 'sync' ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-1.5 h-4 w-4" />}Refresh
             </Button>
@@ -115,7 +127,7 @@ export default function TikTokConnect({ vendorId, switchedOn = true }: { vendorI
           </Button>
         </div>
       )}
-      {switchedOn && conn && !conn.needs_reconnect && (
+      {canManageIntegration && conn && !conn.needs_reconnect && (
         <label className="mt-3 flex items-start justify-between gap-3 rounded-md border p-3">
           <span className="text-sm">
             <span className="block font-medium">Automatically show new TikTok videos</span>

@@ -348,11 +348,33 @@ async function tiktokEnabled(db: ReturnType<typeof admin>): Promise<boolean> {
 async function actionSyncAll(db: ReturnType<typeof admin>) {
   if (!(await tiktokEnabled(db))) return { skipped: "TikTok is switched off" };
   const { data: conns } = await db.from("vendor_tiktok_connections").select("vendor_id").eq("needs_reconnect", false).order("last_synced_at", { ascending: true, nullsFirst: true }).limit(500);
+  const vendorIds = (conns ?? []).map((connection) => connection.vendor_id);
+  if (!vendorIds.length) return { vendors: 0, skipped: 0, ok: 0, failed: 0 };
+
+  const { data: memberships, error: membershipError } = await db.from("vendor_memberships")
+    .select("vendor_id, plan_slug")
+    .in("vendor_id", vendorIds)
+    .in("plan_slug", ["silver", "premium"])
+    .eq("status", "active")
+    .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
+  if (membershipError) throw membershipError;
+
+  const planSlugs = [...new Set((memberships ?? []).map((membership) => membership.plan_slug))];
+  const { data: plans, error: plansError } = planSlugs.length
+    ? await db.from("supplier_membership_plans").select("slug").in("slug", planSlugs).eq("is_active", true)
+    : { data: [], error: null };
+  if (plansError) throw plansError;
+  const activePlans = new Set((plans ?? []).map((plan) => plan.slug));
+  const eligibleVendors = new Set((memberships ?? [])
+    .filter((membership) => activePlans.has(membership.plan_slug))
+    .map((membership) => membership.vendor_id));
+  const eligibleConnections = (conns ?? []).filter((connection) => eligibleVendors.has(connection.vendor_id));
+
   let ok = 0, failed = 0;
-  for (const c of conns ?? []) {
+  for (const c of eligibleConnections) {
     try { await syncVendor(db, c.vendor_id); ok++; } catch { failed++; }
   }
-  return { vendors: (conns ?? []).length, ok, failed };
+  return { vendors: eligibleConnections.length, skipped: vendorIds.length - eligibleConnections.length, ok, failed };
 }
 
 // ---- entry point -----------------------------------------------------------------------------------------------------------------
@@ -375,6 +397,9 @@ serve(async (req) => {
     if (!authHeader) throw new UserError("Unauthorized", 401);
     const { data: { user }, error: userError } = await db.auth.getUser(authHeader.replace(/^Bearer\s+/i, ""));
     if (userError || !user) throw new UserError("Unauthorized", 401);
+    const userDb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
 
     if (action === "config_status") { // for the admin switch: only says whether the keys exist, never the keys
       const { data: isAdmin } = await db.rpc("has_role", { _user_id: user.id, _role: "admin" });
@@ -384,6 +409,14 @@ serve(async (req) => {
 
     const { data: vendor } = await db.from("vendors").select("id, is_approved").eq("user_id", user.id).maybeSingle();
     if (!vendor || !vendor.is_approved) throw new UserError("Only approved sellers can connect TikTok.", 403);
+
+    if (action !== "disconnect") {
+      const { data: plan, error: planError } = await userDb.rpc("effective_supplier_plan", { _vendor_id: vendor.id });
+      if (planError) throw planError;
+      if (plan !== "silver" && plan !== "premium") {
+        throw new UserError("TikTok requires an active Silver or Premium membership.", 403);
+      }
+    }
 
     if (action !== "disconnect" && !(await tiktokEnabled(db))) throw new UserError("TikTok is not available yet.", 403);
 

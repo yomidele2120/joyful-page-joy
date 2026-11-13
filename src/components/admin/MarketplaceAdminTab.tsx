@@ -166,7 +166,7 @@ export function CallsSwitch() {
       <p className="mt-1 text-xs text-muted-foreground">Lets buyers call suppliers, and suppliers call each other, from the chat. Buyers cannot call other buyers. A call needs an existing chat, and rings only while the other person has the site open.</p>
       <ol className="mt-3 space-y-2.5 border-t border-border pt-3">
         <Step ok={dbReady === true} loading={checkingDb} title="1. Database update is installed"
-          fix="Run supabase/migrations/20261108090000_voice_video_calls.sql once in the Supabase SQL editor, then refresh this page." />
+          fix="Run supabase/migrations/20261108090000_voice_video_calls.sql and 20261112100000_call_usage_quotas.sql once in the Supabase SQL editor, then refresh this page." />
         <Step ok={keys?.state !== 'unreachable'} loading={checkingKeys} title="2. The call server function is deployed"
           fix={`Deploy it with: supabase functions deploy zego-token. ${keys?.state === 'unreachable' ? `(Server said: ${keys.detail})` : ''}`} />
         <Step ok={keys?.state === 'ready'} loading={checkingKeys} title="3. The ZEGOCLOUD keys are set on the server"

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { validatePaystackCharge } from "../_shared/paystackCharge.ts";
 
 
 const corsHeaders = {
@@ -48,30 +49,65 @@ serve(async (req) => {
     );
 
     if (event.event === 'charge.success') {
-      const { reference, channel, amount, fees } = event.data;
+      const reference = String(event.data?.reference ?? '');
+      if (!reference) throw new Error('Paystack success event has no reference');
+      const verifyResponse = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
+        headers: { Authorization: `Bearer ${PAYSTACK_SECRET_KEY}` },
+      });
+      if (!verifyResponse.ok) throw new Error('Paystack transaction verification failed');
+      const verified = await verifyResponse.json();
+      const charge = verified.data;
+      if (!verified.status || charge?.status !== 'success' || charge.reference !== reference) {
+        throw new Error('Paystack transaction is not a matching successful charge');
+      }
+
+      const { data: membershipPayment } = await supabase.from('supplier_membership_payments')
+        .select('id')
+        .eq('paystack_reference', reference)
+        .maybeSingle();
+
+      if (membershipPayment) {
+        const { data: finalized, error: finalizeError } = await supabase.rpc('finalize_supplier_membership_payment', {
+          _reference: reference,
+          _amount_kobo: Number(charge.amount),
+          _currency: String(charge.currency ?? ''),
+        });
+        if (finalizeError) throw finalizeError;
+        if (!finalized) {
+          await supabase.from('supplier_membership_payments')
+            .update({ status: 'failed' }).eq('id', membershipPayment.id).eq('status', 'pending');
+        }
+      }
 
       // Use our own payment record (created server-side) to find the order,
       // and only mark it paid when the amount collected covers the total.
       const { data: paymentRow } = await supabase.from('payments')
-        .select('order_id')
+        .select('order_id, user_id, amount, currency, status')
         .eq('paystack_reference', reference)
         .maybeSingle();
 
       if (paymentRow?.order_id) {
         const { data: order } = await supabase.from('orders')
-          .select('id, total')
+          .select('id, total, user_id')
           .eq('id', paymentRow.order_id)
           .maybeSingle();
 
         const expectedKobo = Math.round(Number(order?.total ?? 0) * 100);
-        if (order && Number(amount) >= expectedKobo) {
+        const recordedKobo = Math.round(Number(paymentRow.amount) * 100);
+        const validation = order && Number.isSafeInteger(expectedKobo) && expectedKobo > 0
+          ? validatePaystackCharge(charge, { reference, amountKobo: expectedKobo, currency: 'NGN' })
+          : { valid: false as const, reason: 'amount_mismatch' as const };
+        const matchesOrder = order && order.user_id === paymentRow.user_id && paymentRow.currency === 'NGN'
+          && recordedKobo === expectedKobo && validation.valid;
+
+        if (matchesOrder && ['pending', 'failed', 'success'].includes(paymentRow.status)) {
           await supabase.from('payments')
             .update({
-              status: 'success', payment_method: channel, metadata: event.data,
+              status: 'success', payment_method: charge.channel, metadata: charge,
               // Paystack's processing fee (kobo) is kept apart from the order amounts.
-              paystack_fee: Number(fees ?? 0) / 100,
+              paystack_fee: Number(charge.fees ?? 0) / 100,
             })
-            .eq('paystack_reference', reference);
+            .eq('paystack_reference', reference).in('status', ['pending', 'failed', 'success']);
           // First delivery sets the payment time; a duplicate webhook leaves it alone.
           await supabase.from('payments')
             .update({ paid_at: new Date().toISOString() })
@@ -80,7 +116,7 @@ serve(async (req) => {
           // Handles late payments safely: a paid order that already expired is revived if the
           // stock is still there, or flagged "needs_refund" if it has been sold meanwhile.
           const { data: paidResult } = await supabase.rpc('mark_order_paid', { _order_id: order.id, _method: 'card' });
-          if (paidResult !== 'needs_refund') {
+          if (paidResult !== 'needs_refund' && paidResult !== 'already_needs_refund') {
             // Money has reached you: supplier earnings on this order can start their hold period.
             await supabase.from('orders')
               .update({ settled_at: new Date().toISOString() })
@@ -89,10 +125,22 @@ serve(async (req) => {
           }
         } else {
           await supabase.from('payments')
-            .update({ status: 'failed', metadata: event.data })
-            .eq('paystack_reference', reference);
+            .update({ status: 'review_required', metadata: { ...charge, verification_issue: validation.reason } })
+            .eq('paystack_reference', reference).in('status', ['pending', 'failed', 'success']);
         }
       }
+    }
+
+    if (event.event === 'charge.failed') {
+      const reference = String(event.data?.reference ?? '');
+      await supabase.from('supplier_membership_payments')
+        .update({ status: 'failed' })
+        .eq('paystack_reference', reference)
+        .eq('status', 'pending');
+      await supabase.from('payments')
+        .update({ status: 'failed', metadata: event.data })
+        .eq('paystack_reference', reference)
+        .eq('status', 'pending');
     }
 
     // Refund results (the refund-order function starts them, Paystack reports back here).

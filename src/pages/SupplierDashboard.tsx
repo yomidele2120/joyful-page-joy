@@ -36,6 +36,7 @@ import VendorVideosTab from '@/components/dashboard/VendorVideosTab';
 import VendorOrdersTab, { type VendorOrder } from '@/components/dashboard/VendorOrdersTab';
 import SupplierAgreementPanel from '@/components/dashboard/SupplierAgreementPanel';
 import SupplierVerification from '@/components/verification/SupplierVerification';
+import SupplierMembershipTab from '@/components/dashboard/SupplierMembershipTab';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 export default function SupplierDashboard() {
@@ -44,7 +45,7 @@ export default function SupplierDashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useTabParam('overview', ['overview', 'products', 'videos', 'orders', 'disputes', 'add-product', 'shop-settings']);
+  const [activeTab, setActiveTab] = useTabParam('overview', ['overview', 'products', 'videos', 'orders', 'disputes', 'add-product', 'membership', 'shop-settings']);
   const [preorderProduct, setPreorderProduct] = useState<any>(null);
   const [priceProduct, setPriceProduct] = useState<any>(null);
   const [editProductId, setEditProductId] = useState<string | null>(null);
@@ -191,6 +192,7 @@ export default function SupplierDashboard() {
         { key: 'orders', label: 'Orders', icon: ShoppingCart, group: 'Sales' },
         { key: 'disputes', label: 'Disputes', icon: AlertCircle, group: 'Sales' },
         { key: 'videos', label: 'Videos', icon: Film, group: 'Grow' },
+        { key: 'membership', label: 'Membership', icon: CreditCard, group: 'Grow' },
         { key: 'shop-settings', label: 'Shop settings', icon: Settings, group: 'Account' },
       ]
     : [{ key: 'shop-settings', label: 'Shop settings', icon: Settings, group: 'Account' }];
@@ -476,6 +478,8 @@ export default function SupplierDashboard() {
             )}
 
             {activeTab === 'disputes' && <SellerDisputes vendorId={vendor.id} />}
+
+            {activeTab === 'membership' && <SupplierMembershipTab vendorId={vendor.id} />}
 
             {activeTab === 'add-product' && (
               <SupplierAddProduct vendorId={vendor.id} categories={categories || []} onSuccess={() => {

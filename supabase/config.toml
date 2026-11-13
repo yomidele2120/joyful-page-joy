@@ -3,10 +3,22 @@ project_id = "cgyzhkeliomwxwrpmnlh"
 [functions.initialize-payment]
 verify_jwt = false
 
+[functions.initialize-supplier-subscription]
+verify_jwt = false
+
+[functions.verify-supplier-subscription]
+verify_jwt = false
+
 [functions.verify-payment]
 verify_jwt = false
 
 [functions.paystack-webhook]
+verify_jwt = false
+
+[functions.email-notifications]
+verify_jwt = false
+
+[functions.resend-webhook]
 verify_jwt = false
 
 [functions.create-subaccount]
@@ -64,4 +76,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.mirror-product-images]
+verify_jwt = false
+
+[functions.google-merchant]
 verify_jwt = false

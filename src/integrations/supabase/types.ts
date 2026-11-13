@@ -2008,6 +2008,188 @@ export type Database = {
           },
         ]
       }
+      call_plan_quotas: {
+        Row: { daily_minutes: number; max_concurrent_calls: number; monthly_minutes: number; plan_slug: string; updated_at: string }
+        Insert: { daily_minutes: number; max_concurrent_calls?: number; monthly_minutes: number; plan_slug: string; updated_at?: string }
+        Update: { daily_minutes?: number; max_concurrent_calls?: number; monthly_minutes?: number; plan_slug?: string; updated_at?: string }
+        Relationships: [
+          { foreignKeyName: "call_plan_quotas_plan_slug_fkey"; columns: ["plan_slug"]; isOneToOne: true; referencedRelation: "supplier_membership_plans"; referencedColumns: ["slug"] },
+        ]
+      }
+      buyer_call_quotas: {
+        Row: { daily_minutes: number; id: boolean; max_concurrent_calls: number; monthly_minutes: number; updated_at: string }
+        Insert: { daily_minutes?: number; id?: boolean; max_concurrent_calls?: number; monthly_minutes?: number; updated_at?: string }
+        Update: { daily_minutes?: number; id?: boolean; max_concurrent_calls?: number; monthly_minutes?: number; updated_at?: string }
+        Relationships: []
+      }
+      call_platform_cost_settings: {
+        Row: { cost_per_participant_minute_ngn: number | null; id: boolean; updated_at: string }
+        Insert: { cost_per_participant_minute_ngn?: number | null; id?: boolean; updated_at?: string }
+        Update: { cost_per_participant_minute_ngn?: number | null; id?: boolean; updated_at?: string }
+        Relationships: []
+      }
+      email_notification_jobs: {
+        Row: {
+          attempts: number; created_at: string; event_key: string; event_type: string; id: string;
+          last_error: string | null; locked_at: string | null; max_attempts: number; next_attempt_at: string;
+          payload: Json; recipient_email: string | null; recipient_user_id: string | null; resend_id: string | null;
+          sent_at: string | null; status: string; updated_at: string
+        }
+        Insert: {
+          attempts?: number; created_at?: string; event_key: string; event_type: string; id?: string;
+          last_error?: string | null; locked_at?: string | null; max_attempts?: number; next_attempt_at?: string;
+          payload?: Json; recipient_email?: string | null; recipient_user_id?: string | null; resend_id?: string | null;
+          sent_at?: string | null; status?: string; updated_at?: string
+        }
+        Update: {
+          attempts?: number; created_at?: string; event_key?: string; event_type?: string; id?: string;
+          last_error?: string | null; locked_at?: string | null; max_attempts?: number; next_attempt_at?: string;
+          payload?: Json; recipient_email?: string | null; recipient_user_id?: string | null; resend_id?: string | null;
+          sent_at?: string | null; status?: string; updated_at?: string
+        }
+        Relationships: []
+      }
+      email_delivery_settings: {
+        Row: { id: boolean; notify_admin_new_buyers: boolean; updated_at: string }
+        Insert: { id?: boolean; notify_admin_new_buyers?: boolean; updated_at?: string }
+        Update: { id?: boolean; notify_admin_new_buyers?: boolean; updated_at?: string }
+        Relationships: []
+      }
+      supplier_membership_payments: {
+        Row: {
+          amount_kobo: number
+          created_at: string
+          currency: string
+          id: string
+          paid_at: string | null
+          paystack_reference: string
+          period_days: number
+          plan_slug: string
+          status: string
+          vendor_id: string
+        }
+        Insert: {
+          amount_kobo: number
+          created_at?: string
+          currency?: string
+          id?: string
+          paid_at?: string | null
+          paystack_reference: string
+          period_days: number
+          plan_slug: string
+          status?: string
+          vendor_id: string
+        }
+        Update: {
+          amount_kobo?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          paid_at?: string | null
+          paystack_reference?: string
+          period_days?: number
+          plan_slug?: string
+          status?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_membership_payments_plan_slug_fkey"
+            columns: ["plan_slug"]
+            isOneToOne: false
+            referencedRelation: "supplier_membership_plans"
+            referencedColumns: ["slug"]
+          },
+          {
+            foreignKeyName: "supplier_membership_payments_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_membership_plans: {
+        Row: {
+          currency: string
+          features: Json
+          is_active: boolean
+          name: string
+          period_days: number | null
+          price_kobo: number | null
+          purchase_enabled: boolean
+          slug: string
+          updated_at: string
+          visibility_boost: number
+        }
+        Insert: {
+          currency?: string
+          features?: Json
+          is_active?: boolean
+          name: string
+          period_days?: number | null
+          price_kobo?: number | null
+          purchase_enabled?: boolean
+          slug: string
+          updated_at?: string
+          visibility_boost?: number
+        }
+        Update: {
+          currency?: string
+          features?: Json
+          is_active?: boolean
+          name?: string
+          period_days?: number | null
+          price_kobo?: number | null
+          purchase_enabled?: boolean
+          slug?: string
+          updated_at?: string
+          visibility_boost?: number
+        }
+        Relationships: []
+      }
+      vendor_memberships: {
+        Row: {
+          expires_at: string | null
+          period_started_at: string
+          plan_slug: string
+          status: string
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          expires_at?: string | null
+          period_started_at?: string
+          plan_slug?: string
+          status?: string
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          expires_at?: string | null
+          period_started_at?: string
+          plan_slug?: string
+          status?: string
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_memberships_plan_slug_fkey"
+            columns: ["plan_slug"]
+            isOneToOne: false
+            referencedRelation: "supplier_membership_plans"
+            referencedColumns: ["slug"]
+          },
+          {
+            foreignKeyName: "vendor_memberships_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: true
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_terms_versions: {
         Row: {
           body: string
@@ -2426,6 +2608,9 @@ export type Database = {
             Returns: Json
           }
       expire_unpaid_orders: { Args: never; Returns: number }
+      effective_supplier_plan: { Args: { _vendor_id: string }; Returns: string }
+      my_call_quota: { Args: never; Returns: Json }
+      call_usage_overview: { Args: never; Returns: Json }
       finance_payables_summary: {
         Args: never
         Returns: {
@@ -2450,6 +2635,10 @@ export type Database = {
           _transfer_code?: string
         }
         Returns: string
+      }
+      finalize_supplier_membership_payment: {
+        Args: { _amount_kobo: number; _currency: string; _reference: string }
+        Returns: boolean
       }
       get_current_supplier_terms: { Args: never; Returns: Json }
       get_my_bnpl_status: {
@@ -2572,6 +2761,7 @@ export type Database = {
         Returns: undefined
       }
       set_product_thumbnails: { Args: { _rows: Json }; Returns: number }
+      supplier_visibility_boost: { Args: { _vendor_id: string }; Returns: number }
       set_super_admin: {
         Args: { _on: boolean; _user_id: string }
         Returns: undefined

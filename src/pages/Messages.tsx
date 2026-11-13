@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, MessageCircle, Phone, Send, Store, User as UserIcon, X } from 'lucide-react';
 import { toast } from 'sonner';
-import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import MediaPreview from '@/components/chat/MediaPreview';
@@ -155,16 +154,16 @@ export default function Messages() {
   };
 
   if (authLoading || !user) {
-    return <Layout><div className="container py-16 text-center text-muted-foreground">Loading...</div></Layout>;
+    return <div className="flex min-h-[100dvh] items-center justify-center bg-background text-center text-muted-foreground">Loading...</div>;
   }
 
   const showThread = !!activeId;
 
   return (
-    <Layout>
-      <div className="md:container md:max-w-6xl md:py-4">
+    <div className="flex h-[100dvh] flex-col bg-background">
+      <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col md:py-4">
         <h1 className="sr-only">Messages</h1>
-        <div className="grid h-[calc(100dvh-8rem)] overflow-hidden bg-card md:h-[72vh] md:min-h-[420px] md:grid-cols-[320px_minmax(0,1fr)] md:rounded-lg md:border md:border-border">
+        <div className="grid min-h-0 flex-1 overflow-hidden bg-card md:grid-cols-[320px_minmax(0,1fr)] md:rounded-lg md:border md:border-border">
           {/* Conversation list */}
           <aside className={`${showThread ? 'hidden md:flex' : 'flex'} min-h-0 flex-col border-r border-border`}>
             <div className="flex items-center justify-between border-b border-border p-3 font-heading font-semibold">Messages<Link to="/calls" className="inline-flex items-center gap-1 text-xs font-normal text-primary"><Phone className="h-3.5 w-3.5" /> Call history</Link></div>
@@ -295,7 +294,7 @@ export default function Messages() {
           </section>
         </div>
       </div>
-    </Layout>
+    </div>
   );
 }
 

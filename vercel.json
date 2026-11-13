@@ -1,4 +1,10 @@
 {
+  "crons": [
+    {
+      "path": "/api/merchant-center?cron=1",
+      "schedule": "0 0 * * *"
+    }
+  ],
   "rewrites": [
     {
       "source": "/feed",
@@ -16,6 +22,21 @@
       ],
       "destination": "/api/share?id=:id"
     },
+    {
+      "source": "/product/:slug",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(?i).*(googlebot|bingbot|facebookexternalhit|facebot|whatsapp|twitterbot|telegrambot|slackbot|linkedinbot|discordbot|pinterest|skypeuripreview|redditbot|embedly|vkshare|viber).*"
+        }
+      ],
+      "destination": "/api/product?slug=:slug"
+    },
+    { "source": "/sitemap.xml", "destination": "/api/sitemap" },
+    { "source": "/static-sitemap.xml", "destination": "/api/sitemap?section=static" },
+    { "source": "/product-sitemap.xml", "destination": "/api/sitemap?section=products" },
+    { "source": "/merchant-feed.xml", "destination": "/api/merchant-feed" },
     {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
