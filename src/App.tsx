@@ -16,6 +16,7 @@ import ScrollToTop from "@/components/ScrollToTop";
 import Tracker from "@/components/Tracker";
 import VideoUploadResumer from "@/components/VideoUploadResumer";
 import Index from "./pages/Index";
+import RootRoute from "./pages/RootRoute";
 import { lazyPage } from "@/lib/lazyPage";
 import { persistQueryCache, restoreQueryCache } from "@/lib/queryPersist";
 
@@ -23,6 +24,7 @@ import { persistQueryCache, restoreQueryCache } from "@/lib/queryPersist";
 // the home page and not the admin dashboard, charts, video feed and so on.
 const Feed = lazyPage(() => import("./pages/Feed"));
 const CallHistory = lazyPage(() => import("./pages/CallHistory"));
+const SellOnIthub = lazyPage(() => import("./pages/SellOnIthub"));
 const Products = lazyPage(() => import("./pages/Products"));
 const ProductDetail = lazyPage(() => import("./pages/ProductDetail"));
 const CategoryPage = lazyPage(() => import("./pages/CategoryPage"));
@@ -119,9 +121,11 @@ const App = () => (
             <CallQueueTracker />
             <Suspense fallback={<PageLoader />}>
             <Routes>
-              <Route path="/" element={<Index />} />
+              <Route path="/" element={<RootRoute />} />
+              <Route path="/home" element={<Index />} />
               <Route path="/feed" element={<Feed />} />
               <Route path="/products" element={<Products />} />
+              <Route path="/sell" element={<SellOnIthub />} />
               <Route path="/product/:slug" element={<ProductDetail />} />
               <Route path="/category/:slug" element={<CategoryPage />} />
               <Route path="/cart" element={<Cart />} />

@@ -19,7 +19,7 @@ export default function TrustStrip() {
     { to: '/feed', icon: <Clapperboard />, title: 'Watch & shop', text: 'Videos from sellers' },
     isVendor
       ? { to: '/supplier-dashboard', icon: <Store />, title: 'My store', text: 'Manage your store' }
-      : { to: '/supplier-signup', icon: <Store />, title: 'Sell', text: 'Open your store', badge: MAKE_MONEY_BADGE },
+      : { to: '/sell', icon: <Store />, title: 'Sell', text: 'Open your store', badge: MAKE_MONEY_BADGE },
   ];
 
   return (

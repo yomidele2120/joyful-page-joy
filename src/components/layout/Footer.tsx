@@ -6,11 +6,24 @@ import { BUSINESS, COMPANY_LINKS, LEGAL_LINKS } from '@/config/business';
 import { useConsent } from '@/contexts/ConsentContext';
 import { useMarketplaceSettings, usePayLaterAvailable } from '@/hooks/useMarketplace';
 
+const linkCls = 'text-white/70 transition-colors hover:text-white';
+
+function Column({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <h4 className="mb-4 text-xs font-semibold uppercase tracking-wider text-white/90">{title}</h4>
+      <ul className="space-y-2.5 text-sm">{children}</ul>
+    </div>
+  );
+}
+
 export default function Footer({ flush = false }: { flush?: boolean }) {
   const { data: categories } = useCategories();
   const { openPreferences } = useConsent();
   const payLaterOn = usePayLaterAvailable();
   const { data: marketplace } = useMarketplaceSettings();
+  const year = new Date().getFullYear();
+
   return (
     <footer
       className={`bg-[#0b1220] text-white ${
@@ -20,99 +33,90 @@ export default function Footer({ flush = false }: { flush?: boolean }) {
           : 'mt-16'
       }`}
     >
-      <div className="container py-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-8 text-sm">
+      <div className="container grid grid-cols-2 gap-x-6 gap-y-10 py-12 lg:grid-cols-12 lg:gap-x-8">
         {/* Brand */}
-        <div className="sm:col-span-2 lg:col-span-1">
+        <div className="col-span-2 lg:col-span-4">
           <Link to="/" aria-label="IT Hub Africa home" className="mb-4 inline-block">
             <BrandLogoPill logoClassName="h-10" />
           </Link>
-          <p className="text-white/60 leading-relaxed max-w-xs">
+          <p className="max-w-xs text-sm leading-relaxed text-white/60">
             Buy, Sell, and Grow With Confidence. Nigeria's trusted online marketplace.
           </p>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Link to="/products" className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90">Shop now</Link>
+            <Link to="/sell" className="rounded-md border border-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10">Sell with us</Link>
+          </div>
         </div>
 
-        {/* Buyers */}
-        <div className="border-t border-white/10 pt-6 sm:border-0 sm:pt-0">
-          <h4 className="font-heading font-semibold text-white mb-3">Quick Links</h4>
-          <div className="flex flex-col gap-2.5 text-white/80">
-            <Link to="/products" className="text-white/80 hover:text-primary transition-colors">All Products</Link>
-            <Link to="/products?tab=suppliers" className="hover:text-primary transition-colors">Find Suppliers</Link>
-            <Link to="/rfq/new" className="hover:text-primary transition-colors">Request for Quotation</Link>
-            {payLaterOn && <Link to="/pay-later" className="hover:text-primary transition-colors">Pay Later</Link>}
-            {marketplace?.preorder_enabled !== false && <Link to="/preorders" className="hover:text-primary transition-colors">Preorders</Link>}
-            <Link to="/my-orders" className="hover:text-primary transition-colors">My Orders</Link>
-            <Link to="/inquiries" className="hover:text-primary transition-colors">My Inquiries</Link>
-            <Link to="/messages" className="hover:text-primary transition-colors">Messages</Link>
+        {/* Shop */}
+        <div className="lg:col-span-2">
+          <Column title="Shop">
+            <li><Link to="/products" className={linkCls}>All Products</Link></li>
+            <li><Link to="/products?tab=suppliers" className={linkCls}>Find Suppliers</Link></li>
+            <li><Link to="/rfq/new" className={linkCls}>Request a Quote</Link></li>
+            {payLaterOn && <li><Link to="/pay-later" className={linkCls}>Pay Later</Link></li>}
+            {marketplace?.preorder_enabled !== false && <li><Link to="/preorders" className={linkCls}>Preorders</Link></li>}
             {(categories ?? []).slice(0, 3).map(cat => (
-              <Link key={cat.id} to={`/category/${cat.slug}`} className="hover:text-primary transition-colors">{cat.name}</Link>
+              <li key={cat.id}><Link to={`/category/${cat.slug}`} className={linkCls}>{cat.name}</Link></li>
             ))}
-          </div>
+          </Column>
         </div>
 
-        {/* Suppliers & account */}
-        <div className="border-t border-white/10 pt-6 sm:border-0 sm:pt-0">
-          <h4 className="font-heading font-semibold text-white mb-3">Suppliers &amp; Account</h4>
-          <div className="flex flex-col gap-2.5 text-white/80">
-            <Link to="/supplier-signup" className="hover:text-primary transition-colors">Become a Supplier</Link>
-            <Link to="/suppliers-login" className="hover:text-primary transition-colors">Supplier Login</Link>
-            <Link to="/users-login" className="hover:text-primary transition-colors">My Account</Link>
-            <Link to="/cart" className="hover:text-primary transition-colors">Cart</Link>
-            <Link to="/wishlist" className="hover:text-primary transition-colors">Wishlist</Link>
-          </div>
+        {/* Account */}
+        <div className="lg:col-span-2">
+          <Column title="Account">
+            <li><Link to="/users-login" className={linkCls}>My Account</Link></li>
+            <li><Link to="/my-orders" className={linkCls}>My Orders</Link></li>
+            <li><Link to="/inquiries" className={linkCls}>My Inquiries</Link></li>
+            <li><Link to="/messages" className={linkCls}>Messages</Link></li>
+            <li><Link to="/wishlist" className={linkCls}>Wishlist</Link></li>
+            <li><Link to="/cart" className={linkCls}>Cart</Link></li>
+            <li><Link to="/suppliers-login" className={linkCls}>Supplier Login</Link></li>
+          </Column>
         </div>
 
         {/* Contact */}
-        <div className="border-t border-white/10 pt-6 sm:border-0 sm:pt-0">
-          <h4 className="font-heading font-semibold text-white mb-3">Contact</h4>
-          <div className="flex flex-col gap-3 text-white/80">
-            <div className="flex items-start gap-2.5">
+        <div className="col-span-2 lg:col-span-4">
+          <Column title="Contact us">
+            <li className="flex items-start gap-3 text-white/70">
               <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
               <address className="not-italic leading-relaxed">
                 {BUSINESS.addressLines.map((line, i) => (
                   <span key={line}>{line}{i < BUSINESS.addressLines.length - 1 && <br />}</span>
                 ))}
               </address>
-            </div>
-            <a
-              href={BUSINESS.phoneHref}
-              className="flex items-center gap-2.5 min-w-0 hover:text-primary transition-colors"
-            >
-              <Phone className="w-4 h-4 text-primary shrink-0" />
-              <span className="truncate">{BUSINESS.phone}</span>
-            </a>
-            <a
-              href={`mailto:${BUSINESS.email}`}
-              className="flex items-center gap-2.5 min-w-0 hover:text-primary transition-colors"
-            >
-              <Mail className="w-4 h-4 text-primary shrink-0" />
-              <span className="truncate">{BUSINESS.email}</span>
-            </a>
-            <a
-              href="https://www.ithubafrica.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2.5 min-w-0 hover:text-primary transition-colors"
-            >
-              <Globe className="w-4 h-4 text-primary shrink-0" />
-              <span className="truncate">www.ithubafrica.com</span>
-            </a>
-          </div>
+            </li>
+            <li>
+              <a href={BUSINESS.phoneHref} className={`flex min-w-0 items-center gap-3 ${linkCls}`}>
+                <Phone className="h-4 w-4 shrink-0 text-primary" /><span className="truncate">{BUSINESS.phone}</span>
+              </a>
+            </li>
+            <li>
+              <a href={`mailto:${BUSINESS.email}`} className={`flex min-w-0 items-center gap-3 ${linkCls}`}>
+                <Mail className="h-4 w-4 shrink-0 text-primary" /><span className="truncate">{BUSINESS.email}</span>
+              </a>
+            </li>
+            <li>
+              <a href="https://www.ithubafrica.com" target="_blank" rel="noopener noreferrer" className={`flex min-w-0 items-center gap-3 ${linkCls}`}>
+                <Globe className="h-4 w-4 shrink-0 text-primary" /><span className="truncate">www.ithubafrica.com</span>
+              </a>
+            </li>
+          </Column>
         </div>
       </div>
 
-      <nav aria-label="Policies and company" className="border-t border-white/10 py-5">
-        <ul className="container flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-white/70">
-          {[...LEGAL_LINKS, ...COMPANY_LINKS].map(link => (
-            <li key={link.to}><Link to={link.to} className="hover:text-primary transition-colors">{link.label}</Link></li>
-          ))}
-          <li><button type="button" onClick={openPreferences} className="hover:text-primary transition-colors">Cookie settings</button></li>
-        </ul>
-      </nav>
-
-      <div className="border-t border-white/10 py-4 px-6">
-        <p className="text-center text-xs text-white/40">
-          © {new Date().getFullYear()} IT Hub Africa. All rights reserved.
-        </p>
+      <div className="border-t border-white/10">
+        <div className="container flex flex-col items-center gap-4 py-5 text-xs text-white/50 md:flex-row md:justify-between">
+          <p>© {year} IT Hub Africa. All rights reserved.</p>
+          <nav aria-label="Policies and company">
+            <ul className="flex flex-wrap justify-center gap-x-5 gap-y-2">
+              {[...LEGAL_LINKS, ...COMPANY_LINKS].map(link => (
+                <li key={link.to}><Link to={link.to} className="transition-colors hover:text-white">{link.label}</Link></li>
+              ))}
+              <li><button type="button" onClick={openPreferences} className="transition-colors hover:text-white">Cookie settings</button></li>
+            </ul>
+          </nav>
+        </div>
       </div>
     </footer>
   );

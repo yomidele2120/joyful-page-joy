@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Send } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import HeroCarousel from '@/components/HeroCarousel';
 import TrustStrip from '@/components/TrustStrip';
@@ -13,7 +12,6 @@ import { bnplEligibleForPrice, useMarketplaceSettings, usePayLaterAvailable, use
 import { activeProvider, providerName } from '@/lib/bnplProvider';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { FlyerBanner, pickImages } from '@/components/flyers/Flyers';
 import { FLYERS } from '@/lib/flyers';
 import { useFlyers } from '@/hooks/useFlyers';
@@ -226,22 +224,13 @@ export default function Index() {
 
       <StoreVisitSection />
 
-      <section className="py-14 md:py-20 bg-foreground dark:bg-black text-background dark:text-white">
-        <div className="container max-w-lg text-center">
-          <h2 className="font-heading text-2xl md:text-3xl font-bold mb-2 text-background dark:text-white">Stay Updated</h2>
-          <p className="text-background/70 dark:text-white/70 text-sm md:text-base mb-7">
-            Get the latest deals and product updates directly to your inbox.
-          </p>
-          <form className="flex gap-2" onSubmit={e => e.preventDefault()}>
-            <Input
-              placeholder="Enter your email"
-              type="email"
-              className="flex-1 bg-background/20 dark:bg-white/10 border-background/30 dark:border-white/20 text-background dark:text-white placeholder:text-background/50 dark:placeholder:text-white/50 h-11"
-            />
-            <Button type="submit" size="lg" className="shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground">
-              <Send className="w-4 h-4 mr-1.5" /> Subscribe
-            </Button>
-          </form>
+      <section className="bg-[#0a2236] py-12 text-white md:py-16">
+        <div className="container flex max-w-[1200px] flex-col items-start justify-between gap-6 md:flex-row md:items-center">
+          <div>
+            <h2 className="font-heading text-2xl font-bold md:text-3xl">Have something to sell?</h2>
+            <p className="mt-2 max-w-md text-sm text-white/70 md:text-base">Open a shop, list your products and get paid into your bank account. The free plan costs nothing.</p>
+          </div>
+          <Link to="/sell" className="shrink-0 rounded-md bg-[#f26a1b] px-6 py-3 text-base font-semibold text-white transition-colors hover:bg-[#d95c12]">Start selling</Link>
         </div>
       </section>
     </Layout>
