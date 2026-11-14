@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { kickAdWorker } from '../_shared/adKick.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -104,6 +105,10 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // The payment is verified and the membership finalised. If the plan includes homepage promotion, the database has
+    // already queued a banner job; this just starts the worker now (fire-and-forget, never affects this response).
+    kickAdWorker();
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

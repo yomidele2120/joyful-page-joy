@@ -7,6 +7,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCallsEnabled } from '@/hooks/useCallsEnabled';
 import { useCalls } from '@/contexts/CallContext';
 import { pairMayCall, type CallType } from '@/lib/zego';
+import { joinCallQueue } from '@/hooks/useCallQueue';
+import { nextStep, positionText, queueReasonText } from '@/lib/calls/callQueue';
 
 interface Props {
   peerUserId?: string | null; peerName: string; peerIsVendor: boolean; className?: string;
@@ -28,7 +30,16 @@ export default function CallButtons({ peerUserId, peerName, peerIsVendor, classN
   const go = async (type: CallType) => {
     if (!user) { toast.message('Sign in to call this supplier'); navigate('/users-login'); return; }
     setBusy(true);
-    try { await startCall(peerUserId, peerName, type); } finally { setBusy(false); }
+    try {
+      // Buyers calling a supplier go through the waiting list first: it says "call now" when the supplier is free.
+      if (!isVendor && peerIsVendor) {
+        const r = await joinCallQueue(peerUserId, type);
+        const step = nextStep(r);
+        if (step === 'wait') { toast.success(`${peerName} is on another call. You are on the waiting list. ${positionText(r?.position ?? 1)}.`); return; }
+        if (step === 'message' && r && r.action !== 'unavailable') { toast.error(r.action === 'queue_full' ? 'This supplier is busy and the waiting list is full. Please try again later.' : queueReasonText(r.reason)); return; }
+      }
+      await startCall(peerUserId, peerName, type);
+    } finally { setBusy(false); }
   };
   if (layout === 'labelled') {
     // Two siblings (no wrapper) so they take part in the parent's grid or flex row like the other action buttons.

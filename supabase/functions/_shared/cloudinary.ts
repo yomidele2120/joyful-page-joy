@@ -65,3 +65,37 @@ export async function uploadRemoteImage(
   if (!res.ok || typeof json.secure_url !== "string") throw new Error(`Cloudinary upload failed (${res.status})`);
   return { url: json.secure_url, publicId: json.public_id };
 }
+
+/**
+ * Uploads AI banner artwork to `marketplace/vendors/<vendorId>/ads/<campaignId>-<tag>`.
+ * The artwork has no text in it; the website draws the shop name, logo and wording over it, and asks Cloudinary for
+ * the desktop / tablet / mobile crops. Re-running with the same tag replaces the same file.
+ */
+export async function uploadAdArtwork(
+  bytes: Uint8Array, contentType: string, vendorId: string, campaignId: string, tag: string,
+): Promise<{ url: string; publicId: string }> {
+  const cloud = Deno.env.get("CLOUDINARY_CLOUD_NAME")!;
+  const apiKey = Deno.env.get("CLOUDINARY_API_KEY")!;
+  const secret = Deno.env.get("CLOUDINARY_API_SECRET")!;
+  if (!/^[0-9a-f-]{36}$/i.test(vendorId) || !/^[0-9a-f-]{36}$/i.test(campaignId) || !/^[A-Za-z0-9_-]{1,40}$/.test(tag)) {
+    throw new Error("Invalid identifiers for ad artwork upload");
+  }
+  const publicId = `marketplace/vendors/${vendorId}/ads/${campaignId}-${tag}`;
+  const timestamp = Math.round(Date.now() / 1000);
+  const allowed = "jpg,jpeg,png,webp";
+  const signature = await sha1Hex(`allowed_formats=${allowed}&overwrite=true&public_id=${publicId}&timestamp=${timestamp}${secret}`);
+  const form = new FormData();
+  form.append("file", new Blob([bytes as BlobPart], { type: contentType }), "banner");
+  form.append("api_key", apiKey);
+  form.append("timestamp", String(timestamp));
+  form.append("signature", signature);
+  form.append("public_id", publicId);
+  form.append("overwrite", "true");
+  form.append("allowed_formats", allowed);
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${cloud}/image/upload`, {
+    method: "POST", body: form, signal: AbortSignal.timeout(45_000),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok || typeof json.secure_url !== "string") throw new Error(`Cloudinary upload failed (${res.status})`);
+  return { url: json.secure_url, publicId: json.public_id };
+}

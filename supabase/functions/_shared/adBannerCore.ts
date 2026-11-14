@@ -1,0 +1,326 @@
+// Pure logic for AI banner generation. No Deno, network or database calls in this file, so it can be unit-tested
+// with Node:   node --test supabase/functions/_shared/adBannerCore.test.ts
+//
+// The copy rules mirror the database function public.ad_copy_is_safe so that text the worker accepts is also text
+// the database accepts.
+
+export type ArtCategory = 'electronics' | 'fashion' | 'beauty' | 'home' | 'food' | 'phones' | 'general';
+
+export interface VendorForAd {
+  storeName: string;
+  storeDescription?: string | null;
+  businessType?: string | null;
+  categories?: string[] | null;          // vendors.product_categories
+}
+export interface ProductForAd {
+  name: string;
+  categoryName?: string | null;
+}
+
+// ------------------------------------------------------------------ category detection
+const KEYWORDS: Record<Exclude<ArtCategory, 'general'>, string[]> = {
+  phones: ['phone', 'phones', 'mobile', 'smartphone', 'smartphones', 'iphone', 'android', 'gsm', 'sim', 'earbuds', 'charger', 'chargers', 'powerbank', 'cases', 'accessories'],
+  electronics: ['electronic', 'electronics', 'laptop', 'laptops', 'computer', 'computers', 'tv', 'television', 'audio', 'speaker', 'speakers', 'gadget', 'gadgets', 'camera', 'cameras', 'gaming', 'console', 'monitor', 'printer', 'tech'],
+  fashion: ['fashion', 'cloth', 'clothes', 'clothing', 'wear', 'apparel', 'shoe', 'shoes', 'sneakers', 'bag', 'bags', 'ankara', 'fabric', 'fabrics', 'jewelry', 'jewellery', 'dress', 'dresses', 'tailoring', 'textile', 'textiles'],
+  beauty: ['beauty', 'cosmetic', 'cosmetics', 'skincare', 'skin', 'hair', 'makeup', 'perfume', 'perfumes', 'fragrance', 'fragrances', 'wig', 'wigs', 'salon', 'grooming', 'nails'],
+  home: ['home', 'furniture', 'kitchen', 'decor', 'bed', 'beds', 'sofa', 'sofas', 'household', 'appliance', 'appliances', 'lighting', 'mattress', 'curtain', 'curtains', 'interior'],
+  food: ['food', 'foods', 'grocery', 'groceries', 'snack', 'snacks', 'drink', 'drinks', 'beverage', 'spice', 'spices', 'bakery', 'restaurant', 'catering', 'farm', 'fresh', 'produce', 'agro'],
+};
+// Used to break ties (earlier wins).
+const PRIORITY: Exclude<ArtCategory, 'general'>[] = ['phones', 'electronics', 'fashion', 'beauty', 'home', 'food'];
+
+function words(text: string | null | undefined): string[] {
+  return (text ?? '').toLowerCase().split(/[^a-z]+/).filter(Boolean);
+}
+
+export function detectArtCategory(vendor: VendorForAd, products: ProductForAd[] = []): ArtCategory {
+  const score: Record<string, number> = {};
+  const add = (list: string[], weight: number) => {
+    for (const w of list) {
+      for (const cat of PRIORITY) if (KEYWORDS[cat].includes(w)) score[cat] = (score[cat] ?? 0) + weight;
+    }
+  };
+  add((vendor.categories ?? []).flatMap(words), 3);
+  add(words(vendor.businessType), 2);
+  add(products.flatMap((p) => words(p.categoryName)), 2);
+  add(words(vendor.storeDescription), 1);
+  add(products.flatMap((p) => words(p.name)), 1);
+  let best: ArtCategory = 'general';
+  let bestScore = 0;
+  for (const cat of PRIORITY) {
+    if ((score[cat] ?? 0) > bestScore) { best = cat; bestScore = score[cat]; }
+  }
+  return best;
+}
+
+// ------------------------------------------------------------------ text safety
+const UNSAFE_TERMS = /\b(nude|naked|nsfw|porn|sex|sexy|erotic|gore|blood|kill|killing|murder|suicide|terror|terrorist|bomb|gun|guns|rifle|weapon|weapons|drug|drugs|cocaine|heroin|marijuana|cannabis|hate|racist|nazi|swastika|isis|fraud|scam)\b/i;
+
+export function containsUnsafeTerms(text: string | null | undefined): boolean {
+  return UNSAFE_TERMS.test(text ?? '');
+}
+
+/** Reduces vendor-written text to a few harmless words that are safe to place inside an image prompt. */
+export function sanitizeForPrompt(text: string | null | undefined, maxChars = 80): string {
+  const cleaned = (text ?? '')
+    .replace(/https?:\/\/\S+/gi, ' ')
+    .replace(/[^A-Za-z\s,'-]/g, ' ')       // letters only: no digits, symbols, markup or punctuation-based instructions
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, maxChars)
+    .trim();
+  if (!cleaned || containsUnsafeTerms(cleaned)) return '';
+  if (/\b(ignore|disregard|forget|system|prompt|instruction|instructions|override|jailbreak)\b/i.test(cleaned)) return '';
+  return cleaned;
+}
+
+// ------------------------------------------------------------------ copy rules (mirror of ad_copy_is_safe)
+const COPY_BAD_CHARS = /[<>0-9%₦$€£#]/;
+const COPY_LINKS = /(https?:|www\.|@)/i;
+const COPY_WORDS = /\b(free|guarantee|guaranteed|guarantees|warranty|certified|certification|authentic|genuine|official|cheapest|cheap|discount|discounts|sale|clearance|stock|bargain|giveaway)\b/i;
+const COPY_PHRASES = /(lowest price|best price|price drop|money back|limited time|while stocks)/i;
+
+export function copyIsSafe(text: string | null | undefined): boolean {
+  const t = text ?? '';
+  return t.trim().length > 0 && !COPY_BAD_CHARS.test(t) && !COPY_LINKS.test(t) && !COPY_WORDS.test(t) && !COPY_PHRASES.test(t)
+    && !containsUnsafeTerms(t);
+}
+
+export interface Copy { headline: string; description: string }
+export interface CopyCheck { ok: boolean; reasons: string[]; copy?: Copy }
+
+export function validateCopy(headline: unknown, description: unknown): CopyCheck {
+  const reasons: string[] = [];
+  const h = typeof headline === 'string' ? headline.replace(/\s+/g, ' ').trim() : '';
+  const d = typeof description === 'string' ? description.replace(/\s+/g, ' ').trim() : '';
+  if (h.length < 3 || h.length > 60) reasons.push('headline length must be 3-60 characters');
+  if (d.length < 10 || d.length > 160) reasons.push('description length must be 10-160 characters');
+  if (!copyIsSafe(h)) reasons.push('headline contains a number, price, link or restricted claim');
+  if (!copyIsSafe(d)) reasons.push('description contains a number, price, link or restricted claim');
+  return reasons.length ? { ok: false, reasons } : { ok: true, reasons, copy: { headline: h, description: d } };
+}
+
+/** Parses a model reply that should be JSON, tolerating code fences and surrounding text. */
+export function parseCopyResponse(raw: string | null | undefined): CopyCheck {
+  if (!raw) return { ok: false, reasons: ['empty response'] };
+  const stripped = raw.replace(/```(?:json)?/gi, '').trim();
+  const start = stripped.indexOf('{');
+  const end = stripped.lastIndexOf('}');
+  if (start < 0 || end <= start) return { ok: false, reasons: ['no JSON object found'] };
+  try {
+    const obj = JSON.parse(stripped.slice(start, end + 1));
+    return validateCopy(obj?.headline, obj?.description);
+  } catch {
+    return { ok: false, reasons: ['response was not valid JSON'] };
+  }
+}
+
+// ------------------------------------------------------------------ template copy (always-valid fallback)
+const TEMPLATES: Record<ArtCategory, Copy[]> = {
+  electronics: [
+    { headline: 'Discover Premium Electronics', description: 'Browse a curated range of electronics from a shop on the ITHUBAFRICA marketplace.' },
+    { headline: 'Explore Quality Electronics', description: 'See what this shop has to offer and find your next favourite device.' },
+  ],
+  phones: [
+    { headline: 'Find Your Next Phone', description: 'Browse phones and accessories from a trusted shop on the ITHUBAFRICA marketplace.' },
+    { headline: 'Discover Phones And Accessories', description: 'Visit the shop to see the latest phones and accessories on offer.' },
+  ],
+  fashion: [
+    { headline: 'Shop The Latest Fashion', description: 'Explore styles and collections from a shop on the ITHUBAFRICA marketplace.' },
+    { headline: 'Discover Fresh Styles', description: 'Visit the shop to browse clothing, footwear and accessories.' },
+  ],
+  beauty: [
+    { headline: 'Discover Beauty Essentials', description: 'Browse beauty and personal care products from a shop on the ITHUBAFRICA marketplace.' },
+    { headline: 'Explore Beauty And Care', description: 'Visit the shop to see skincare, hair and beauty products on offer.' },
+  ],
+  home: [
+    { headline: 'Explore Quality Home Essentials', description: 'Browse furniture and home products from a shop on the ITHUBAFRICA marketplace.' },
+    { headline: 'Make Your Space Feel Like Home', description: 'Visit the shop to see furniture, decor and household products.' },
+  ],
+  food: [
+    { headline: 'Discover Fresh Flavours', description: 'Browse food and drink products from a shop on the ITHUBAFRICA marketplace.' },
+    { headline: 'Explore Tasty Favourites', description: 'Visit the shop to see the food and groceries on offer.' },
+  ],
+  general: [
+    { headline: 'Find Your Next Favourite Product', description: 'Browse a wide range of products from a shop on the ITHUBAFRICA marketplace.' },
+    { headline: 'Discover Something New Today', description: 'Visit the shop to explore the products on offer.' },
+  ],
+};
+
+/** Deterministic pick so the same shop gets stable copy. `seed` is any string (vendor or campaign id). */
+export function templateCopy(category: ArtCategory, seed: string): Copy {
+  const list = TEMPLATES[category] ?? TEMPLATES.general;
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  return list[h % list.length];
+}
+
+// ------------------------------------------------------------------ prompts
+const SCENES: Record<ArtCategory, { scene: string; palette: string }> = {
+  electronics: { scene: 'a sleek modern tech workspace with abstract glowing devices, soft reflections and clean geometric shapes', palette: 'deep navy, electric blue and cool silver' },
+  phones: { scene: 'floating abstract smartphones and accessory shapes with soft light trails over a clean gradient', palette: 'midnight blue, violet and bright cyan highlights' },
+  fashion: { scene: 'an elegant fashion boutique atmosphere with draped fabric, soft studio lighting and tasteful abstract garment shapes, no people', palette: 'warm cream, deep burgundy and gold accents' },
+  beauty: { scene: 'a calm luxurious beauty setting with soft petals, glass surfaces and gentle light, abstract product silhouettes without labels', palette: 'blush pink, soft peach and champagne gold' },
+  home: { scene: 'a bright welcoming living space with warm natural light, abstract furniture shapes and plants', palette: 'warm oak, soft white and sage green' },
+  food: { scene: 'a fresh colourful table of ingredients and produce in warm natural light, appetising and clean, no packaging or labels', palette: 'warm orange, fresh green and cream' },
+  general: { scene: 'an inviting modern marketplace atmosphere with abstract shapes, soft depth and gentle lighting', palette: 'ITHUBAFRICA teal, warm gold and soft white' },
+};
+
+export interface PromptInput {
+  category: ArtCategory;
+  vendorHint?: string | null;         // vendor's promotional message or description, sanitised below
+  subjects?: string[];                // generic category / product-type words ONLY (never product or brand names)
+}
+
+/**
+ * The image prompt. The SHOP NAME IS DELIBERATELY NOT INCLUDED, and the model is told to draw no text at all: the
+ * name, logo and wording are drawn later by the website from real data, so the art can never show a wrong or invented name.
+ */
+export function buildImagePrompt(input: PromptInput): string {
+  const s = SCENES[input.category] ?? SCENES.general;
+  const hint = sanitizeForPrompt(input.vendorHint, 80);
+  const subjects = (input.subjects ?? []).map((n) => sanitizeForPrompt(n, 30)).filter(Boolean).slice(0, 3);
+  const lines = [
+    'Create a premium, professional e-commerce advertising banner background image.',
+    `Scene: ${s.scene}.`,
+    `Colour palette: ${s.palette}.`,
+    'Composition: ultra-wide landscape banner. Keep the main visual interest in the centre and right two thirds, and leave the left third calm and uncluttered with soft gradient so text can be placed over it later.',
+    'Style: polished commercial photography / refined digital render, sharp, high quality, balanced lighting, subtle depth of field.',
+  ];
+  if (subjects.length) lines.push(`Loose subject inspiration (product types only): ${subjects.join(', ')}.`);
+  if (hint) lines.push(`Mood hint: ${hint}.`);
+  lines.push(
+    'STRICT RULES: The image must contain absolutely NO text, letters, numbers, words, captions, logos, brand marks, watermarks, signs, labels, price tags, badges or UI elements.',
+    'Do not show identifiable people or faces. Do not depict real brands or trademarked products. Nothing violent, sexual, political or offensive.',
+  );
+  return lines.join('\n');
+}
+
+export function buildCopyPrompt(vendor: VendorForAd, category: ArtCategory, vendorMessage?: string | null): { system: string; user: string } {
+  const desc = sanitizeForPrompt(vendor.storeDescription, 160);
+  const msg = sanitizeForPrompt(vendorMessage, 100);
+  return {
+    system: [
+      'You write short promotional copy for online marketplace shop banners.',
+      'Return ONLY a JSON object: {"headline": string, "description": string}.',
+      'headline: 3 to 6 words. description: one sentence of 8 to 20 words.',
+      'Hard rules: no digits or numbers, no prices, no percentages, no currency symbols, no discounts or sales, no guarantees or warranties,',
+      'no certifications or claims of being official, genuine or authentic, no claims about stock or availability, no superlatives like cheapest or best price,',
+      'no links, no @handles, no emojis, no hashtags. Do not invent facts about the shop. Be inviting and general.',
+    ].join(' '),
+    user: [
+      `Shop category: ${category}.`,
+      desc ? `Shop description (context only): ${desc}.` : '',
+      msg ? `Vendor message (tone hint only): ${msg}.` : '',
+      'Examples of the style wanted: "Discover Premium Electronics", "Shop the Latest Fashion", "Explore Quality Home Essentials".',
+    ].filter(Boolean).join('\n'),
+  };
+}
+
+export const MODERATION_PROMPT = [
+  'You are a strict ad-image reviewer for a family-friendly marketplace.',
+  'Look at the image and answer ONLY with JSON: {"safe": boolean, "contains_text": boolean, "contains_logo": boolean, "contains_face": boolean, "reasons": string[]}.',
+  'safe=false for violence, nudity, sexual or suggestive content, hate symbols, drugs, weapons or anything misleading.',
+  'contains_text=true if ANY readable letters, numbers or words appear anywhere. contains_logo=true if any brand mark or logo appears.',
+  'contains_face=true if a human face is clearly visible.',
+].join(' ');
+
+export interface ModerationResult { safe: boolean; contains_text: boolean; contains_logo: boolean; contains_face: boolean; reasons: string[] }
+
+export function parseModerationResponse(raw: string | null | undefined): ModerationResult | null {
+  if (!raw) return null;
+  const stripped = raw.replace(/```(?:json)?/gi, '').trim();
+  const start = stripped.indexOf('{');
+  const end = stripped.lastIndexOf('}');
+  if (start < 0 || end <= start) return null;
+  try {
+    const o = JSON.parse(stripped.slice(start, end + 1));
+    if (typeof o.safe !== 'boolean') return null;
+    return {
+      safe: o.safe,
+      contains_text: o.contains_text === true,
+      contains_logo: o.contains_logo === true,
+      contains_face: o.contains_face === true,
+      reasons: Array.isArray(o.reasons) ? o.reasons.filter((r: unknown) => typeof r === 'string').slice(0, 5) : [],
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** An image is accepted only when it is safe and free of text, logos and faces. */
+export function moderationDecision(r: ModerationResult): { pass: boolean; flags: string[] } {
+  const flags: string[] = [];
+  if (!r.safe) flags.push('unsafe');
+  if (r.contains_text) flags.push('contains_text');
+  if (r.contains_logo) flags.push('contains_logo');
+  if (r.contains_face) flags.push('contains_face');
+  return { pass: flags.length === 0, flags };
+}
+
+// ------------------------------------------------------------------ image inspection
+export interface ImageInfo { ok: boolean; reason?: string; mime?: string; width?: number; height?: number; bytes: number }
+
+const MIN_BYTES = 20_000;
+const MAX_BYTES = 10 * 1024 * 1024;
+const MIN_WIDTH = 800;
+
+/** Checks the real file signature (never trusts the declared type) and reads the pixel size. */
+export function inspectImage(bytes: Uint8Array): ImageInfo {
+  const n = bytes.length;
+  if (n < MIN_BYTES) return { ok: false, reason: 'image is too small', bytes: n };
+  if (n > MAX_BYTES) return { ok: false, reason: 'image is too large', bytes: n };
+  let mime: string | undefined; let width = 0; let height = 0;
+
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) {
+    mime = 'image/png';
+    const dv = new DataView(bytes.buffer, bytes.byteOffset, n);
+    width = dv.getUint32(16); height = dv.getUint32(20);
+  } else if (bytes[0] === 0xff && bytes[1] === 0xd8) {
+    mime = 'image/jpeg';
+    let i = 2;
+    while (i + 9 < n) {
+      if (bytes[i] !== 0xff) { i++; continue; }
+      const marker = bytes[i + 1];
+      if (marker === 0xd8 || marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) { i += 2; continue; }
+      const len = (bytes[i + 2] << 8) | bytes[i + 3];
+      if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+        height = (bytes[i + 5] << 8) | bytes[i + 6]; width = (bytes[i + 7] << 8) | bytes[i + 8];
+        break;
+      }
+      i += 2 + len;
+    }
+  } else if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) {
+    mime = 'image/webp';
+    const tag = String.fromCharCode(bytes[12], bytes[13], bytes[14], bytes[15]);
+    if (tag === 'VP8X') { width = 1 + (bytes[24] | (bytes[25] << 8) | (bytes[26] << 16)); height = 1 + (bytes[27] | (bytes[28] << 8) | (bytes[29] << 16)); }
+    else if (tag === 'VP8 ') { width = (bytes[26] | (bytes[27] << 8)) & 0x3fff; height = (bytes[28] | (bytes[29] << 8)) & 0x3fff; }
+    else if (tag === 'VP8L') { const b = bytes[21] | (bytes[22] << 8) | (bytes[23] << 16) | (bytes[24] << 24); width = 1 + (b & 0x3fff); height = 1 + ((b >> 14) & 0x3fff); }
+  } else {
+    return { ok: false, reason: 'not a PNG, JPEG or WebP image', bytes: n };
+  }
+
+  if (!width || !height) return { ok: false, reason: 'could not read image size', mime, bytes: n };
+  if (width < MIN_WIDTH) return { ok: false, reason: `image is only ${width}px wide`, mime, width, height, bytes: n };
+  const ratio = width / height;
+  if (ratio < 1.2 || ratio > 3.6) return { ok: false, reason: `unsuitable shape (${width}x${height})`, mime, width, height, bytes: n };
+  return { ok: true, mime, width, height, bytes: n };
+}
+
+// ------------------------------------------------------------------ misc
+export function estimateCostUsd(imageCostUsd: number, textCalls: number, visionCalls: number): number {
+  const TEXT_CALL = 0.001;   // rough: a short text or vision call. An estimate only, not Google's billing.
+  return Math.round((imageCostUsd + (textCalls + visionCalls) * TEXT_CALL) * 10000) / 10000;
+}
+
+export type FailureKind = { code: string; retryable: boolean };
+
+/** Maps an HTTP status from the AI provider to a failure code and whether retrying can help. */
+export function classifyProviderStatus(status: number): FailureKind {
+  if (status === 401 || status === 403) return { code: 'provider_auth', retryable: false };
+  if (status === 429) return { code: 'provider_rate_limited', retryable: true };
+  if (status === 404) return { code: 'provider_model_not_found', retryable: false };
+  if (status >= 500) return { code: 'provider_unavailable', retryable: true };
+  if (status === 400) return { code: 'provider_rejected_request', retryable: true };
+  return { code: `provider_http_${status}`, retryable: true };
+}

@@ -14,6 +14,8 @@ import { formatCompactNumber } from '@/lib/format';
 import { toast } from 'sonner';
 import CallButtons from '@/components/calls/CallButtons';
 import { formatResponseTime, useVendorReputation } from '@/hooks/useVendorReputation';
+import ShopSocialBanner from '@/components/ads/ShopSocialBanner';
+import { useShopAdAttribution } from '@/components/ads/useAdAttribution';
 
 export default function SupplierShop() {
   const { vendorId } = useParams();
@@ -31,6 +33,7 @@ export default function SupplierShop() {
     enabled: !!vendorId,
   });
   const { data: reputation } = useVendorReputation(vendor?.id);
+  useShopAdAttribution(searchParams.toString() ? `?${searchParams.toString()}` : '', !!vendor && user?.id !== vendor.user_id);
 
   // A shop can hold hundreds of thousands of products, so it loads one page at a time from the database.
   const [page, setPage] = useState(1);
@@ -204,6 +207,7 @@ export default function SupplierShop() {
           <p className="text-muted-foreground text-center py-8">This shop hasn't posted any videos yet.</p>
         )}
       </div>
+      <ShopSocialBanner vendorId={vendor.id} isOwnShop={isOwnShop} />
     </Layout>
   );
 }

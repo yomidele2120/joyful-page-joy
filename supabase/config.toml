@@ -15,6 +15,11 @@ verify_jwt = false
 [functions.paystack-webhook]
 verify_jwt = false
 
+# Advertising banner worker: server-to-server only. It authenticates inside the function with the service-role key or
+# AD_WORKER_SECRET, so the platform JWT check is switched off (like the payment functions above).
+[functions.ad-process-jobs]
+verify_jwt = false
+
 [functions.email-notifications]
 verify_jwt = false
 
@@ -79,4 +84,13 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.google-merchant]
+verify_jwt = false
+
+[functions.initialize-ad-boost]
+verify_jwt = false
+
+[functions.verify-ad-boost]
+verify_jwt = false
+
+[functions.ai-product-assist]
 verify_jwt = false

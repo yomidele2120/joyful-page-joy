@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import AiListingAssist from '@/components/dashboard/AiListingAssist';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,7 +28,7 @@ import { functionErrorMessage } from '@/lib/functionError';
 import { BANKS, BANK_PLACEHOLDER, isValidAccountNumber } from '@/lib/banks';
 import { formatNaira } from '@/lib/format';
 import { useCategories } from '@/hooks/useProducts';
-import { Package, ShoppingCart, DollarSign, Plus, LogOut, ArrowLeft, Trash2, Store, Upload, MessageCircle, AlertCircle, Clock, CheckCircle, CreditCard, LayoutDashboard, Film, Settings, ExternalLink, Pencil } from 'lucide-react';
+import { Package, ShoppingCart, DollarSign, Plus, LogOut, ArrowLeft, Trash2, Store, Upload, MessageCircle, AlertCircle, Clock, CheckCircle, CreditCard, LayoutDashboard, Film, Settings, ExternalLink, Pencil, Megaphone } from 'lucide-react';
 import DashboardShell, { Panel, StatCard, WelcomeBanner, useTabParam, type DashNavItem } from '@/components/dashboard/DashboardShell';
 import { BrandFlyerBanner } from '@/components/flyers/BrandFlyerImage';
 import { BRAND_FLYERS } from '@/lib/brandFlyers';
@@ -37,6 +38,7 @@ import VendorOrdersTab, { type VendorOrder } from '@/components/dashboard/Vendor
 import SupplierAgreementPanel from '@/components/dashboard/SupplierAgreementPanel';
 import SupplierVerification from '@/components/verification/SupplierVerification';
 import SupplierMembershipTab from '@/components/dashboard/SupplierMembershipTab';
+import VendorAdvertisingTab from '@/components/dashboard/VendorAdvertisingTab';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 export default function SupplierDashboard() {
@@ -45,7 +47,7 @@ export default function SupplierDashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useTabParam('overview', ['overview', 'products', 'videos', 'orders', 'disputes', 'add-product', 'membership', 'shop-settings']);
+  const [activeTab, setActiveTab] = useTabParam('overview', ['overview', 'products', 'videos', 'orders', 'disputes', 'add-product', 'membership', 'advertising', 'shop-settings']);
   const [preorderProduct, setPreorderProduct] = useState<any>(null);
   const [priceProduct, setPriceProduct] = useState<any>(null);
   const [editProductId, setEditProductId] = useState<string | null>(null);
@@ -193,6 +195,7 @@ export default function SupplierDashboard() {
         { key: 'disputes', label: 'Disputes', icon: AlertCircle, group: 'Sales' },
         { key: 'videos', label: 'Videos', icon: Film, group: 'Grow' },
         { key: 'membership', label: 'Membership', icon: CreditCard, group: 'Grow' },
+        { key: 'advertising', label: 'Advertising', icon: Megaphone, group: 'Grow' },
         { key: 'shop-settings', label: 'Shop settings', icon: Settings, group: 'Account' },
       ]
     : [{ key: 'shop-settings', label: 'Shop settings', icon: Settings, group: 'Account' }];
@@ -480,6 +483,7 @@ export default function SupplierDashboard() {
             {activeTab === 'disputes' && <SellerDisputes vendorId={vendor.id} />}
 
             {activeTab === 'membership' && <SupplierMembershipTab vendorId={vendor.id} />}
+            {activeTab === 'advertising' && <VendorAdvertisingTab vendorId={vendor.id} />}
 
             {activeTab === 'add-product' && (
               <SupplierAddProduct vendorId={vendor.id} categories={categories || []} onSuccess={() => {
@@ -698,6 +702,7 @@ function SupplierAddProduct({ vendorId, categories, onSuccess }: { vendorId: str
       <div><Label>Product video URL (optional)</Label><Input placeholder="https://..." value={form.video_url} onChange={e => setForm(p => ({ ...p, video_url: e.target.value }))} /></div>
 
       <div><Label>Description</Label><Textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} /></div>
+      <AiListingAssist name={form.name} description={form.description} onUseTitle={v => setForm(p => ({ ...p, name: v }))} onUseDescription={v => setForm(p => ({ ...p, description: v }))} />
       <Button type="submit" disabled={loading}>{loading ? 'Adding...' : 'Add Product'}</Button>
     </form>
   );

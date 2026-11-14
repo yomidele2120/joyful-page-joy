@@ -5,6 +5,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { CallProvider } from "@/contexts/CallContext";
+import CallQueueTracker from "@/components/calls/CallQueueTracker";
 import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from "react-router-dom";
 import { CartProvider } from "@/contexts/CartContext";
 import { InquiryBasketProvider } from "@/contexts/InquiryBasketContext";
@@ -115,6 +116,7 @@ const App = () => (
             <CookieConsent />
             <Tracker />
             <VideoUploadResumer />
+            <CallQueueTracker />
             <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/" element={<Index />} />

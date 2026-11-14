@@ -23,6 +23,7 @@ import { BRAND_FLYERS } from '@/lib/brandFlyers';
 import BrandMarquee from '@/components/BrandMarquee';
 import { StoreVisitSection } from '@/components/StoreVisit';
 import CategoryShelves from '@/components/CategoryShelves';
+import { FeaturedAds, RotatingAds, SponsoredRowBanner, useSponsoredRows } from '@/components/ads/HomepageAds';
 
 const FEED_PAGE = 20;
 
@@ -42,6 +43,10 @@ export default function Index() {
     () => (bnplProducts ?? []).filter(p => bnplEligibleForPrice(p, finance, payLaterOn)).slice(0, 12),
     [bnplProducts, finance, payLaterOn],
   );
+  // Which product rows are on screen, in order: sponsored banners are placed between them (admin sets the interval).
+  const showPayLater = payLaterOn && !!payLaterRow.length;
+  const showPreorder = marketplace?.preorder_enabled !== false && !!preorderProducts?.length;
+  const showLowMoq = !!lowMoq?.length && (products ?? []).some(p => getMoq(p) > 5);
   const [visible, setVisible] = useState(FEED_PAGE);
   const sentinel = useRef<HTMLDivElement>(null);
 
@@ -51,6 +56,11 @@ export default function Index() {
   );
   const newest = (products ?? []).slice(0, 12);
   const feed = products ?? [];
+  const rowKeys = useMemo(() => [
+    showPayLater && 'paylater', showPreorder && 'preorder', showLowMoq && 'lowmoq', !!featured?.length && 'featured',
+    !!deals.length && 'deals', !!newest.length && 'new',
+  ].filter((k): k is string => !!k), [showPayLater, showPreorder, showLowMoq, featured?.length, deals.length, newest.length]);
+  const sponsoredAfter = useSponsoredRows(rowKeys);
 
   // Product photos used as flyer artwork (real data only).
   const photos = useMemo(
@@ -82,6 +92,7 @@ export default function Index() {
     <Layout flushFooter>
       <HeroCarousel images={photos} />
       <TrustStrip />
+      <FeaturedAds className="container max-w-[1440px] pt-4 sm:pt-6" />
 
       <div className="container max-w-[1440px] pb-6">
         {!!suppliers?.length && (
@@ -95,46 +106,55 @@ export default function Index() {
           ? <ImageFlyerBanner className="mt-8 sm:mt-10" flyer={rowBanners[0]} />
           : hasUploadedRows ? null : <BrandFlyerBanner className="mt-8 sm:mt-10" flyer={BRAND_FLYERS.seamlessPurple} />)}
 
-        {payLaterOn && !!payLaterRow.length && (
+        {showPayLater && (<>
           <ScrollRow eyebrow="Buy now, pay later" title={`Pay later with ${providerName(activeProvider(finance))}`} linkTo="/pay-later">
             {payLaterRow.map(p => <ScrollItem key={p.id}><ProductCard {...p} /></ScrollItem>)}
           </ScrollRow>
-        )}
+          <SponsoredRowBanner ad={sponsoredAfter('paylater')} />
+        </>)}
 
-        {marketplace?.preorder_enabled !== false && !!preorderProducts?.length && (
+        {showPreorder && (<>
           <ScrollRow eyebrow="Order ahead" title="Preorders" linkTo="/preorders">
-            {preorderProducts.map(p => <ScrollItem key={p.id}><ProductCard {...p} /></ScrollItem>)}
+            {preorderProducts!.map(p => <ScrollItem key={p.id}><ProductCard {...p} /></ScrollItem>)}
           </ScrollRow>
-        )}
+          <SponsoredRowBanner ad={sponsoredAfter('preorder')} />
+        </>)}
 
-        {!!lowMoq?.length && (products ?? []).some(p => getMoq(p) > 5) && (
+        {showLowMoq && (<>
           <ScrollRow eyebrow="Start small" title="Low MOQ" linkTo="/products">
-            {lowMoq.map(p => <ScrollItem key={p.id}><ProductCard {...p} /></ScrollItem>)}
+            {lowMoq!.map(p => <ScrollItem key={p.id}><ProductCard {...p} /></ScrollItem>)}
           </ScrollRow>
-        )}
+          <SponsoredRowBanner ad={sponsoredAfter('lowmoq')} />
+        </>)}
 
-        {!!featured?.length && (
+        {!!featured?.length && (<>
           <ScrollRow eyebrow="Picked for you" title="Featured products" linkTo="/products">
             {featured.map(p => <ScrollItem key={p.id}><ProductCard {...p} /></ScrollItem>)}
           </ScrollRow>
-        )}
+          <SponsoredRowBanner ad={sponsoredAfter('featured')} />
+        </>)}
 
         {/* Flyer: wide banner after the featured row */}
         {flyersReady && (rowBanners[1]
           ? <ImageFlyerBanner className="mt-8 sm:mt-10" flyer={rowBanners[1]} />
           : hasUploadedRows ? null : <FlyerBanner className="mt-8 sm:mt-10" flyer={FLYERS.lowMoq} images={art(FLYERS.lowMoq.offset)} />)}
 
-        {!!deals.length && (
+        {!!deals.length && (<>
           <ScrollRow eyebrow="Price drops" title="Best deals" linkTo="/products">
             {deals.map(p => <ScrollItem key={p.id}><ProductCard {...p} /></ScrollItem>)}
           </ScrollRow>
-        )}
+          <SponsoredRowBanner ad={sponsoredAfter('deals')} />
+        </>)}
 
-        {!!newest.length && (
+        {!!newest.length && (<>
           <ScrollRow eyebrow="Just in" title="New arrivals" linkTo="/products">
             {newest.map(p => <ScrollItem key={p.id}><ProductCard {...p} /></ScrollItem>)}
           </ScrollRow>
-        )}
+          <SponsoredRowBanner ad={sponsoredAfter('new')} />
+        </>)}
+
+        {/* Rotating sponsored banner (changes every few minutes) */}
+        <RotatingAds className="mt-8 sm:mt-10" />
 
         {/* One row per category that has products (loads each row as it scrolls into view) */}
         <CategoryShelves />

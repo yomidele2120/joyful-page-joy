@@ -19,6 +19,8 @@ import SubscriptionsTab from '@/components/admin/SubscriptionsTab';
 import SupplierPlansTab from '@/components/admin/SupplierPlansTab';
 import AiProductIntelligenceTab from '@/components/admin/AiProductIntelligenceTab';
 import CampaignManagerTab from '@/components/admin/CampaignManagerTab';
+import AdminAdvertisingTab from '@/components/admin/AdminAdvertisingTab';
+import { AuditLogTab, CallQueueTab } from '@/components/admin/CallQueueAuditTab';
 import RiskReviewTab from '@/components/admin/RiskReviewTab';
 import SocialSeoTab from '@/components/admin/SocialSeoTab';
 import GoogleMerchantTab from '@/components/admin/GoogleMerchantTab';
@@ -289,12 +291,14 @@ export default function AdminDashboard() {
     { key: 'supplier-plans', label: 'Supplier plans', icon: CreditCard, group: 'Marketplace' },
     { key: 'ai-intelligence', label: 'AI listing tools', icon: Sparkles, group: 'Marketplace' },
     { key: 'campaigns', label: 'Campaign manager', icon: BadgeDollarSign, group: 'Marketplace' },
+    { key: 'vendor-ads', label: 'Vendor advertising', icon: Megaphone, group: 'Marketplace' },
     { key: 'risk-review', label: 'Risk review', icon: ShieldAlert, group: 'Marketplace' },
     { key: 'social-seo', label: 'Social & SEO', icon: Globe, group: 'Marketplace' },
     { key: 'google-merchant', label: 'Google Merchant', icon: ShoppingBag, group: 'Marketplace' },
     { key: 'tiktok', label: 'TikTok for sellers', icon: Video, group: 'Marketplace' },
     { key: 'merchant-center', label: 'Google Merchant Center', icon: ShoppingBag, group: 'Marketplace' },
     { key: 'calls', label: 'Voice and video calls', icon: Phone, group: 'Marketplace' },
+    { key: 'call-queue', label: 'Call waiting list', icon: Phone, group: 'Marketplace' },
     { key: 'orders', label: 'Orders', icon: ShoppingCart, group: 'Sales' },
     { key: 'payments', label: 'Payments', icon: CreditCard, group: 'Sales' },
     { key: 'finance', label: 'Finance', icon: Landmark, group: 'Sales' },
@@ -304,6 +308,7 @@ export default function AdminDashboard() {
     { key: 'moderation', label: 'Moderation', icon: Flag, badge: pendingReports?.length ?? 0, group: 'Community' },
     { key: 'subscriptions', label: 'Subscriptions', icon: CalendarClock, badge: subscriptionAlerts, group: 'System' },
     { key: 'email-notifications', label: 'Email notifications', icon: Mail, group: 'System' },
+    { key: 'audit-log', label: 'Audit log', icon: ShieldAlert, group: 'System' },
     { key: 'settings', label: 'Settings', icon: Settings, group: 'System' },
   ];
 
@@ -670,6 +675,9 @@ export default function AdminDashboard() {
         {activeTab === 'supplier-plans' && <SupplierPlansTab />}
         {activeTab === 'ai-intelligence' && <AiProductIntelligenceTab />}
         {activeTab === 'campaigns' && <CampaignManagerTab />}
+        {activeTab === 'vendor-ads' && <AdminAdvertisingTab />}
+        {activeTab === 'call-queue' && <CallQueueTab />}
+        {activeTab === 'audit-log' && <AuditLogTab />}
         {activeTab === 'risk-review' && <RiskReviewTab />}
         {activeTab === 'social-seo' && <SocialSeoTab />}
         {activeTab === 'google-merchant' && <GoogleMerchantTab />}

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { validatePaystackCharge } from "../_shared/paystackCharge.ts";
+import { kickAdWorker } from "../_shared/adKick.ts";
 
 
 const corsHeaders = {
@@ -76,7 +77,19 @@ serve(async (req) => {
         if (!finalized) {
           await supabase.from('supplier_membership_payments')
             .update({ status: 'failed' }).eq('id', membershipPayment.id).eq('status', 'pending');
+        } else {
+          kickAdWorker();   // verified payment finalised: start any queued advertising banner job now
         }
+      }
+
+      // Ad boost payments (separate from subscriptions): verified above, applied only if amount and currency match our record.
+      const { data: boostPayment } = await supabase.from('ad_boost_payments').select('id').eq('paystack_reference', reference).maybeSingle();
+      if (boostPayment) {
+        const { data: boostOk, error: boostError } = await supabase.rpc('finalize_ad_boost_payment', {
+          _reference: reference, _amount_kobo: Number(charge.amount), _currency: String(charge.currency ?? ''),
+        });
+        if (boostError) throw boostError;
+        if (!boostOk) await supabase.from('ad_boost_payments').update({ status: 'failed', status_detail: 'Amount or currency did not match' }).eq('id', boostPayment.id).eq('status', 'pending');
       }
 
       // Use our own payment record (created server-side) to find the order,
@@ -133,6 +146,7 @@ serve(async (req) => {
 
     if (event.event === 'charge.failed') {
       const reference = String(event.data?.reference ?? '');
+      await supabase.from('ad_boost_payments').update({ status: 'failed' }).eq('paystack_reference', reference).eq('status', 'pending');
       await supabase.from('supplier_membership_payments')
         .update({ status: 'failed' })
         .eq('paystack_reference', reference)

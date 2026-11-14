@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useProductAdAttribution } from '@/components/ads/useAdAttribution';
 import Layout from '@/components/layout/Layout';
 import ProductCard from '@/components/ProductCard';
 import InquiryDialog, { type InquiryDialogTarget } from '@/components/InquiryDialog';
@@ -37,6 +38,7 @@ export default function ProductDetail() {
   const { slug } = useParams<{ slug: string }>();
   const { data: product, isLoading } = useProduct(slug || '');
   const { data: reputation } = useVendorReputation(product?.vendors?.id);
+  useProductAdAttribution(product?.id);
   const { currency, format: formatDisplay } = useCurrency();
   const { data: recommendations } = useProducts({ categorySlug: product?.categories?.slug, limit: 8 });
   const { addItem, items: cartItems } = useCart();
