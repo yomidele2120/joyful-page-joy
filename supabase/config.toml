@@ -94,3 +94,6 @@ verify_jwt = false
 
 [functions.ai-product-assist]
 verify_jwt = false
+
+[functions.google-ads-check]
+verify_jwt = false

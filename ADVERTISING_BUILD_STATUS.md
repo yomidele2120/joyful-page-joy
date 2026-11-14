@@ -276,3 +276,8 @@ Tests: `supabase/tests/ad_boost_payments_test.sql` (not executed), 30 Node tests
 - UI: `AiListingAssist` in the supplier product form.
 - Not run: edge function, SQL and UI were not executed here (only the core logic has tests).
 - Not built: wiring natural-language search into the Products page (`parseSearchText` exists in `src/lib/aiAssistApi.ts`), admin UI for the new limits (edit `ai_assist_settings` in the table editor), bulk/automatic listing enrichment.
+
+## Google Ads connection, step 1 (connection test only)
+- `supabase/functions/_shared/googleAds.ts` (+5 passing tests): REST client, token exchange, accessible accounts, search, secret scrubbing. API version is `GOOGLE_ADS_API_VERSION` (default v25).
+- `supabase/functions/google-ads-check`: admin-only; signs in, lists reachable accounts, reads the manager account. Changes nothing in Google Ads.
+- Not built yet: campaign creation, pausing, reporting sync, per-vendor accounts. Build these only after the check passes.
