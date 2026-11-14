@@ -84,7 +84,7 @@ GRANT EXECUTE ON FUNCTION public.zego_minutes_exhausted() TO authenticated;
 
 -- Where a subscription stands right now.
 CREATE OR REPLACE FUNCTION public.subscription_stage(_kind text, _expires timestamptz, _total integer, _used bigint)
-RETURNS text LANGUAGE sql IMMUTABLE AS $$
+RETURNS text LANGUAGE sql STABLE AS $$
   SELECT CASE
     WHEN _kind = 'term' THEN
       CASE WHEN _expires <= now() THEN 'expired'
