@@ -49,13 +49,9 @@ Deno.serve(async (req) => {
       });
     }
 
+    const billingPeriod = body.billingPeriod === 'monthly' ? 'monthly' : 'annual';
     const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
-    const [{ data: vendor }, { data: plan }] = await Promise.all([
-      admin.from('vendors').select('id, is_approved').eq('user_id', userId).maybeSingle(),
-      admin.from('supplier_membership_plans')
-        .select('slug, price_kobo, currency, period_days, is_active, purchase_enabled')
-        .eq('slug', body.planSlug).maybeSingle(),
-    ]);
+    const { data: vendor } = await admin.from('vendors').select('id, is_approved').eq('user_id', userId).maybeSingle();
 
     if (!vendor || !vendor.is_approved) {
       return new Response(JSON.stringify({ error: 'An approved supplier account is required' }), {
@@ -63,12 +59,29 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    if (!plan?.is_active || !plan.purchase_enabled || !plan.price_kobo || !plan.period_days) {
-      return new Response(JSON.stringify({ error: 'This supplier plan is not available for purchase' }), {
+
+    // The price is worked out in the database from the vendor's own record: plan, period, category and any upgrade credit.
+    // Nothing about the amount comes from the browser.
+    const { data: quote, error: quoteError } = await admin.rpc('quote_subscription', {
+      _vendor: vendor.id, _plan: body.planSlug, _period: billingPeriod,
+    });
+    if (quoteError) throw quoteError;
+    if (!quote || quote.error) {
+      const messages: Record<string, string> = {
+        plan_unavailable: 'This supplier plan is not available for purchase',
+        not_offered: 'This plan is not offered for your category',
+        downgrade_not_allowed: 'You cannot move to a lower plan while your current plan is active. You can choose it after it ends.',
+        category_required: 'Choose your business category before subscribing',
+        bad_period: 'Choose monthly or annual billing',
+      };
+      return new Response(JSON.stringify({ error: messages[quote?.error] ?? 'This supplier plan is not available for purchase' }), {
         status: 409,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+    const plan = {
+      slug: String(quote.plan_slug), price_kobo: Number(quote.payable_kobo), currency: 'NGN', period_days: Number(quote.period_days),
+    };
 
     const paystackSecret = Deno.env.get('PAYSTACK_SECRET_KEY');
     const siteUrl = Deno.env.get('SITE_URL');
@@ -97,6 +110,12 @@ Deno.serve(async (req) => {
       currency: plan.currency,
       period_days: plan.period_days,
       status: 'pending',
+      kind: quote.kind,
+      billing_period: billingPeriod,
+      pricing_category_id: quote.category_id,
+      list_price_kobo: quote.list_price_kobo,
+      credit_kobo: quote.credit_kobo,
+      previous_plan_slug: quote.previous_plan_slug,
     });
     if (paymentError) throw paymentError;
 

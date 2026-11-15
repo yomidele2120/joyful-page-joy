@@ -107,3 +107,6 @@ verify_jwt = false
 
 [functions.verify-ad-wallet-topup]
 verify_jwt = false
+
+[functions.refund-subscription-payment]
+verify_jwt = false

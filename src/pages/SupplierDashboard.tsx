@@ -28,7 +28,7 @@ import { functionErrorMessage } from '@/lib/functionError';
 import { BANKS, BANK_PLACEHOLDER, isValidAccountNumber } from '@/lib/banks';
 import { formatNaira } from '@/lib/format';
 import { useCategories } from '@/hooks/useProducts';
-import { Bell, Wallet, Users, Package, ShoppingCart, DollarSign, Plus, LogOut, ArrowLeft, Trash2, Store, Upload, MessageCircle, AlertCircle, Clock, CheckCircle, CreditCard, LayoutDashboard, Film, Settings, ExternalLink, Pencil, Megaphone, Pin } from 'lucide-react';
+import { Bell, Wallet, Users, Package, ShoppingCart, DollarSign, Plus, LogOut, ArrowLeft, Trash2, Store, Upload, MessageCircle, AlertCircle, Clock, CheckCircle, CreditCard, LayoutDashboard, Film, Settings, ExternalLink, Pencil, Megaphone, Pin, Gift } from 'lucide-react';
 import NotificationsPanel from '@/components/dashboard/NotificationsPanel';
 import VendorEarningsPanel, { useVendorBalance } from '@/components/dashboard/VendorEarningsPanel';
 import VendorFollowersPanel from '@/components/dashboard/VendorFollowersPanel';
@@ -43,6 +43,8 @@ import VendorVideosTab from '@/components/dashboard/VendorVideosTab';
 import VendorOrdersTab, { type VendorOrder } from '@/components/dashboard/VendorOrdersTab';
 import SupplierAgreementPanel from '@/components/dashboard/SupplierAgreementPanel';
 import SupplierVerification from '@/components/verification/SupplierVerification';
+import { applyStoredReferral } from '@/lib/referral';
+import ReferralPanel from '@/components/dashboard/ReferralPanel';
 import SupplierMembershipTab from '@/components/dashboard/SupplierMembershipTab';
 import VendorAdvertisingTab from '@/components/dashboard/VendorAdvertisingTab';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -53,7 +55,7 @@ export default function SupplierDashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useTabParam('overview', ['overview', 'products', 'videos', 'orders', 'disputes', 'add-product', 'membership', 'advertising', 'earnings', 'followers', 'notifications', 'shop-settings']);
+  const [activeTab, setActiveTab] = useTabParam('overview', ['overview', 'products', 'videos', 'orders', 'disputes', 'add-product', 'membership', 'referrals', 'advertising', 'earnings', 'followers', 'notifications', 'shop-settings']);
   const [preorderProduct, setPreorderProduct] = useState<any>(null);
   const [priceProduct, setPriceProduct] = useState<any>(null);
   const [editProductId, setEditProductId] = useState<string | null>(null);
@@ -119,6 +121,8 @@ export default function SupplierDashboard() {
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [confirmIds, setConfirmIds] = useState<string[] | null>(null);
   const [removing, setRemoving] = useState(false);
+  // A referral code saved from a link is attached once the supplier account exists. The server decides if it is allowed.
+  useEffect(() => { if (vendor?.id) void applyStoredReferral('link'); }, [vendor?.id]);
   useEffect(() => { setSelected(new Set()); }, [productPage, debouncedProductSearch, photoFilter]);
   const confirmRemove = async () => {
     if (!confirmIds?.length) return;
@@ -204,6 +208,7 @@ export default function SupplierDashboard() {
         { key: 'disputes', label: 'Disputes', icon: AlertCircle, group: 'Sales' },
         { key: 'videos', label: 'Videos', icon: Film, group: 'Grow' },
         { key: 'membership', label: 'Membership', icon: CreditCard, group: 'Grow' },
+        { key: 'referrals', label: 'Refer & earn', icon: Gift, group: 'Grow' },
         { key: 'advertising', label: 'Advertising', icon: Megaphone, group: 'Grow' },
         { key: 'followers', label: 'Followers', icon: Users, group: 'Grow' },
         { key: 'notifications', label: 'Notifications', icon: Bell, badge: unreadNotes, group: 'Account' },
@@ -509,6 +514,7 @@ export default function SupplierDashboard() {
             {activeTab === 'disputes' && <SellerDisputes vendorId={vendor.id} />}
 
             {activeTab === 'membership' && <SupplierMembershipTab vendorId={vendor.id} />}
+            {activeTab === 'referrals' && <ReferralPanel />}
             {activeTab === 'advertising' && <VendorAdvertisingTab vendorId={vendor.id} />}
             {activeTab === 'earnings' && <VendorEarningsPanel vendorId={vendor.id} />}
             {activeTab === 'followers' && <VendorFollowersPanel vendorId={vendor.id} />}

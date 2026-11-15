@@ -168,6 +168,23 @@ serve(async (req) => {
         .eq('status', 'pending');
     }
 
+    // Subscription payments that Paystack reports as refunded or disputed: take the paid benefits back and reverse the
+    // referral commission (or record the debt if it was already paid out). Order refunds are handled below, unchanged.
+    if (event.event === 'charge.dispute.create' || event.event === 'refund.processed') {
+      const d = event.data ?? {};
+      const ref = String(d.transaction?.reference ?? d.transaction_reference ?? d.reference ?? '');
+      if (ref) {
+        const { data: subPay } = await supabase.from('supplier_membership_payments').select('id').eq('paystack_reference', ref).maybeSingle();
+        if (subPay) {
+          const kind = event.event === 'charge.dispute.create' ? 'chargeback' : 'refunded';
+          const { error: reverseError } = await supabase.rpc('reverse_subscription_payment', {
+            _payment_id: subPay.id, _new_status: kind, _reason: `Paystack ${event.event}`,
+          });
+          if (reverseError) throw reverseError;
+        }
+      }
+    }
+
     // Refund results (the refund-order function starts them, Paystack reports back here).
     if (event.event === 'refund.processed' || event.event === 'refund.failed') {
       const d = event.data ?? {};

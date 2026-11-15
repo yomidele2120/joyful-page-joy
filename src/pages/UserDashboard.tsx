@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import {
   ShoppingBag, Heart, Package, MapPin, Phone, MessageCircle, LayoutDashboard, UserRound,
   ChevronRight, ShoppingCart, FileText, Store, Bell,
+  Gift,
 } from 'lucide-react';
 import { formatNaira } from '@/lib/format';
 import { useUnreadCount } from '@/hooks/useChat';
@@ -19,6 +20,7 @@ import NotificationsPanel from '@/components/dashboard/NotificationsPanel';
 import { useUnreadNotificationCount } from '@/hooks/useNotifications';
 import UserMessages from '@/components/dashboard/UserMessages';
 import OrderShipments, { type Shipment } from '@/components/dashboard/OrderShipments';
+import ReferralPanel from '@/components/dashboard/ReferralPanel';
 import DashboardShell, { Panel, StatCard, WelcomeBanner, useTabParam, type DashNavItem } from '@/components/dashboard/DashboardShell';
 import { BrandFlyerBanner } from '@/components/flyers/BrandFlyerImage';
 import { BRAND_FLYERS } from '@/lib/brandFlyers';
@@ -27,7 +29,7 @@ export default function UserDashboard() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useTabParam('overview', ['overview', 'orders', 'wishlist', 'messages', 'notifications', 'profile']);
+  const [activeTab, setActiveTab] = useTabParam('overview', ['overview', 'orders', 'wishlist', 'messages', 'notifications', 'referrals', 'profile']);
   const unreadCount = useUnreadCount();
   const unreadNotes = useUnreadNotificationCount();
 
@@ -144,6 +146,7 @@ export default function UserDashboard() {
     { key: 'wishlist', label: 'Wishlist', icon: Heart, group: 'My account' },
     { key: 'messages', label: 'Messages', icon: MessageCircle, badge: unreadCount, group: 'Connect' },
     { key: 'notifications', label: 'Notifications', icon: Bell, badge: unreadNotes, group: 'Connect' },
+    { key: 'referrals', label: 'Refer & earn', icon: Gift, group: 'Connect' },
     { key: 'profile', label: 'Profile', icon: UserRound, group: 'Settings' },
   ];
 
@@ -276,6 +279,7 @@ export default function UserDashboard() {
       {activeTab === 'messages' && <UserMessages />}
 
       {activeTab === 'notifications' && <NotificationsPanel />}
+      {activeTab === 'referrals' && <ReferralPanel />}
 
       {/* Profile */}
       {activeTab === 'profile' && (

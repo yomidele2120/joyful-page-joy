@@ -26,19 +26,19 @@ const TIERS: Record<SupplierTier, { label: string; full: string; Icon: typeof Ba
     title: 'This supplier has been verified by IT Hub Africa',
   },
   silver: {
-    label: 'Silver', full: 'Silver Supplier', Icon: Medal,
+    label: 'Starter', full: 'Starter Supplier', Icon: Medal,
     cls: 'border-slate-400/50 bg-gradient-to-r from-slate-300/30 to-slate-100/40 text-slate-700 dark:from-slate-500/30 dark:to-slate-400/10 dark:text-slate-200', icon: 'text-slate-500 dark:text-slate-300',
-    title: 'Verified Silver member of IT Hub Africa',
+    title: 'Verified Starter member of IT Hub Africa',
   },
   premium: {
-    label: 'Premium', full: 'Premium Supplier', Icon: Crown,
+    label: 'Growth', full: 'Growth Supplier', Icon: Crown,
     cls: 'border-amber-500/50 bg-gradient-to-r from-amber-400/30 to-yellow-200/40 text-amber-900 dark:from-amber-500/30 dark:to-yellow-400/10 dark:text-amber-200', icon: 'text-amber-600 dark:text-amber-300',
-    title: 'Verified Premium member of IT Hub Africa',
+    title: 'Verified Growth member of IT Hub Africa',
   },
   gold: {
-    label: 'Gold', full: 'Gold Supplier', Icon: Star,
+    label: 'Enterprise', full: 'Enterprise Supplier', Icon: Star,
     cls: 'border-yellow-600/60 bg-gradient-to-r from-yellow-500/40 to-amber-300/40 text-yellow-950 dark:from-yellow-500/30 dark:to-amber-400/10 dark:text-yellow-100', icon: 'text-yellow-700 dark:text-yellow-300',
-    title: 'Verified Gold member of IT Hub Africa',
+    title: 'Verified Enterprise member of IT Hub Africa',
   },
   diamond: {
     label: 'Diamond', full: 'Diamond Supplier', Icon: Gem,

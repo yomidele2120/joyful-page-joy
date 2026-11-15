@@ -13,6 +13,7 @@ import { ConsentProvider } from "@/contexts/ConsentContext";
 import CookieConsent from "@/components/CookieConsent";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ScrollToTop from "@/components/ScrollToTop";
+import RefCapture from "@/components/RefCapture";
 import Tracker from "@/components/Tracker";
 import VideoUploadResumer from "@/components/VideoUploadResumer";
 import Index from "./pages/Index";
@@ -25,6 +26,7 @@ import { persistQueryCache, restoreQueryCache } from "@/lib/queryPersist";
 const Feed = lazyPage(() => import("./pages/Feed"));
 const CallHistory = lazyPage(() => import("./pages/CallHistory"));
 const SellOnIthub = lazyPage(() => import("./pages/SellOnIthub"));
+const ReferralLanding = lazyPage(() => import("./pages/ReferralLanding"));
 const Products = lazyPage(() => import("./pages/Products"));
 const ProductDetail = lazyPage(() => import("./pages/ProductDetail"));
 const CategoryPage = lazyPage(() => import("./pages/CategoryPage"));
@@ -115,6 +117,7 @@ const App = () => (
           <BrowserRouter>
           <CallProvider>
             <ScrollToTop />
+            <RefCapture />
             <CookieConsent />
             <Tracker />
             <VideoUploadResumer />
@@ -126,6 +129,7 @@ const App = () => (
               <Route path="/feed" element={<Feed />} />
               <Route path="/products" element={<Products />} />
               <Route path="/sell" element={<SellOnIthub />} />
+              <Route path="/ref/:code" element={<ReferralLanding />} />
               <Route path="/product/:slug" element={<ProductDetail />} />
               <Route path="/category/:slug" element={<CategoryPage />} />
               <Route path="/cart" element={<Cart />} />

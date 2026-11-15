@@ -18,6 +18,8 @@ import { toast } from 'sonner';
 import { lazyPage } from '@/lib/lazyPage';
 const SubscriptionsTab = lazyPage(() => import('@/components/admin/SubscriptionsTab'));
 const SupplierPlansTab = lazyPage(() => import('@/components/admin/SupplierPlansTab'));
+const SubscriptionPricingAdmin = lazyPage(() => import('@/components/admin/SubscriptionPricingAdmin'));
+const ReferralAdminTab = lazyPage(() => import('@/components/admin/ReferralAdminTab'));
 const AiProductIntelligenceTab = lazyPage(() => import('@/components/admin/AiProductIntelligenceTab'));
 const CampaignManagerTab = lazyPage(() => import('@/components/admin/CampaignManagerTab'));
 const AdminAdvertisingTab = lazyPage(() => import('@/components/admin/AdminAdvertisingTab'));
@@ -296,6 +298,7 @@ export default function AdminDashboard() {
     { key: 'flyers', label: 'Flyers', icon: Megaphone, group: 'Marketplace' },
     { key: 'marketplace', label: 'Pay later, preorders and support', icon: Wallet, group: 'Marketplace' },
     { key: 'supplier-plans', label: 'Supplier plans', icon: CreditCard, group: 'Marketplace' },
+    { key: 'referrals', label: 'Referrals', icon: Percent, group: 'Marketplace' },
     { key: 'ai-intelligence', label: 'AI listing tools', icon: Sparkles, group: 'Marketplace' },
     { key: 'campaigns', label: 'Campaign manager', icon: BadgeDollarSign, group: 'Marketplace' },
     { key: 'vendor-ads', label: 'Vendor advertising', icon: Megaphone, group: 'Marketplace' },
@@ -680,7 +683,8 @@ export default function AdminDashboard() {
         {activeTab === 'calls' && <div className="max-w-4xl space-y-4"><CallsSwitch /><CallQuotasTab /></div>}
         {activeTab === 'email-notifications' && <EmailNotificationsTab />}
         {activeTab === 'subscriptions' && <SubscriptionsTab />}
-        {activeTab === 'supplier-plans' && <SupplierPlansTab />}
+        {activeTab === 'supplier-plans' && <div className="space-y-6"><SupplierPlansTab /><SubscriptionPricingAdmin /></div>}
+        {activeTab === 'referrals' && <ReferralAdminTab />}
         {activeTab === 'ai-intelligence' && <AiProductIntelligenceTab />}
         {activeTab === 'campaigns' && <CampaignManagerTab />}
         {activeTab === 'vendor-ads' && <AdminAdvertisingTab />}

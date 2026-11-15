@@ -53,6 +53,8 @@ export default function SupplierLogin() {
   return (
     <AuthShell
       title="Sign in to your supplier account"
+      subtitle="Manage your shop, orders and ads."
+      audience="seller"
       footer={<AuthFooterLink text="Don’t have a supplier account?" to="/supplier-signup" label="Sign up" />}
     >
       <form onSubmit={handleSubmit}>

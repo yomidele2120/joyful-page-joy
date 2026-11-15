@@ -76,10 +76,11 @@ export default function UserLogin() {
   return (
     <AuthShell
       title={isLogin ? 'Sign in to your account' : 'Create your account'}
+      subtitle={isLogin ? 'Welcome back. Enter your details to continue.' : 'It takes about a minute.'}
       footer={
         isLogin
-          ? <>Don’t have an account?{' '}<button type="button" onClick={() => setMode('signup')} className="font-semibold text-white underline-offset-4 hover:underline">Sign up</button></>
-          : <>Already have an account?{' '}<button type="button" onClick={() => setMode('login')} className="font-semibold text-white underline-offset-4 hover:underline">Sign in</button></>
+          ? <>Don’t have an account?{' '}<button type="button" onClick={() => setMode('signup')} className="font-semibold text-primary underline-offset-4 hover:underline">Sign up</button></>
+          : <>Already have an account?{' '}<button type="button" onClick={() => setMode('login')} className="font-semibold text-primary underline-offset-4 hover:underline">Sign in</button></>
       }
     >
       <form onSubmit={handleSubmit} noValidate={false}>
@@ -144,7 +145,7 @@ export default function UserLogin() {
         {!isLogin && <LegalText />}
       </form>
 
-      <div className="mt-6 border-t border-slate-200 pt-5 text-center text-[15px] text-slate-600">
+      <div className="mt-5 text-center text-[15px] text-slate-600">
         Selling on IT Hub Africa?{' '}
         <Link to={isLogin ? '/suppliers-login' : '/supplier-signup'} className="font-semibold text-primary hover:underline">
           {isLogin ? 'Sign in as a supplier' : 'Create a supplier account'}

@@ -11,6 +11,7 @@ import {
   AuthShell, AuthFooterLink, Field, PasswordField, SelectField, PhoneField, ChoiceGroup,
   CheckboxRow, SubmitButton, SecondaryButton, LegalText, COUNTRIES,
 } from '@/components/auth/AuthShell';
+import { applyStoredReferral, readReferralCode, storeReferralCode } from '@/lib/referral';
 import { MAKE_MONEY_BADGE } from '@/lib/brandFlyers';
 
 const BUSINESS_TYPES: Record<string, string> = {
@@ -22,7 +23,7 @@ interface Form {
   country: string; businessName: string; firstName: string; lastName: string; email: string;
   phone: string; whatsappNumber: string; password: string; businessType: string; marketing: boolean;
   companyAddress: string; productCategories: string; storeDescription: string;
-  bankName: string; bankAccountNumber: string; bankAccountName: string;
+  bankName: string; bankAccountNumber: string; bankAccountName: string; referralCode: string;
 }
 
 const STEP_TITLES = ['Create your account', 'Tell buyers about your business', 'Where should we pay you?'];
@@ -39,6 +40,7 @@ export default function SupplierSignup() {
     phone: '', whatsappNumber: '', password: '', businessType: '', marketing: false,
     companyAddress: '', productCategories: '', storeDescription: '',
     bankName: '', bankAccountNumber: '', bankAccountName: '',
+    referralCode: readReferralCode() ?? '',
   });
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [docFile, setDocFile] = useState<File | null>(null);
@@ -122,6 +124,13 @@ export default function SupplierSignup() {
       if (vendorError) throw vendorError;
       const vendorRow = { id: newVendorId as string };
 
+      // 4a. Referral code (optional). A refusal never blocks signup; a code that could not be applied yet is retried at first sign-in.
+      const typedCode = form.referralCode.trim();
+      if (typedCode) {
+        storeReferralCode(typedCode);
+        await applyStoredReferral('code_signup', typedCode.toUpperCase());
+      }
+
       // 4b. Bank details and the verification document live in a private table
       if (form.bankName || form.bankAccountNumber || form.bankAccountName || docPath) {
         const { error: privateError } = await supabase.from('vendor_private').insert({
@@ -151,6 +160,7 @@ export default function SupplierSignup() {
   return (
     <AuthShell
       title={STEP_TITLES[step - 1]}
+      audience="seller"
       footer={<AuthFooterLink text="Already have a supplier account?" to="/suppliers-login" label="Sign in" />}
     >
       <div className="mb-6 -mt-2">
@@ -192,6 +202,7 @@ export default function SupplierSignup() {
               ]}
             />
 
+            <Field label="Referral code (optional)" value={form.referralCode} onChange={e => set('referralCode', e.target.value.toUpperCase())} placeholder="Who invited you?" autoComplete="off" />
             <p className="-mt-2 mb-2 text-sm font-semibold text-slate-600">Email marketing (optional)</p>
             <CheckboxRow checked={form.marketing} onChange={v => set('marketing', v)}>
               I consent to IT Hub Africa sending me marketing emails (seller tips, new features, etc.)
