@@ -4,6 +4,20 @@ import type { AuthError } from '@supabase/supabase-js';
 import { formatWait, lockoutSecondsRemaining, recordSignInFailure, recordSignInSuccess } from '@/lib/loginThrottle';
 import type { User, Session } from '@supabase/supabase-js';
 
+// The last known roles for this browser. They only decide which screen is shown straight away; the database still
+// enforces access on every request, and the real roles are fetched again in the background on every load.
+const ROLE_KEY = 'ith_roles_v1';
+const readRoleCache = (uid: string): { isAdmin: boolean; isVendor: boolean } | null => {
+  try {
+    const v = JSON.parse(window.localStorage.getItem(ROLE_KEY) ?? 'null');
+    return v && v.uid === uid ? { isAdmin: v.isAdmin === true, isVendor: v.isVendor === true } : null;
+  } catch { return null; }
+};
+const writeRoleCache = (uid: string, isAdmin: boolean, isVendor: boolean) => {
+  try { window.localStorage.setItem(ROLE_KEY, JSON.stringify({ uid, isAdmin, isVendor })); } catch { /* storage unavailable */ }
+};
+const clearRoleCache = () => { try { window.localStorage.removeItem(ROLE_KEY); } catch { /* ignore */ } };
+
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -26,6 +40,7 @@ export function useAuth() {
       const roles = data?.map((r) => r.role) || [];
       setIsAdmin(roles.includes('admin'));
       setIsVendor(roles.includes('vendor'));
+      writeRoleCache(userId, roles.includes('admin'), roles.includes('vendor'));
       return roles;
     } catch {
       // Offline / transient failure: don't destroy the session, just leave
@@ -44,8 +59,19 @@ export function useAuth() {
       setUser(nextSession?.user ?? null);
 
       if (nextSession?.user) {
+        const cached = readRoleCache(nextSession.user.id);
+        if (cached) {
+          // Show the right screen at once and confirm the roles in the background.
+          setIsAdmin(cached.isAdmin);
+          setIsVendor(cached.isVendor);
+          resolvedOnce.current = true;
+          setLoading(false);
+          void checkRoles(nextSession.user.id);
+          return;
+        }
         await checkRoles(nextSession.user.id);
       } else {
+        clearRoleCache();
         setIsAdmin(false);
         setIsVendor(false);
       }
@@ -107,6 +133,7 @@ export function useAuth() {
   };
 
   const signOut = async () => {
+    clearRoleCache();
     await supabase.auth.signOut();
     setIsAdmin(false);
     setIsVendor(false);

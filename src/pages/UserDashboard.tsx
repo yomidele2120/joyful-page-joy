@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import {
   ShoppingBag, Heart, Package, MapPin, Phone, MessageCircle, LayoutDashboard, UserRound,
-  ChevronRight, ShoppingCart, FileText, Store,
+  ChevronRight, ShoppingCart, FileText, Store, Bell,
 } from 'lucide-react';
 import { formatNaira } from '@/lib/format';
 import { useUnreadCount } from '@/hooks/useChat';
@@ -27,7 +27,7 @@ export default function UserDashboard() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useTabParam('overview', ['overview', 'orders', 'wishlist', 'messages', 'profile']);
+  const [activeTab, setActiveTab] = useTabParam('overview', ['overview', 'orders', 'wishlist', 'messages', 'notifications', 'profile']);
   const unreadCount = useUnreadCount();
   const unreadNotes = useUnreadNotificationCount();
 

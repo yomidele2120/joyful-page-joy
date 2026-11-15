@@ -11,12 +11,13 @@ import { bannerUrl } from '@/lib/ads/adMedia';
 import { campaignStatus, externalStatus, pct, PLATFORM_LABEL } from '@/lib/ads/adStatus';
 import { errText, fmtDate, n, Stat, Status } from '@/components/ads/adUi';
 import ExternalExportPanel from '@/components/admin/ExternalExportPanel';
+import AdWalletAdminPanel from '@/components/admin/AdWalletAdminPanel';
 import AdBoostAdminPanel from '@/components/admin/AdBoostAdminPanel';
 import GoogleAdsConnectionPanel from '@/components/admin/GoogleAdsConnectionPanel';
 
-const TABS = ['campaigns', 'vendors', 'ai', 'social', 'external', 'analytics', 'settings'] as const;
+const TABS = ['campaigns', 'vendors', 'wallets', 'ai', 'social', 'external', 'analytics', 'settings'] as const;
 type TabKey = typeof TABS[number];
-const LABEL: Record<TabKey, string> = { campaigns: 'Campaigns', vendors: 'Vendors', ai: 'AI usage & jobs', social: 'Social links', external: 'External requests', analytics: 'Analytics', settings: 'Settings & plans' };
+const LABEL: Record<TabKey, string> = { campaigns: 'Campaigns', vendors: 'Vendors', wallets: 'Ad balances', ai: 'AI usage & jobs', social: 'Social links', external: 'External requests', analytics: 'Analytics', settings: 'Settings & plans' };
 
 export default function AdminAdvertisingTab() {
   const [tab, setTab] = useState<TabKey>('campaigns');
@@ -27,6 +28,7 @@ export default function AdminAdvertisingTab() {
       </div>
       {tab === 'campaigns' && <CampaignsView />}
       {tab === 'vendors' && <VendorsView />}
+      {tab === 'wallets' && <AdWalletAdminPanel />}
       {tab === 'ai' && <AiView />}
       {tab === 'social' && <SocialView />}
       {tab === 'external' && <ExternalView />}

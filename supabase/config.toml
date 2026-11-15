@@ -101,3 +101,9 @@ verify_jwt = false
 # Monthly seasonal hero banners. Authenticates inside the function (service-role key, AD_WORKER_SECRET, or a signed-in admin).
 [functions.seasonal-hero-generate]
 verify_jwt = false
+
+[functions.initialize-ad-wallet-topup]
+verify_jwt = false
+
+[functions.verify-ad-wallet-topup]
+verify_jwt = false

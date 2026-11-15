@@ -92,6 +92,16 @@ serve(async (req) => {
         if (!boostOk) await supabase.from('ad_boost_payments').update({ status: 'failed', status_detail: 'Amount or currency did not match' }).eq('id', boostPayment.id).eq('status', 'pending');
       }
 
+      // Advertising balance top-ups: verified above, added only if amount and currency match our record.
+      const { data: walletTopup } = await supabase.from('ad_wallet_topups').select('id').eq('paystack_reference', reference).maybeSingle();
+      if (walletTopup) {
+        const { data: walletOk, error: walletError } = await supabase.rpc('finalize_ad_wallet_topup', {
+          _reference: reference, _amount_kobo: Number(charge.amount), _currency: String(charge.currency ?? ''),
+        });
+        if (walletError) throw walletError;
+        if (!walletOk) await supabase.from('ad_wallet_topups').update({ status: 'failed', status_detail: 'Amount or currency did not match' }).eq('id', walletTopup.id).eq('status', 'pending');
+      }
+
       // Use our own payment record (created server-side) to find the order,
       // and only mark it paid when the amount collected covers the total.
       const { data: paymentRow } = await supabase.from('payments')
@@ -147,6 +157,7 @@ serve(async (req) => {
     if (event.event === 'charge.failed') {
       const reference = String(event.data?.reference ?? '');
       await supabase.from('ad_boost_payments').update({ status: 'failed' }).eq('paystack_reference', reference).eq('status', 'pending');
+      await supabase.from('ad_wallet_topups').update({ status: 'failed' }).eq('paystack_reference', reference).eq('status', 'pending');
       await supabase.from('supplier_membership_payments')
         .update({ status: 'failed' })
         .eq('paystack_reference', reference)

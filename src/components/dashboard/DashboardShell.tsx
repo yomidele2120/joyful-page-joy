@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { Suspense, useCallback, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ChevronRight, Settings } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -34,7 +34,7 @@ export function useTabParam(defaultTab: string, valid?: string[]) {
     const copy = new URLSearchParams(params);
     copy.set('tab', next);
     copy.delete('compose');
-    setParams(copy, { replace: true });
+    setParams(copy); // a normal history entry, so the browser Back button returns to the previous section
   }, [params, setParams]);
   return [tab, setTab] as const;
 }
@@ -134,7 +134,9 @@ export default function DashboardShell({
 
         <main className="mx-auto w-full max-w-[1400px] px-3 py-5 sm:px-5 lg:px-8 lg:py-8">
           {notice}
-          {children}
+          <Suspense fallback={<div className="space-y-3" aria-busy="true"><Skeleton className="h-8 w-48" /><Skeleton className="h-24 w-full" /><Skeleton className="h-64 w-full" /></div>}>
+            {children}
+          </Suspense>
         </main>
       </div>
 

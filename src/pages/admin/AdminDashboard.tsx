@@ -15,17 +15,19 @@ import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import SubscriptionsTab from '@/components/admin/SubscriptionsTab';
-import SupplierPlansTab from '@/components/admin/SupplierPlansTab';
-import AiProductIntelligenceTab from '@/components/admin/AiProductIntelligenceTab';
-import CampaignManagerTab from '@/components/admin/CampaignManagerTab';
-import AdminAdvertisingTab from '@/components/admin/AdminAdvertisingTab';
-import { AuditLogTab, CallQueueTab } from '@/components/admin/CallQueueAuditTab';
-import RiskReviewTab from '@/components/admin/RiskReviewTab';
-import SocialSeoTab from '@/components/admin/SocialSeoTab';
-import GoogleMerchantTab from '@/components/admin/GoogleMerchantTab';
-import CallQuotasTab from '@/components/admin/CallQuotasTab';
-import EmailNotificationsTab from '@/components/admin/EmailNotificationsTab';
+import { lazyPage } from '@/lib/lazyPage';
+const SubscriptionsTab = lazyPage(() => import('@/components/admin/SubscriptionsTab'));
+const SupplierPlansTab = lazyPage(() => import('@/components/admin/SupplierPlansTab'));
+const AiProductIntelligenceTab = lazyPage(() => import('@/components/admin/AiProductIntelligenceTab'));
+const CampaignManagerTab = lazyPage(() => import('@/components/admin/CampaignManagerTab'));
+const AdminAdvertisingTab = lazyPage(() => import('@/components/admin/AdminAdvertisingTab'));
+const AuditLogTab = lazyPage(() => import('@/components/admin/CallQueueAuditTab').then(m => ({ default: m.AuditLogTab })));
+const CallQueueTab = lazyPage(() => import('@/components/admin/CallQueueAuditTab').then(m => ({ default: m.CallQueueTab })));
+const RiskReviewTab = lazyPage(() => import('@/components/admin/RiskReviewTab'));
+const SocialSeoTab = lazyPage(() => import('@/components/admin/SocialSeoTab'));
+const GoogleMerchantTab = lazyPage(() => import('@/components/admin/GoogleMerchantTab'));
+const CallQuotasTab = lazyPage(() => import('@/components/admin/CallQuotasTab'));
+const EmailNotificationsTab = lazyPage(() => import('@/components/admin/EmailNotificationsTab'));
 import SubscriptionAlertBanner from '@/components/admin/SubscriptionAlertBanner';
 import ApprovalAlerts from '@/components/admin/ApprovalAlerts';
 import { useSubscriptionOverview } from '@/hooks/useSubscriptions';
@@ -41,21 +43,21 @@ import {
 } from 'lucide-react';
 import DashboardShell, { Panel, StatCard, StatusDot, WelcomeBanner, useTabParam, type DashNavItem } from '@/components/dashboard/DashboardShell';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import FlyersTab from '@/components/admin/FlyersTab';
+const FlyersTab = lazyPage(() => import('@/components/admin/FlyersTab'));
 import MarketplaceAdminTab, { TikTokSwitch, CallsSwitch } from '@/components/admin/MarketplaceAdminTab';
-import TrafficTab from '@/components/admin/TrafficTab';
-import FinanceTab from '@/components/admin/FinanceTab';
-import OrderOpsTab from '@/components/admin/OrderOpsTab';
-import SupplierCommissionTab from '@/components/admin/SupplierCommissionTab';
-import AnalyticsTab from '@/components/admin/AnalyticsTab';
-import BulkProductImportTab from '@/components/admin/BulkProductImportTab';
+const TrafficTab = lazyPage(() => import('@/components/admin/TrafficTab'));
+const FinanceTab = lazyPage(() => import('@/components/admin/FinanceTab'));
+const OrderOpsTab = lazyPage(() => import('@/components/admin/OrderOpsTab'));
+const SupplierCommissionTab = lazyPage(() => import('@/components/admin/SupplierCommissionTab'));
+const AnalyticsTab = lazyPage(() => import('@/components/admin/AnalyticsTab'));
+const BulkProductImportTab = lazyPage(() => import('@/components/admin/BulkProductImportTab'));
 import { ExportButton } from '@/components/admin/analyticsUi';
 import ProductPager from '@/components/ProductPager';
 import { useManagedProducts, MANAGE_PAGE_SIZE, MAX_MANAGE_PAGES } from '@/hooks/useManagedProducts';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { formatProductCount } from '@/lib/productSearch';
 import { usePendingReports, useResolveReport, useDeactivatePost, useDeleteComment } from '@/hooks/useReports';
-import GoogleMerchantCenterTab from '@/components/admin/GoogleMerchantCenterTab';
+const GoogleMerchantCenterTab = lazyPage(() => import('@/components/admin/GoogleMerchantCenterTab'));
 import { merchantCenterRequest } from '@/lib/googleMerchantCenter';
 
 export default function AdminDashboard() {
@@ -97,10 +99,12 @@ export default function AdminDashboard() {
   const { data: vendors, isLoading: vendorsLoading, error: vendorsError } = useQuery({
     queryKey: ['admin-vendors'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('vendors').select('*').order('created_at', { ascending: false });
+      // Asked together, not one after the other. Bank details and verification documents are kept in a private (admin-only) table.
+      const [{ data, error }, { data: priv }] = await Promise.all([
+        supabase.from('vendors').select('*').order('created_at', { ascending: false }),
+        supabase.from('vendor_private').select('*'),
+      ]);
       if (error) throw error;
-      // Bank details and verification documents are kept in a private (admin-only) table.
-      const { data: priv } = await supabase.from('vendor_private').select('*');
       const privateByVendor = new Map((priv ?? []).map(p => [p.vendor_id, p]));
       return (data || []).map(v => {
         const p = privateByVendor.get(v.id);
@@ -123,7 +127,8 @@ export default function AdminDashboard() {
       if (error) throw error;
       return data || [];
     },
-    enabled: canFetchAdminData,
+    // The totals on the other pages come from admin_overview; the full list is only needed on the payments page.
+    enabled: canFetchAdminData && activeTab === 'payments',
   });
 
   const { data: profiles, isLoading: profilesLoading, error: profilesError } = useQuery({
@@ -133,7 +138,8 @@ export default function AdminDashboard() {
       if (error) throw error;
       return data || [];
     },
-    enabled: canFetchAdminData,
+    // Only the users page lists everyone; the user count elsewhere comes from admin_overview.
+    enabled: canFetchAdminData && activeTab === 'users',
   });
 
   const { data: categories, isLoading: categoriesLoading } = useCategories({ includeHidden: true });
@@ -366,7 +372,7 @@ export default function AdminDashboard() {
             </WelcomeBanner>
 
             <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-              <StatCard icon={<Wallet />} label="Total revenue" value={formatNaira(totalRevenue)} loading={paymentsLoading} />
+              <StatCard icon={<Wallet />} label="Total revenue" value={formatNaira(totalRevenue)} loading={paymentsLoading || (overviewLoading && !allTime)} />
               <StatCard icon={<DollarSign />} tone="accent" label="Platform commission" value={naira(platformCommission)} loading={paymentsLoading && overviewLoading} />
               <StatCard icon={<ShoppingCart />} tone="sky" label="Orders" value={String(allTime?.orders ?? orders?.length ?? 0)} loading={ordersLoading && overviewLoading} />
               <StatCard icon={<Package />} label="Products" value={String(allTime?.products ?? 0)} loading={productsLoading && overviewLoading} />

@@ -1,10 +1,12 @@
 import { Link } from 'react-router-dom';
-import { BadgeCheck, MapPin, MessageSquare, Store } from 'lucide-react';
+import { MapPin, MessageSquare, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { SupplierSummary } from '@/hooks/useProducts';
+import VerifiedSupplierBadge, { useSupplierTier } from '@/components/VerifiedSupplierBadge';
 import { formatSupplierProductCount } from '@/lib/productSearch';
 
 export default function SupplierCard({ supplier, layout = 'card' }: { supplier: SupplierSummary; layout?: 'card' | 'row' }) {
+  const { data: tier } = useSupplierTier(supplier.id);
   const meta = [
     supplier.business_type,
     supplier.year_established ? `Since ${supplier.year_established}` : null,
@@ -24,8 +26,8 @@ export default function SupplierCard({ supplier, layout = 'card' }: { supplier: 
         <span className="min-w-0">
           <span className="flex items-center gap-1 text-sm font-semibold">
             <span className="truncate">{supplier.store_name}</span>
-            {supplier.is_approved && <BadgeCheck className="h-4 w-4 shrink-0 text-primary" aria-label="Verified supplier" />}
           </span>
+          {supplier.is_approved && tier && tier !== 'free' && <span className="mt-1 block"><VerifiedSupplierBadge tier={tier} /></span>}
           <span className="mt-0.5 block truncate text-xs text-muted-foreground">{meta}</span>
           {supplier.location && (
             <span className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground"><MapPin className="h-3 w-3" /> {supplier.location}</span>

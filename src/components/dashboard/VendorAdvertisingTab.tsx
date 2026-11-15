@@ -15,6 +15,7 @@ import { bannerUrl } from '@/lib/ads/adMedia';
 import { buildSocialUrl, SOCIAL_PLATFORMS } from '@/lib/ads/socialValidation';
 import { campaignStatus, checkMessage, daysLeft, externalStatus, pct, PLATFORM_LABEL } from '@/lib/ads/adStatus';
 import { errText, fmtDate, n, Stat, Status } from '@/components/ads/adUi';
+import AdWalletPanel from '@/components/dashboard/AdWalletPanel';
 import AdBoostSection from '@/components/dashboard/AdBoostSection';
 
 type Overview = any;
@@ -31,6 +32,7 @@ export default function VendorAdvertisingTab({ vendorId }: { vendorId: string })
 
   return (
     <div className="space-y-5">
+      <AdWalletPanel />
       <Panel title="Your advertising plan" action={<Link to="?tab=membership" className="text-sm font-medium text-primary hover:underline">{ent.active ? 'Manage plan' : 'Get a plan'}</Link>}>
         {ent.active ? (
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">

@@ -52,7 +52,7 @@ export default function SupplierDashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useTabParam('overview', ['overview', 'products', 'videos', 'orders', 'disputes', 'add-product', 'membership', 'advertising', 'shop-settings']);
+  const [activeTab, setActiveTab] = useTabParam('overview', ['overview', 'products', 'videos', 'orders', 'disputes', 'add-product', 'membership', 'advertising', 'earnings', 'followers', 'notifications', 'shop-settings']);
   const [preorderProduct, setPreorderProduct] = useState<any>(null);
   const [priceProduct, setPriceProduct] = useState<any>(null);
   const [editProductId, setEditProductId] = useState<string | null>(null);
