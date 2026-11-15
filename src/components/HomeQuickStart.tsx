@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom';
-import { Store, FileText, Users, Wallet, CalendarClock, Package } from 'lucide-react';
+import { Store, FileText, Users, Wallet, CalendarClock, Package, Gift } from 'lucide-react';
 import { useCategories } from '@/hooks/useProducts';
 import Tilt3D from '@/components/Tilt3D';
 import { iconMap } from '@/components/CategoryGrid';
+import { useReferralPublicInfo } from '@/hooks/useReferralPublicInfo';
 
 interface Props {
   payLater?: boolean;
@@ -12,6 +13,7 @@ interface Props {
 // Quick links and a category icon grid for the top of the homepage: one tap to the things people come to do.
 export default function HomeQuickStart({ payLater = false, preorders = false }: Props) {
   const { data: categories } = useCategories();
+  const { data: referral } = useReferralPublicInfo();
 
   const links = [
     { to: '/rfq/new', label: 'Request a quote', Icon: FileText, tone: 'bg-sky-500/10 text-sky-700 dark:text-sky-300' },
@@ -19,6 +21,7 @@ export default function HomeQuickStart({ payLater = false, preorders = false }: 
     ...(payLater ? [{ to: '/pay-later', label: 'Pay later', Icon: Wallet, tone: 'bg-violet-500/10 text-violet-700 dark:text-violet-300' }] : []),
     ...(preorders ? [{ to: '/preorders', label: 'Preorders', Icon: CalendarClock, tone: 'bg-amber-500/10 text-amber-700 dark:text-amber-300' }] : []),
     { to: '/sell', label: 'Sell here', Icon: Store, tone: 'bg-orange-500/10 text-orange-700 dark:text-orange-300' },
+    ...(referral?.programme_enabled ? [{ to: '/affiliate', label: 'Refer & earn', Icon: Gift, tone: 'bg-rose-500/10 text-rose-700 dark:text-rose-300' }] : []),
   ];
   const cats = (categories ?? []).slice(0, 11);
 

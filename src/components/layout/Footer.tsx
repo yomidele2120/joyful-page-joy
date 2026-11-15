@@ -72,6 +72,7 @@ export default function Footer({ flush = false }: { flush?: boolean }) {
             <li><Link to="/wishlist" className={linkCls}>Wishlist</Link></li>
             <li><Link to="/cart" className={linkCls}>Cart</Link></li>
             <li><Link to="/suppliers-login" className={linkCls}>Supplier Login</Link></li>
+            <li><Link to="/affiliate" className={linkCls}>Refer &amp; earn</Link></li>
           </Column>
         </div>
 

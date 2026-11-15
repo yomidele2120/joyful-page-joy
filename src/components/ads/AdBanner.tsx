@@ -6,6 +6,9 @@ import { trackAd } from '@/lib/ads/adsApi';
 import { bannerSources } from '@/lib/ads/adMedia';
 import { adShopLink } from '@/lib/ads/adTracking';
 
+// Ads already counted as seen in this page load. A slideshow remounts a banner each time it comes round again; that must not count twice.
+const counted = new Set<string>();
+
 /**
  * One advertising banner. The artwork is text-free; the shop name, logo, headline, description and button are drawn
  * here, so they are always the vendor's real data and always sharp. The whole banner is one link to the vendor's own shop.
@@ -19,7 +22,11 @@ export default function AdBanner({ ad, placement, priority = false, className, v
     const node = ref.current;
     if (!node || typeof IntersectionObserver === 'undefined') return;
     const io = new IntersectionObserver((entries) => {
-      if (entries.some((e) => e.isIntersecting && e.intersectionRatio >= 0.5)) { trackAd({ event: 'impression', campaign: ad.id, placement }); io.disconnect(); }
+      if (entries.some((e) => e.isIntersecting && e.intersectionRatio >= 0.5)) {
+        const key = `${ad.id}:${placement}`;
+        if (!counted.has(key)) { counted.add(key); trackAd({ event: 'impression', campaign: ad.id, placement }); }
+        io.disconnect();
+      }
     }, { threshold: [0.5] });
     io.observe(node);
     return () => io.disconnect();
@@ -35,7 +42,7 @@ export default function AdBanner({ ad, placement, priority = false, className, v
         to={adShopLink(ad.vendor_id, ad.id)}
         onClick={() => trackAd({ event: 'banner_click', campaign: ad.id, placement })}
         aria-label={`${ad.store_name}: ${ad.headline} (sponsored)`}
-        className={cn('group relative flex h-[112px] w-full items-center overflow-hidden rounded-2xl bg-muted sm:h-[132px] lg:h-[148px]', className)}
+        className={cn('group relative flex h-[88px] w-full items-center overflow-hidden rounded-xl bg-muted sm:h-[132px] sm:rounded-2xl lg:h-[148px]', className)}
       >
         <picture>
           <source media={src.media.desktop} srcSet={src.desktop} />
@@ -70,7 +77,7 @@ export default function AdBanner({ ad, placement, priority = false, className, v
       to={adShopLink(ad.vendor_id, ad.id)}
       onClick={() => trackAd({ event: 'banner_click', campaign: ad.id, placement })}
       aria-label={`${ad.store_name}: ${ad.headline} (sponsored)`}
-      className={cn('group relative block aspect-[4/3] w-full overflow-hidden rounded-2xl bg-muted sm:aspect-[2/1] lg:aspect-[16/5]', className)}
+      className={cn('group relative block aspect-[2/1] w-full overflow-hidden rounded-xl bg-muted sm:rounded-2xl lg:aspect-[16/5]', className)}
     >
       <picture>
         <source media={src.media.desktop} srcSet={src.desktop} />
@@ -79,18 +86,18 @@ export default function AdBanner({ ad, placement, priority = false, className, v
              className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]" />
       </picture>
       <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-transparent sm:via-black/35" aria-hidden="true" />
-      <span className="absolute right-3 top-3 rounded-full bg-black/55 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white backdrop-blur">Sponsored</span>
+      <span className="absolute right-2 top-2 rounded-full bg-black/55 px-2 py-0.5 text-[9px] sm:right-3 sm:top-3 sm:px-2.5 sm:text-[10px] font-semibold uppercase tracking-wider text-white backdrop-blur">Sponsored</span>
 
-      <div className="absolute inset-0 flex max-w-[85%] flex-col justify-end gap-1.5 p-4 text-white sm:max-w-[60%] sm:justify-center sm:gap-2 sm:p-8">
+      <div className="absolute inset-0 flex max-w-[88%] flex-col justify-end gap-1 p-3 text-white sm:max-w-[60%] sm:justify-center sm:gap-2 sm:p-8">
         <div className="flex items-center gap-2">
           {ad.logo_url
             ? <img src={ad.logo_url} alt="" loading="lazy" className="h-8 w-8 rounded-full bg-white object-cover sm:h-10 sm:w-10" />
             : <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-sm font-bold text-black sm:h-10 sm:w-10">{ad.store_name.slice(0, 1).toUpperCase()}</span>}
           <span className="truncate text-sm font-semibold sm:text-base">{ad.store_name}</span>
         </div>
-        <h3 className="font-heading text-xl font-bold leading-tight sm:text-3xl lg:text-4xl">{ad.headline}</h3>
-        {ad.description && <p className="line-clamp-2 text-xs text-white/85 sm:text-sm lg:text-base">{ad.description}</p>}
-        <span className="mt-1 inline-flex w-fit items-center rounded-full bg-white px-4 py-1.5 text-xs font-semibold text-black sm:text-sm">{ad.cta_text || 'Visit shop'}</span>
+        <h3 className="line-clamp-2 font-heading text-base font-bold leading-tight sm:text-3xl lg:text-4xl">{ad.headline}</h3>
+        {ad.description && <p className="hidden text-xs text-white/85 sm:line-clamp-2 sm:block sm:text-sm lg:text-base">{ad.description}</p>}
+        <span className="mt-0.5 inline-flex w-fit items-center rounded-full bg-white px-3 py-1 text-xs font-semibold text-black sm:mt-1 sm:px-4 sm:py-1.5 sm:text-sm">{ad.cta_text || 'Visit shop'}</span>
       </div>
 
       {products.length > 0 && (

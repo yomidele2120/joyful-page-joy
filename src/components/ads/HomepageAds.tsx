@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import AdBanner from './AdBanner';
 import { fetchAdSettings, fetchHomepageAds, type AdPlacement, type HomepageAd, type PublicAdSettings } from '@/lib/ads/adsApi';
@@ -14,15 +14,80 @@ function useAds(placement: AdPlacement, enabled: boolean) {
   return useQuery({ queryKey: ['homepage-ads', placement], queryFn: () => fetchHomepageAds(placement), staleTime: 3 * 60_000, retry: 1, enabled });
 }
 
-/** Featured banner(s) at the top of the homepage. Renders nothing when there is nothing eligible. */
+/** How long each vendor's featured banner stays before the next vendor's banner takes over. */
+export const FEATURED_SLIDE_MS = 15_000;
+
+/**
+ * Featured banners at the top of the homepage, as a slideshow. Each slide is a different vendor's own banner; with more
+ * than one running, the next vendor's banner appears every 15 seconds. The slideshow stops moving while the pointer or
+ * keyboard focus is on it, while the browser tab is in the background, and for people who ask for reduced motion
+ * (they can still use the dots). One banner or none: nothing moves, and nothing renders when nothing is eligible.
+ */
 export function FeaturedAds({ className }: { className?: string }) {
   const { data: settings } = useAdSettings();
   const { data: ads } = useAds('featured', !!settings?.ads_enabled);
-  const chosen = useMemo(() => pickAds(ads ?? [], { limit: settings?.featured_banner_limit ?? 1, seed: `${PAGE_SEED}:f` }), [ads, settings?.featured_banner_limit]);
-  if (!settings?.ads_enabled || !chosen.length) return null;
+  const slides = useMemo(() => pickAds(ads ?? [], { limit: settings?.featured_banner_limit ?? 1, seed: `${PAGE_SEED}:f` }), [ads, settings?.featured_banner_limit]);
+  const [index, setIndex] = useState(0);
+  const [hold, setHold] = useState(false);
+  const [hidden, setHidden] = useState(() => typeof document !== 'undefined' && document.hidden);
+  const [reduce, setReduce] = useState(() => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
+  const count = slides.length;
+
+  useEffect(() => {
+    const onVis = () => setHidden(document.hidden);
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
+  useEffect(() => {
+    const mq = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+    if (!mq) return;
+    const on = () => setReduce(mq.matches);
+    mq.addEventListener?.('change', on);
+    return () => mq.removeEventListener?.('change', on);
+  }, []);
+  useEffect(() => { if (index >= count) setIndex(0); }, [count, index]);
+
+  // A fresh 15 seconds starts every time the slide changes, including when a visitor taps a dot.
+  const playing = count > 1 && !hold && !hidden && !reduce;
+  useEffect(() => {
+    if (!playing) return;
+    const t = window.setTimeout(() => setIndex(i => (i + 1) % count), FEATURED_SLIDE_MS);
+    return () => window.clearTimeout(t);
+  }, [playing, index, count]);
+
+  const go = useCallback((i: number) => setIndex(((i % count) + count) % count), [count]);
+
+  if (!settings?.ads_enabled || !count) return null;
+  const ad = slides[Math.min(index, count - 1)];
   return (
-    <section aria-label="Sponsored" className={className}>
-      <div className="grid gap-4">{chosen.map((ad, i) => <AdBanner key={ad.id} ad={ad} placement="featured" priority={i === 0} />)}</div>
+    <section
+      aria-label="Sponsored"
+      aria-roledescription={count > 1 ? 'carousel' : undefined}
+      className={className}
+      onPointerEnter={() => setHold(true)}
+      onPointerLeave={() => setHold(false)}
+      onFocusCapture={() => setHold(true)}
+      onBlurCapture={() => setHold(false)}
+    >
+      <div key={ad.id} className={reduce ? '' : 'animate-in fade-in duration-500'} aria-live={playing ? 'off' : 'polite'}>
+        <AdBanner ad={ad} placement="featured" priority={index === 0} />
+      </div>
+      {count > 1 && (
+        <div className="mt-2 flex items-center justify-center gap-1.5" role="group" aria-label="Choose a sponsored banner">
+          {slides.map((s, i) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => go(i)}
+              aria-label={`Show sponsored banner ${i + 1} of ${count}: ${s.store_name}`}
+              aria-current={i === index ? 'true' : undefined}
+              className="flex h-6 w-6 items-center justify-center"
+            >
+              <span className={`block h-2 rounded-full transition-all ${i === index ? 'w-5 bg-foreground/70' : 'w-2 bg-foreground/25'}`} />
+            </button>
+          ))}
+        </div>
+      )}
     </section>
   );
 }

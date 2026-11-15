@@ -48,17 +48,19 @@ export default function Showcase3D({ items }: { items: Item[] }) {
   const mid = (shown.length - 1) / 2;
 
   return (
-    <section className="relative mt-6 overflow-hidden bg-[#0a2236] text-white sm:mt-8" aria-label="Featured products">
+    <section className="relative mt-5 overflow-hidden bg-[#0a2236] text-white sm:mt-6" aria-label="Featured products">
       <div className="pointer-events-none absolute inset-0 opacity-40" aria-hidden="true"
            style={{ background: 'radial-gradient(60% 80% at 50% 0%, rgba(56,140,220,.55), transparent 70%)' }} />
-      <div className="container relative max-w-[1440px] py-8 sm:py-12">
+      <div className="container relative max-w-[1440px] py-6 sm:py-8 lg:grid lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] lg:items-center lg:gap-6 lg:py-6">
         <div className="max-w-xl">
-          <h2 className="font-heading text-2xl font-bold sm:text-4xl">Buy direct from verified suppliers</h2>
+          <h2 className="font-heading text-2xl font-bold sm:text-3xl lg:text-3xl">Buy direct from verified suppliers</h2>
           <p className="mt-2 text-sm text-white/70 sm:text-base">Real listings from sellers across Nigeria. Open any product to see the supplier, the minimum order and the price.</p>
+          <Link to="/products" className="mt-4 hidden rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[#0a2236] hover:bg-white/90 lg:inline-block">Browse all products</Link>
         </div>
+        <div className="min-w-0">
 
         {/* Phones and "reduce motion": a plain swipeable row. */}
-        <ul className={`-mx-4 mt-6 flex snap-x gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] ${reduce ? '' : 'md:hidden'} ${reduce ? 'md:mx-0 md:px-0' : ''}`}>
+        <ul className={`-mx-4 mt-5 flex snap-x gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] ${reduce ? '' : 'md:hidden'} ${reduce ? 'md:mx-0 md:px-0' : ''}`}>
           {shown.map(p => <li key={p.id} className="w-44 shrink-0 snap-start">{card(p)}</li>)}
         </ul>
 
@@ -67,7 +69,7 @@ export default function Showcase3D({ items }: { items: Item[] }) {
             ref={stage}
             onPointerMove={onMove}
             onPointerLeave={reset}
-            className="mt-8 hidden h-[340px] items-center justify-center md:flex lg:h-[400px]"
+            className="mt-4 hidden h-[250px] items-center justify-center md:flex lg:mt-0 lg:h-[270px]"
             style={{ perspective: 1200 }}
           >
             <motion.ul style={{ rotateY: ry, rotateX: rx, transformStyle: 'preserve-3d' }} className="relative h-full w-full">
@@ -76,9 +78,9 @@ export default function Showcase3D({ items }: { items: Item[] }) {
                 return (
                   <li
                     key={p.id}
-                    className="absolute left-1/2 top-1/2 w-44 lg:w-52"
+                    className="absolute left-1/2 top-1/2 w-36 lg:w-40"
                     style={{
-                      transform: `translate(-50%, -50%) translateX(${d * 150}px) translateZ(${-Math.abs(d) * 90}px) rotateY(${-d * 14}deg)`,
+                      transform: `translate(-50%, -50%) translateX(${d * 118}px) translateZ(${-Math.abs(d) * 70}px) rotateY(${-d * 14}deg)`,
                       transformStyle: 'preserve-3d',
                       zIndex: 10 - Math.round(Math.abs(d)),
                     }}
@@ -96,7 +98,8 @@ export default function Showcase3D({ items }: { items: Item[] }) {
           </div>
         )}
 
-        <Link to="/products" className="mt-6 inline-block rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[#0a2236] hover:bg-white/90">Browse all products</Link>
+        <Link to="/products" className="mt-5 inline-block rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[#0a2236] hover:bg-white/90 lg:hidden">Browse all products</Link>
+        </div>
       </div>
     </section>
   );
