@@ -66,6 +66,7 @@ function subjectFor(eventType: string, data: NotificationEmailData): string {
     'vendor.new_rfq': 'A new request for quotation matches your shop',
     'admin.new_vendor': 'A new vendor registered on IT Hub Africa',
     'admin.new_buyer': 'A new buyer registered on IT Hub Africa',
+    'user.welcome': 'Welcome to IT Hub Africa',
     'admin.content_report': 'A marketplace content report needs review',
     'user.support_reply': 'The IT Hub Africa support team replied',
     'vendor.membership_activated': 'Your supplier membership is active',
@@ -106,6 +107,11 @@ function contentFor(eventType: string, data: NotificationEmailData, siteUrl: str
     case 'buyer.rfq_quote': heading = 'You received a quote'; intro = `${data.storeName ?? 'A supplier'} sent a quote for “${data.title ?? 'your request'}”.`; if (data.unitPrice !== undefined) lines.push(`Unit price: ${money(data.unitPrice)}`); if (data.quantity) lines.push(`Minimum quantity: ${data.quantity} ${data.unit ?? 'Piece'}`); if (data.message) lines.push(data.message); actionPath = '/rfq'; break;
     case 'vendor.new_rfq': heading = 'New matching request'; intro = `A buyer posted a request that matches ${data.storeName ?? 'your shop'}${data.title ? `: ${data.title}` : ''}.`; if (data.description) lines.push(data.description); if (data.quantity) lines.push(`Quantity: ${data.quantity} ${data.unit ?? 'Piece'}`); if (data.destination) lines.push(`Destination: ${data.destination}`); if (data.targetPrice != null) lines.push(`Target price: ${money(data.targetPrice)}`); actionPath = '/rfq'; break;
     case 'admin.new_vendor': heading = 'New vendor registration'; intro = `${data.storeName ?? 'A new vendor'} has registered and may need review.`; actionPath = '/admin?tab=suppliers'; break;
+    case 'user.welcome':
+      heading = 'Welcome to IT Hub Africa';
+      intro = 'Your account is ready. You can now buy from suppliers across the marketplace.';
+      lines.push('Browse products and compare suppliers.', 'Send an inquiry or request a quote from a supplier.', 'Track your orders from your account.');
+      actionPath = '/products'; break;
     case 'admin.new_buyer': heading = 'New buyer registration'; intro = 'A new buyer account was created.'; actionPath = '/admin?tab=users'; break;
     case 'admin.content_report': heading = 'Reported marketplace content'; intro = `A user submitted a report${data.reason ? `: ${data.reason}` : ''}. Review it in the admin moderation queue.`; actionPath = '/admin?tab=moderation'; break;
     case 'user.support_reply': heading = 'Support replied'; intro = `Our support team replied${data.title ? ` to “${data.title}”` : ' to your request'}.`; if (data.message) lines.push(data.message); actionPath = '/contact'; break;
@@ -144,13 +150,14 @@ const TONES: Record<Tone, { bar: string; chipBg: string; chipFg: string; label: 
 function toneFor(eventType: string): Tone {
   if (/cancelled|payment_failed|refund_failed/.test(eventType)) return 'bad';
   if (/payment_issue|payment_alert|expiring|payout_issue|dispute|content_report/.test(eventType)) return 'attention';
-  if (/order_paid|order_received|shipped|delivered|refund_processed|membership_activated|payout_paid|rfq_quote|inquiry_replied|support_reply/.test(eventType)) return 'good';
+  if (/order_paid|order_received|shipped|delivered|refund_processed|membership_activated|payout_paid|rfq_quote|inquiry_replied|support_reply|user\.welcome/.test(eventType)) return 'good';
   return 'info';
 }
 function ctaFor(eventType: string): string {
   if (/^buyer\.(order|refund|payment|dispute)/.test(eventType)) return 'View my order';
   if (eventType === 'vendor.order_received' || eventType === 'vendor.order_cancelled') return 'Open seller dashboard';
   if (eventType.startsWith('admin.')) return 'Open admin console';
+  if (eventType === 'user.welcome') return 'Start shopping';
   if (eventType === 'buyer.rfq_quote') return 'View the quote';
   if (eventType === 'vendor.new_rfq') return 'View the request';
   if (/inquiry|support_reply/.test(eventType)) return 'Read and reply';

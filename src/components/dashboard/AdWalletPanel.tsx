@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Panel, StatCard } from '@/components/dashboard/DashboardShell';
+import { Panel } from '@/components/dashboard/DashboardShell';
 import { supabase } from '@/integrations/supabase/client';
 import { call } from '@/lib/ads/adsApi';
 import { formatNaira } from '@/lib/format';
@@ -49,30 +49,48 @@ export default function AdWalletPanel() {
     } catch (e) { toast.error(errText(e)); setBusy(false); }
   };
 
+  const quick = [5000, 10000, 20000, 50000].filter(q => q >= min && q <= max);
+
   return (
     <Panel title="Advertising balance">
-      <div className="grid grid-cols-3 gap-2">
-        <StatCard icon={<Wallet />} label="Balance" value={naira(Number(data.balance_kobo))} />
-        <StatCard icon={<Wallet />} tone="sky" label="Added in total" value={naira(Number(data.topped_up_kobo))} />
-        <StatCard icon={<Wallet />} tone="accent" label="Spent in total" value={naira(Number(data.spent_kobo))} />
+      {/* Compact balance card: the balance is the one big number, the totals sit small underneath. */}
+      <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-[#0a2236] to-[#12395a] p-4 text-white shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-xs text-white/70">Available balance</p>
+            <p className="truncate font-heading text-2xl font-bold tabular-nums sm:text-3xl">{naira(Number(data.balance_kobo))}</p>
+          </div>
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10"><Wallet className="h-5 w-5" aria-hidden="true" /></span>
+        </div>
+        <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
+          <div className="rounded-xl bg-white/10 px-3 py-2"><dt className="text-white/70">Added</dt><dd className="font-semibold tabular-nums">{naira(Number(data.topped_up_kobo))}</dd></div>
+          <div className="rounded-xl bg-white/10 px-3 py-2"><dt className="text-white/70">Spent</dt><dd className="font-semibold tabular-nums">{naira(Number(data.spent_kobo))}</dd></div>
+        </dl>
       </div>
 
-      <p className="mt-3 text-sm text-muted-foreground">
-        Add money here to pay for ads on other platforms such as Google, Meta and TikTok. When ITHUBAFRICA runs one for you, the cost is taken from this balance and listed below.
-      </p>
-
       {data.enabled ? (
-        <div className="mt-3 flex flex-wrap items-end gap-2">
-          <label className="text-sm">
-            <span className="mb-1 block text-xs text-muted-foreground">Amount to add (₦{min.toLocaleString('en-NG')} to ₦{max.toLocaleString('en-NG')})</span>
-            <Input inputMode="numeric" value={amount} onChange={e => setAmount(e.target.value.replace(/[^0-9]/g, ''))} placeholder="e.g. 20000" className="w-44" />
-          </label>
-          <Button disabled={!valid || busy} onClick={add}>{busy ? 'Opening Paystack…' : 'Add funds'}</Button>
+        <div className="mt-3 rounded-2xl border border-border p-3">
+          <label className="block text-xs text-muted-foreground" htmlFor="wallet-amount">Add funds (₦{min.toLocaleString('en-NG')} to ₦{max.toLocaleString('en-NG')})</label>
+          <div className="mt-1.5 flex gap-2">
+            <Input id="wallet-amount" inputMode="numeric" value={amount} onChange={e => setAmount(e.target.value.replace(/[^0-9]/g, ''))} placeholder="e.g. 20000" className="h-11 min-w-0 flex-1 rounded-xl" />
+            <Button variant="cta" className="h-11 shrink-0 rounded-xl px-4" disabled={!valid || busy} onClick={add}>{busy ? 'Opening…' : 'Add funds'}</Button>
+          </div>
+          {quick.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {quick.map(q => (
+                <button key={q} type="button" onClick={() => setAmount(String(q))}
+                  className={`rounded-full border px-3 py-1 text-xs font-medium ${value === q ? 'border-accent bg-accent/10 text-accent' : 'border-border text-muted-foreground hover:bg-secondary'}`}>
+                  ₦{q.toLocaleString('en-NG')}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       ) : <p className="mt-3 text-sm font-medium">Adding funds is switched off right now.</p>}
       {!!data.pending?.length && <p className="mt-2 text-xs text-muted-foreground">{data.pending.length} payment{data.pending.length === 1 ? ' is' : 's are'} waiting for Paystack to confirm. Funds appear here once it does.</p>}
+      <p className="mt-2 text-xs text-muted-foreground">Pays for ads on Google, Meta and TikTok. Each cost is taken from this balance and listed in your history.</p>
 
-      <h3 className="mb-1 mt-5 font-heading text-sm">History</h3>
+      <h3 className="mb-1 mt-4 font-heading text-sm">History</h3>
       {!data.ledger?.length ? <p className="rounded-lg border border-dashed border-border p-4 text-center text-sm text-muted-foreground">Nothing yet. Funds you add and ad spend will be listed here.</p> : (
         <ul className="divide-y divide-border rounded-lg border border-border">
           {data.ledger.map((l: any) => (

@@ -28,12 +28,13 @@ import { functionErrorMessage } from '@/lib/functionError';
 import { BANKS, BANK_PLACEHOLDER, isValidAccountNumber } from '@/lib/banks';
 import { formatNaira } from '@/lib/format';
 import { useCategories } from '@/hooks/useProducts';
-import { Bell, Wallet, Users, Package, ShoppingCart, DollarSign, Plus, LogOut, ArrowLeft, Trash2, Store, Upload, MessageCircle, AlertCircle, Clock, CheckCircle, CreditCard, LayoutDashboard, Film, Settings, ExternalLink, Pencil, Megaphone } from 'lucide-react';
+import { Bell, Wallet, Users, Package, ShoppingCart, DollarSign, Plus, LogOut, ArrowLeft, Trash2, Store, Upload, MessageCircle, AlertCircle, Clock, CheckCircle, CreditCard, LayoutDashboard, Film, Settings, ExternalLink, Pencil, Megaphone, Pin } from 'lucide-react';
 import NotificationsPanel from '@/components/dashboard/NotificationsPanel';
 import VendorEarningsPanel, { useVendorBalance } from '@/components/dashboard/VendorEarningsPanel';
 import VendorFollowersPanel from '@/components/dashboard/VendorFollowersPanel';
 import { useUnreadNotificationCount } from '@/hooks/useNotifications';
 import { formatNaira as formatNairaHub } from '@/lib/format';
+import { usePlanUsage } from '@/hooks/usePlanUsage';
 import DashboardShell, { Panel, StatCard, WelcomeBanner, useTabParam, type DashNavItem } from '@/components/dashboard/DashboardShell';
 import { BrandFlyerBanner } from '@/components/flyers/BrandFlyerImage';
 import { BRAND_FLYERS } from '@/lib/brandFlyers';
@@ -384,6 +385,19 @@ export default function SupplierDashboard() {
                               <div className="flex items-center gap-2">
                                 <img src={listImage(p) || '/placeholder.svg'} alt="" loading="lazy" decoding="async" className={`w-8 h-8 rounded object-cover ${p.is_active === false ? 'opacity-50' : ''}`} />
                                 <span className="font-medium line-clamp-1">{p.name}</span>
+                                <button type="button"
+                                  title={(p as any).is_pinned ? 'Pinned to the top. Click to unpin' : 'Pin this product to the top'}
+                                  aria-label={(p as any).is_pinned ? `Unpin ${p.name}` : `Pin ${p.name} to the top`}
+                                  aria-pressed={!!(p as any).is_pinned}
+                                  onClick={async () => {
+                                    const next = !(p as any).is_pinned;
+                                    const { error } = await supabase.from('products').update({ is_pinned: next } as any).eq('id', p.id);
+                                    if (error) toast.error(error.message);
+                                    else { queryClient.invalidateQueries({ queryKey: ['vendor-products'] }); queryClient.invalidateQueries({ queryKey: ['my-plan-usage'] }); toast.success(next ? 'Pinned to the top' : 'Unpinned'); }
+                                  }}
+                                  className={`shrink-0 rounded p-1 ${(p as any).is_pinned ? 'bg-accent/15 text-accent' : 'text-muted-foreground hover:bg-secondary'}`}>
+                                  <Pin className={`h-3.5 w-3.5 ${(p as any).is_pinned ? 'fill-current' : ''}`} />
+                                </button>
                                 {!p.image_url && !p.thumb_url && (
                                   <button type="button" onClick={() => setEditProductId(p.id)}
                                     className="shrink-0 rounded bg-destructive/10 px-1.5 py-0.5 text-[11px] font-medium text-destructive hover:bg-destructive/20">
@@ -558,6 +572,8 @@ function SupplierAddProduct({ vendorId, categories, onSuccess }: { vendorId: str
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [preorder, setPreorder] = useState<PreorderForm>(emptyPreorder);
+  const { data: usage } = usePlanUsage();
+  const queryClient = useQueryClient();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -618,12 +634,19 @@ function SupplierAddProduct({ vendorId, categories, onSuccess }: { vendorId: str
       // The product was not saved, so the photos we just uploaded are not used anywhere: remove them.
       void deleteCloudinaryImages(uploaded.map(u => u.url));
       toast.error(error.message);
-    } else { toast.success('Product added!'); onSuccess(); }
+    } else { toast.success('Product added!'); queryClient.invalidateQueries({ queryKey: ['my-plan-usage'] }); onSuccess(); }
   };
 
   return (
     <form onSubmit={handleSubmit} className="bg-card p-6 rounded-lg card-shadow max-w-2xl space-y-4">
       <h2 className="font-heading text-xl font-bold flex items-center gap-2"><Plus className="w-5 h-5" /> Add Product</h2>
+      {usage && usage.product_limit != null && (
+        <p className={`rounded-xl px-3 py-2 text-sm ${usage.product_count >= usage.product_limit ? 'bg-destructive/10 text-destructive' : 'bg-secondary text-muted-foreground'}`}>
+          {usage.product_count >= usage.product_limit
+            ? `You have used all ${usage.product_limit} products on your ${usage.plan_name} plan. Upgrade in the Membership tab to add more.`
+            : `${usage.product_count} of ${usage.product_limit} products used on your ${usage.plan_name} plan.`}
+        </p>
+      )}
       <div className="grid grid-cols-2 gap-4">
         <div><Label>Name *</Label><Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required /></div>
         <div><Label>Brand</Label><Input value={form.brand} onChange={e => setForm(p => ({ ...p, brand: e.target.value }))} /></div>

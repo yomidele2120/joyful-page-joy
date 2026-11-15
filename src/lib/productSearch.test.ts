@@ -36,7 +36,8 @@ describe('sortKeys', () => {
     }
   });
   it('maps each option to the right column and direction', () => {
-    expect(sortKeys('newest')[0]).toEqual({ column: 'created_at', ascending: false });
+    expect(sortKeys('newest')[0]).toEqual({ column: 'is_pinned', ascending: false });
+    expect(sortKeys('newest')[1]).toEqual({ column: 'bumped_at', ascending: false });
     expect(sortKeys('price-low')[0]).toEqual({ column: 'price_min', ascending: true });
     expect(sortKeys('price-high')[0]).toEqual({ column: 'price_min', ascending: false });
     expect(sortKeys('moq-low')[0]).toEqual({ column: 'moq', ascending: true });

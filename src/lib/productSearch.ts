@@ -28,7 +28,8 @@ export function sortKeys(sort: ProductSort | undefined): { column: string; ascen
     case 'price-low': return [{ column: 'price_min', ascending: true }, { column: 'id', ascending: true }];
     case 'price-high': return [{ column: 'price_min', ascending: false }, { column: 'id', ascending: false }];
     case 'moq-low': return [{ column: 'moq', ascending: true }, { column: 'id', ascending: true }];
-    default: return [{ column: 'created_at', ascending: false }, { column: 'id', ascending: false }];
+    // Default order: products the seller pinned first (a plan feature), then the most recently listed or renewed.
+    default: return [{ column: 'is_pinned', ascending: false }, { column: 'bumped_at', ascending: false }, { column: 'id', ascending: false }];
   }
 }
 

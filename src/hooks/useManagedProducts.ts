@@ -14,7 +14,7 @@ export interface ManagedProduct {
   id: string; name: string; slug: string; price: number; compare_at_price: number | null;
   moq: number | null; unit: string | null; price_tiers: unknown; stock_quantity: number | null;
   image_url: string | null; thumb_url: string | null; created_at: string;
-  is_active: boolean | null; bnpl_eligible: boolean | null;
+  is_active: boolean | null; is_pinned?: boolean | null; bnpl_eligible: boolean | null;
   is_preorder: boolean; preorder_approved: boolean; preorder_status: string;
   preorder_release_date: string | null; preorder_delivery_estimate: string | null;
   preorder_quantity_limit: number | null; preorder_max_per_order: number | null; preorder_terms: string | null;
@@ -23,7 +23,7 @@ export interface ManagedProduct {
 }
 
 const COLUMNS =
-  'id, name, slug, price, compare_at_price, moq, unit, price_tiers, stock_quantity, image_url, thumb_url, created_at, is_active, bnpl_eligible, ' +
+  'id, name, slug, price, compare_at_price, moq, unit, price_tiers, stock_quantity, image_url, thumb_url, created_at, is_active, is_pinned, bnpl_eligible, ' +
   'is_preorder, preorder_approved, preorder_status, preorder_release_date, preorder_delivery_estimate, ' +
   'preorder_quantity_limit, preorder_max_per_order, preorder_terms, categories(name), vendors(store_name)';
 

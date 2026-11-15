@@ -5,7 +5,7 @@ import { CACHE } from '@/lib/cachePolicy';
 
 // Product lists show cards, so they skip the heavy columns (specs, gallery, video, SKU) and, unless asked,
 // the long description. The full row is only loaded on the product page (useProduct).
-export const LIST_COLUMNS = 'id, name, slug, price, compare_at_price, image_url, thumb_url, badge, brand, category_id, vendor_id, is_featured, is_active, moq, unit, price_tiers, stock_quantity, bnpl_eligible, created_at, updated_at, is_preorder, preorder_approved, preorder_status, preorder_release_date, preorder_delivery_estimate, preorder_quantity_limit, preorder_max_per_order, preorder_terms, preorder_due_notified';
+export const LIST_COLUMNS = 'id, name, slug, price, compare_at_price, image_url, thumb_url, badge, brand, category_id, vendor_id, is_featured, is_active, moq, unit, price_tiers, stock_quantity, bnpl_eligible, is_pinned, created_at, updated_at, is_preorder, preorder_approved, preorder_status, preorder_release_date, preorder_delivery_estimate, preorder_quantity_limit, preorder_max_per_order, preorder_terms, preorder_due_notified';
 export const LIST_JOINS = 'categories(name, slug), vendors(id, user_id, store_name, logo_url, is_approved, location)';
 
 export type ProductListRow = Omit<Tables<'products'>, 'specs' | 'images' | 'video_url' | 'sku' | 'description'> & {
@@ -37,7 +37,9 @@ export function useProducts(options?: { categorySlug?: string; featured?: boolea
         if (cat) query = query.eq('category_id', cat.id);
       }
 
-      const { data, error } = await query.order('created_at', { ascending: options?.orderBy === 'oldest' });
+      const { data, error } = options?.orderBy === 'oldest'
+        ? await query.order('created_at', { ascending: true })
+        : await query.order('is_pinned', { ascending: false }).order('bumped_at', { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as ProductListRow[];
     },

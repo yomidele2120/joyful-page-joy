@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { Bell, CheckCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Panel } from '@/components/dashboard/DashboardShell';
-import { useMarkNotificationsRead, useNotifications } from '@/hooks/useNotifications';
+import { notificationHref, useMarkNotificationsRead, useNotifications } from '@/hooks/useNotifications';
 
 // The same notifications as the bell in the site header, laid out as a page for the account menu.
 export default function NotificationsPanel() {
@@ -40,10 +40,11 @@ export default function NotificationsPanel() {
                 </span>
               </span>
             );
+            const href = notificationHref(n);
             return (
               <li key={n.id}>
-                {n.link
-                  ? <Link to={n.link} onClick={() => !n.is_read && mark.mutate([n.id])} className="block hover:bg-secondary">{body}</Link>
+                {href
+                  ? <Link to={href} onClick={() => !n.is_read && mark.mutate([n.id])} className="block hover:bg-secondary">{body}</Link>
                   : <button type="button" onClick={() => !n.is_read && mark.mutate([n.id])} className="block w-full text-left hover:bg-secondary">{body}</button>}
               </li>
             );

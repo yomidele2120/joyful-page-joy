@@ -80,7 +80,7 @@ export default function TikTokConnect({ vendorId, switchedOn = true }: { vendorI
   };
 
   if (isLoading || planLoading) return null;
-  const hasSocialPlan = effectivePlan === 'silver' || effectivePlan === 'premium';
+  const hasSocialPlan = ['silver', 'premium', 'gold', 'diamond'].includes(String(effectivePlan));
   const canManageIntegration = switchedOn && hasSocialPlan;
   // Switched off by the admin: nothing new can be connected or chosen. A connected seller can still disconnect.
   if (!switchedOn && !conn) return null;

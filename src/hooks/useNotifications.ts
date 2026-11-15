@@ -58,3 +58,46 @@ export function useMarkNotificationsRead() {
     },
   });
 }
+
+// Where a notification should take the person. Newer notifications carry their own link; older ones (follow, like,
+// comment, new post) only have ids, so the destination is worked out here. Generic dashboard links are narrowed to
+// the section the notification is about. The database also fills a link on every new notification; this is the
+// fallback for any row that still has none, so a click always lands somewhere.
+export function notificationHref(n: AppNotification): string {
+  const link = n.link && n.link.trim() ? n.link.trim() : null;
+  const vendorTab = (tab: string) => `/supplier-dashboard?tab=${tab}`;
+  const asType = n.type as string;
+
+  if (link === '/supplier-dashboard') {
+    if (asType === 'dispute') return vendorTab('disputes');
+    if (asType === 'order' || asType === 'payment') return vendorTab('orders');
+    if (asType === 'preorder') return vendorTab('products');
+    return link;
+  }
+  if (link) return link;
+
+  switch (asType) {
+    case 'like':
+    case 'comment':
+    case 'new_post':
+      return n.post_id ? `/feed?post=${n.post_id}` : '/feed';
+    case 'follow':
+      return vendorTab('followers');
+    case 'review':
+      return n.vendor_id ? `/shop/${n.vendor_id}` : '/user-dashboard?tab=notifications';
+    case 'inquiry':
+      return '/inquiries';
+    case 'quote':
+      return '/rfq';
+    case 'message':
+      return '/user-dashboard?tab=messages';
+    case 'order':
+    case 'payment':
+    case 'bnpl':
+    case 'preorder':
+    case 'dispute':
+      return '/my-orders';
+    default:
+      return '/user-dashboard?tab=notifications';
+  }
+}

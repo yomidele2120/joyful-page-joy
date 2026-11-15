@@ -1,8 +1,8 @@
-import { BadgeCheck, Crown, Medal } from 'lucide-react';
+import { BadgeCheck, Crown, Gem, Medal, Star } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
-export type SupplierTier = 'free' | 'silver' | 'premium';
+export type SupplierTier = 'free' | 'silver' | 'premium' | 'gold' | 'diamond';
 
 // Public read of the vendor's current plan. The database function already falls back to Free
 // when a paid plan has expired or been suspended, so an expired vendor never keeps a paid badge.
@@ -14,7 +14,7 @@ export function useSupplierTier(vendorId?: string) {
     queryFn: async (): Promise<SupplierTier> => {
       const { data, error } = await (supabase as any).rpc('effective_supplier_plan', { _vendor_id: vendorId });
       if (error) return 'free';
-      return data === 'silver' || data === 'premium' ? data : 'free';
+      return data === 'silver' || data === 'premium' || data === 'gold' || data === 'diamond' ? data : 'free';
     },
   });
 }
@@ -34,6 +34,16 @@ const TIERS: Record<SupplierTier, { label: string; full: string; Icon: typeof Ba
     label: 'Premium', full: 'Premium Supplier', Icon: Crown,
     cls: 'border-amber-500/50 bg-gradient-to-r from-amber-400/30 to-yellow-200/40 text-amber-900 dark:from-amber-500/30 dark:to-yellow-400/10 dark:text-amber-200', icon: 'text-amber-600 dark:text-amber-300',
     title: 'Verified Premium member of IT Hub Africa',
+  },
+  gold: {
+    label: 'Gold', full: 'Gold Supplier', Icon: Star,
+    cls: 'border-yellow-600/60 bg-gradient-to-r from-yellow-500/40 to-amber-300/40 text-yellow-950 dark:from-yellow-500/30 dark:to-amber-400/10 dark:text-yellow-100', icon: 'text-yellow-700 dark:text-yellow-300',
+    title: 'Verified Gold member of IT Hub Africa',
+  },
+  diamond: {
+    label: 'Diamond', full: 'Diamond Supplier', Icon: Gem,
+    cls: 'border-sky-500/50 bg-gradient-to-r from-sky-400/30 to-indigo-300/30 text-sky-950 dark:from-sky-500/30 dark:to-indigo-400/10 dark:text-sky-100', icon: 'text-sky-600 dark:text-sky-300',
+    title: 'Verified Diamond member of IT Hub Africa',
   },
 };
 

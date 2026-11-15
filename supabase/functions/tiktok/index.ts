@@ -354,7 +354,7 @@ async function actionSyncAll(db: ReturnType<typeof admin>) {
   const { data: memberships, error: membershipError } = await db.from("vendor_memberships")
     .select("vendor_id, plan_slug")
     .in("vendor_id", vendorIds)
-    .in("plan_slug", ["silver", "premium"])
+    .in("plan_slug", ["silver", "premium", "gold", "diamond"])
     .eq("status", "active")
     .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
   if (membershipError) throw membershipError;
@@ -413,8 +413,8 @@ serve(async (req) => {
     if (action !== "disconnect") {
       const { data: plan, error: planError } = await userDb.rpc("effective_supplier_plan", { _vendor_id: vendor.id });
       if (planError) throw planError;
-      if (plan !== "silver" && plan !== "premium") {
-        throw new UserError("TikTok requires an active Silver or Premium membership.", 403);
+      if (!["silver", "premium", "gold", "diamond"].includes(String(plan))) {
+        throw new UserError("TikTok requires an active paid membership (Silver or higher).", 403);
       }
     }
 

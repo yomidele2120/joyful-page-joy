@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    if (typeof body.planSlug !== 'string' || !['silver', 'premium'].includes(body.planSlug)) {
+    if (typeof body.planSlug !== 'string' || !['silver', 'premium', 'gold', 'diamond'].includes(body.planSlug)) {
       return new Response(JSON.stringify({ error: 'Choose a paid supplier plan' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

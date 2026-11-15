@@ -29,6 +29,8 @@ export interface ProductCardProps {
   price_tiers?: Json | null;
   vendors?: { store_name: string; is_approved: boolean | null } | null;
   bnpl_eligible?: boolean | null;
+  /** Pinned by a seller on a plan that includes pinning: shown with a "Promoted" tag. */
+  is_pinned?: boolean | null;
   is_preorder?: boolean | null;
   preorder_approved?: boolean | null;
   preorder_release_date?: string | null;
@@ -52,7 +54,7 @@ export function ProductPrice({ product, className = '', compact = false }: { pro
 
 export default function ProductCard({
   name, slug, price, compare_at_price, image_url, thumb_url, badge, brand, stock_quantity, moq, unit, price_tiers, vendors,
-  bnpl_eligible, is_preorder, preorder_approved, preorder_release_date,
+  bnpl_eligible, is_pinned, is_preorder, preorder_approved, preorder_release_date,
 }: ProductCardProps) {
   // Pay later is only advertised when it is genuinely on and this product fits the limits; preorders never offer it.
   const { data: finance } = usePublicFinance();
@@ -103,6 +105,9 @@ export default function ProductCard({
           <Badge className="absolute left-1.5 top-1.5 rounded-full border-none bg-background/90 px-2 py-0.5 text-[11px] font-medium text-primary shadow-sm">
             {badge}
           </Badge>
+        )}
+        {is_pinned && (
+          <span className="absolute right-1.5 top-1.5 rounded-full bg-primary/90 px-2 py-0.5 text-[10px] font-semibold text-primary-foreground shadow-sm">Promoted</span>
         )}
         {discount > 0 && (
           <span className="absolute bottom-1.5 left-1.5 rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-accent-foreground">

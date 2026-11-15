@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { formatNaira } from '@/lib/format';
 
-type PlanQuota = { plan_slug: 'free' | 'silver' | 'premium'; daily_minutes: number; monthly_minutes: number; max_concurrent_calls: number };
+type PlanQuota = { plan_slug: string; daily_minutes: number; monthly_minutes: number; max_concurrent_calls: number };
 type BuyerQuota = { daily_minutes: number; monthly_minutes: number; max_concurrent_calls: number };
 type Usage = { calls_30d: number; conversation_minutes_30d: number; participant_minutes_30d: number; estimated_cost_ngn_30d: number };
 

@@ -15,6 +15,10 @@ type Plan = {
   visibility_boost: number;
   is_active: boolean;
   purchase_enabled: boolean;
+  sort_order?: number;
+  product_limit?: number | null;
+  pinned_limit?: number;
+  renew_hours?: number | null;
 };
 
 type Membership = {
@@ -40,7 +44,7 @@ export default function SupplierPlansTab() {
   const { data: plans = [], isLoading: plansLoading, isError: plansError } = useQuery({
     queryKey: ['admin-supplier-plans'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('supplier_membership_plans').select('*').order('visibility_boost');
+      const { data, error } = await supabase.from('supplier_membership_plans').select('*').order('sort_order').order('visibility_boost');
       if (error) throw error;
       return data as Plan[];
     },
@@ -101,6 +105,7 @@ export default function SupplierPlansTab() {
     toast.success('Plan saved');
     queryClient.invalidateQueries({ queryKey: ['admin-supplier-plans'] });
     queryClient.invalidateQueries({ queryKey: ['supplier-membership-plans'] });
+    queryClient.invalidateQueries({ queryKey: ['plan-catalog'] });
   };
 
   const setMembershipStatus = async (vendorId: string, status: Membership['status']) => {
@@ -122,6 +127,8 @@ export default function SupplierPlansTab() {
 
   return (
     <div className="space-y-8">
+      <CategoryLimits plans={plans} />
+
       <section className="space-y-3">
         <div>
           <h2 className="font-heading text-lg font-semibold">Ranking and visibility controls</h2>
@@ -233,6 +240,9 @@ function PlanRow({ plan, onSave }: { plan: Plan; onSave: (slug: string, changes:
   const [price, setPrice] = useState(plan.price_kobo == null ? '' : String(plan.price_kobo / 100));
   const [days, setDays] = useState(plan.period_days == null ? '' : String(plan.period_days));
   const [boost, setBoost] = useState(String(plan.visibility_boost));
+  const [productLimit, setProductLimit] = useState(plan.product_limit == null ? '' : String(plan.product_limit));
+  const [pinnedLimit, setPinnedLimit] = useState(String(plan.pinned_limit ?? 0));
+  const [renewHours, setRenewHours] = useState(plan.renew_hours == null ? '' : String(plan.renew_hours));
   const [active, setActive] = useState(plan.is_active);
   const [purchaseEnabled, setPurchaseEnabled] = useState(plan.purchase_enabled);
   const [saving, setSaving] = useState(false);
@@ -241,6 +251,15 @@ function PlanRow({ plan, onSave }: { plan: Plan; onSave: (slug: string, changes:
     const parsedPrice = price === '' ? null : Math.round(Number(price) * 100);
     const parsedDays = days === '' ? null : Math.floor(Number(days));
     const parsedBoost = Math.floor(Number(boost));
+    const parsedLimit = productLimit === '' ? null : Math.floor(Number(productLimit));
+    const parsedPins = Math.floor(Number(pinnedLimit));
+    const parsedRenew = renewHours === '' ? null : Math.floor(Number(renewHours));
+    if ((parsedLimit !== null && !(parsedLimit >= 1))
+      || !(parsedPins >= 0 && parsedPins <= 100)
+      || (parsedRenew !== null && !(parsedRenew >= 1 && parsedRenew <= 720))) {
+      toast.error('Check the product limit, pinned products and renewal hours');
+      return;
+    }
     if ((parsedPrice !== null && (!Number.isSafeInteger(parsedPrice) || parsedPrice < 0))
       || (parsedDays !== null && (parsedDays < 1 || parsedDays > 366))
       || (!Number.isInteger(parsedBoost) || parsedBoost < 0 || parsedBoost > 100)) {
@@ -252,6 +271,9 @@ function PlanRow({ plan, onSave }: { plan: Plan; onSave: (slug: string, changes:
       price_kobo: parsedPrice,
       period_days: parsedDays,
       visibility_boost: parsedBoost,
+      product_limit: parsedLimit,
+      pinned_limit: parsedPins,
+      renew_hours: parsedRenew,
       is_active: active,
       purchase_enabled: purchaseEnabled,
     });
@@ -270,6 +292,86 @@ function PlanRow({ plan, onSave }: { plan: Plan; onSave: (slug: string, changes:
       <label className="flex items-center gap-2 text-xs">Live<Switch checked={active} onCheckedChange={setActive} /></label>
       <label className="flex items-center gap-2 text-xs">Checkout<Switch checked={purchaseEnabled} onCheckedChange={setPurchaseEnabled} disabled={plan.slug === 'free'} /></label>
       <Button size="sm" disabled={saving} onClick={save}>{saving ? 'Saving...' : 'Save'}</Button>
+      <div className="grid gap-3 sm:grid-cols-3 md:col-span-full">
+        <label className="text-xs text-muted-foreground">Product limit (empty = no limit)<Input type="number" min="1" className="mt-1" value={productLimit} onChange={event => setProductLimit(event.target.value)} /></label>
+        <label className="text-xs text-muted-foreground">Pinned products allowed<Input type="number" min="0" max="100" className="mt-1" value={pinnedLimit} onChange={event => setPinnedLimit(event.target.value)} /></label>
+        <label className="text-xs text-muted-foreground">Move listings to the top every (hours, empty = never)<Input type="number" min="1" max="720" className="mt-1" value={renewHours} onChange={event => setRenewHours(event.target.value)} /></label>
+      </div>
     </div>
+  );
+}
+
+// Optional per-category limits on a plan ("Free: at most 3 phones"). A category with no limit is only held to the plan's overall product limit.
+function CategoryLimits({ plans }: { plans: Plan[] }) {
+  const qc = useQueryClient();
+  const [planSlug, setPlanSlug] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [limit, setLimit] = useState('');
+  const { data: categories = [] } = useQuery({
+    queryKey: ['admin-plan-limit-categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('categories').select('id, name').order('name');
+      if (error) throw error;
+      return (data ?? []) as { id: string; name: string }[];
+    },
+  });
+  const { data: rows = [] } = useQuery({
+    queryKey: ['admin-plan-category-limits'],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).from('plan_category_limits').select('plan_slug, category_id, product_limit');
+      if (error) throw error;
+      return (data ?? []) as { plan_slug: string; category_id: string; product_limit: number }[];
+    },
+  });
+  const catName = (id: string) => categories.find(c => c.id === id)?.name ?? 'Category';
+  const planName = (slug: string) => plans.find(p => p.slug === slug)?.name ?? slug;
+  const n = Number(limit);
+  const valid = !!planSlug && !!categoryId && limit !== '' && Number.isInteger(n) && n >= 0;
+
+  const save = async () => {
+    const { error } = await (supabase as any).from('plan_category_limits')
+      .upsert({ plan_slug: planSlug, category_id: categoryId, product_limit: n, updated_at: new Date().toISOString() });
+    if (error) { toast.error(error.message); return; }
+    toast.success('Category limit saved');
+    setLimit('');
+    qc.invalidateQueries({ queryKey: ['admin-plan-category-limits'] });
+  };
+  const remove = async (slug: string, id: string) => {
+    const { error } = await (supabase as any).from('plan_category_limits').delete().eq('plan_slug', slug).eq('category_id', id);
+    if (error) { toast.error(error.message); return; }
+    qc.invalidateQueries({ queryKey: ['admin-plan-category-limits'] });
+  };
+
+  return (
+    <section className="space-y-3">
+      <div>
+        <h2 className="font-heading text-lg font-semibold">Category limits per plan</h2>
+        <p className="text-sm text-muted-foreground">Optional. Caps how many products a seller on a plan can list in one category, on top of the plan's overall limit. Use 0 to block a category on that plan.</p>
+      </div>
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="text-xs text-muted-foreground">Plan
+          <select className="mt-1 block h-10 rounded-md border border-input bg-background px-2 text-sm" value={planSlug} onChange={e => setPlanSlug(e.target.value)}>
+            <option value="">Choose…</option>{plans.map(p => <option key={p.slug} value={p.slug}>{p.name}</option>)}
+          </select>
+        </label>
+        <label className="text-xs text-muted-foreground">Category
+          <select className="mt-1 block h-10 max-w-[14rem] rounded-md border border-input bg-background px-2 text-sm" value={categoryId} onChange={e => setCategoryId(e.target.value)}>
+            <option value="">Choose…</option>{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </label>
+        <label className="text-xs text-muted-foreground">Max products<Input type="number" min="0" className="mt-1 w-28" value={limit} onChange={e => setLimit(e.target.value)} /></label>
+        <Button size="sm" disabled={!valid} onClick={save}>Save limit</Button>
+      </div>
+      {rows.length === 0 ? <p className="text-sm text-muted-foreground">No category limits set.</p> : (
+        <ul className="divide-y border-y text-sm">
+          {rows.map(r => (
+            <li key={`${r.plan_slug}-${r.category_id}`} className="flex items-center justify-between gap-3 py-2">
+              <span>{planName(r.plan_slug)} · {catName(r.category_id)} · <strong>{r.product_limit}</strong></span>
+              <Button size="sm" variant="ghost" onClick={() => remove(r.plan_slug, r.category_id)}>Remove</Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }

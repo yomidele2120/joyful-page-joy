@@ -9,7 +9,7 @@ const TYPES = [
   'admin.payment_alert', 'vendor.new_inquiry', 'buyer.inquiry_replied', 'buyer.rfq_quote', 'vendor.new_rfq', 'admin.new_vendor',
   'admin.new_buyer', 'admin.content_report', 'user.support_reply', 'vendor.membership_activated', 'vendor.membership_expiring',
   'vendor.membership_payment_failed', 'vendor.payout_paid', 'vendor.payout_issue', 'buyer.dispute_update', 'vendor.dispute_update',
-  'admin.dispute_opened', 'something.unknown',
+  'admin.dispute_opened', 'user.welcome', 'something.unknown',
 ];
 
 test('every event type renders a complete, safe email', () => {

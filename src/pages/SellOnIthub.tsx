@@ -47,7 +47,7 @@ function usePlans() {
       const { data, error } = await supabase.from('supplier_membership_plans')
         .select('slug, name, price_kobo, period_days, visibility_boost, purchase_enabled').eq('is_active', true);
       if (error) throw error;
-      const order = ['free', 'silver', 'premium'];
+      const order = ['free', 'silver', 'premium', 'gold', 'diamond'];
       return ((data ?? []) as Plan[]).sort((a, b) => order.indexOf(a.slug) - order.indexOf(b.slug));
     },
   });

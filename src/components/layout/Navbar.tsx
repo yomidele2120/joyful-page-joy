@@ -19,7 +19,7 @@ import ThemeToggle, { ThemeSwitchRow } from '@/components/ThemeToggle';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { useNotifications, useUnreadNotificationCount, useMarkNotificationsRead } from '@/hooks/useNotifications';
+import { useNotifications, useUnreadNotificationCount, useMarkNotificationsRead, notificationHref } from '@/hooks/useNotifications';
 import { formatDistanceToNow } from 'date-fns';
 import HeaderTicker from '@/components/flyers/HeaderTicker';
 import HeaderFlyerStrip from '@/components/flyers/HeaderFlyerStrip';
@@ -317,7 +317,7 @@ function NotificationBell() {
           <DropdownMenuItem
             key={n.id}
             className="flex flex-col items-start gap-0.5 whitespace-normal cursor-pointer"
-            onClick={() => { if (n.link) navigate(n.link); }}
+            onClick={() => navigate(notificationHref(n))}
           >
             <span className="text-sm">{n.message}</span>
             <span className="text-xs text-muted-foreground">
