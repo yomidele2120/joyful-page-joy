@@ -28,7 +28,7 @@ const readState = (): SocialBannerState => {
 const writeState = (s: SocialBannerState) => { try { adLocalStore().setItem(KEY, JSON.stringify(s)); } catch { /* ignore */ } };
 
 /**
- * Small floating card inviting visitors to follow the shop. It sits above the contact button and the phone's bottom bar,
+ * Small floating card inviting visitors to follow the shop. It floats at the middle of the screen's edge, clear of the contact button and the phone's bottom bar,
  * swaps sides every few seconds, slides out of the way while the visitor scrolls and slides back when they stop.
  * Closing it hides only that account; the shop's other account (if any) takes its place. Links only.
  */
@@ -107,7 +107,7 @@ export default function ShopSocialBanner({ vendorId, isOwnShop }: { vendorId: st
 
   return (
     <aside role="complementary" aria-label="Follow this shop"
-           className="pointer-events-none fixed inset-x-0 z-30 bottom-[calc(8.75rem+env(safe-area-inset-bottom))] md:bottom-24">
+           className="pointer-events-none fixed inset-x-0 z-30 top-[calc(50%-5.5rem)]">
       <div className="pointer-events-auto absolute top-0 w-44 transition-[left,opacity] duration-500 ease-out motion-reduce:transition-opacity"
            style={{ left, opacity: visible ? 1 : 0 }}>
         <a href={account.profile_url} target="_blank" rel="noopener noreferrer nofollow"
