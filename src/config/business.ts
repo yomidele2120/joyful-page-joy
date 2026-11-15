@@ -65,4 +65,5 @@ export const COMPANY_LINKS: { to: string; label: string }[] = [
   { to: '/about', label: 'About Us' },
   { to: '/contact', label: 'Contact Us' },
   { to: '/faq', label: 'FAQ' },
+  { to: '/affiliate', label: 'Earn with referrals' },
 ];

@@ -23,12 +23,14 @@ import { BRAND_FLYERS } from '@/lib/brandFlyers';
 import BrandMarquee from '@/components/BrandMarquee';
 import { StoreVisitSection } from '@/components/StoreVisit';
 import CategoryShelves from '@/components/CategoryShelves';
+import { useReferralPublicInfo } from '@/hooks/useReferralPublicInfo';
 import { FeaturedAds, RotatingAds, SponsoredRowBanner, useSponsoredRows } from '@/components/ads/HomepageAds';
 
 const FEED_PAGE = 20;
 
 export default function Index() {
   const { isVendor } = useAuth();
+  const { data: referralInfo } = useReferralPublicInfo();
   const { data: products, isLoading } = useProducts({ limit: 120 });
   const { data: featured } = useProducts({ featured: true, limit: 12 });
   const { data: lowMoq } = useProducts({ maxMoq: 5, limit: 12 });
@@ -237,6 +239,18 @@ export default function Index() {
           <Link to="/sell" className="shrink-0 rounded-md bg-[#f26a1b] px-6 py-3 text-base font-semibold text-white transition-colors hover:bg-[#d95c12]">Start selling</Link>
         </div>
       </section>
+
+      {referralInfo?.programme_enabled && (
+        <section className="border-t border-border bg-card py-10 md:py-12">
+          <div className="container flex max-w-[1200px] flex-col items-start justify-between gap-5 md:flex-row md:items-center">
+            <div>
+              <h2 className="font-heading text-xl font-bold md:text-2xl">Know someone who sells?</h2>
+              <p className="mt-2 max-w-lg text-sm text-muted-foreground md:text-base">Share your link. When a supplier you bring subscribes to a paid plan, you earn a commission.</p>
+            </div>
+            <Link to="/affiliate" className="shrink-0 rounded-md border border-border px-6 py-3 text-base font-semibold transition-colors hover:bg-muted">See how referrals work</Link>
+          </div>
+        </section>
+      )}
     </Layout>
   );
 }

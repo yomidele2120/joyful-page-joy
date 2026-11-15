@@ -12,9 +12,9 @@ const db = supabase as any;
 const naira = (k: unknown) => formatNaira(Number(k ?? 0) / 100);
 const day = (v?: string | null) => (v ? new Date(v).toLocaleDateString() : '-');
 const sel = 'h-10 rounded-md border border-input bg-background px-3 text-sm';
-const VIEWS = ['overview', 'referrers', 'commissions', 'withdrawals', 'settings'] as const;
+const VIEWS = ['overview', 'referrers', 'applications', 'commissions', 'withdrawals', 'settings'] as const;
 type View = typeof VIEWS[number];
-const LABEL: Record<View, string> = { overview: 'Overview', referrers: 'Referrers', commissions: 'Commissions', withdrawals: 'Withdrawals', settings: 'Settings and rates' };
+const LABEL: Record<View, string> = { overview: 'Overview', referrers: 'Referrers', applications: 'Applications', commissions: 'Commissions', withdrawals: 'Withdrawals', settings: 'Settings and rates' };
 
 function csv(rows: Record<string, unknown>[], name: string) {
   if (!rows.length) { toast.error('Nothing to export'); return; }
@@ -39,11 +39,13 @@ export default function ReferralAdminTab() {
   const [aff, setAff] = useState({ email: '', code: '', name: '', rate: '13', bio: '', pub: true });
   const [rate, setRate] = useState({ def: '', agreement: '', cohort: '', reason: '' });
   const [st, setSt] = useState<any>(null);
+  const [appForm, setAppForm] = useState<Record<string, { rate: string; code: string; note: string }>>({});
 
   const rpc = (fn: string, args?: Record<string, unknown>) => async () => (await db.rpc(fn, args)) as { data?: any; error?: { message: string } | null };
   const q = (key: string, fn: string, args?: Record<string, unknown>, enabled = true) => useQuery<any>({ queryKey: ['adm-ref', key, JSON.stringify(args ?? {})], enabled, queryFn: async () => { const { data, error } = await db.rpc(fn, args); if (error) throw error; return data; } });
   const ov = q('overview', 'admin_referral_overview', undefined, view === 'overview');
   const refs = q('referrers', 'admin_referrers', undefined, view === 'referrers');
+  const apps = q('applications', 'admin_affiliate_applications', { _status: null }, view === 'applications');
   const coms = q('commissions', 'admin_referral_commissions', { _status: cStatus || null, _limit: 300 }, view === 'commissions');
   const wds = q('withdrawals', 'admin_referral_withdrawals', undefined, view === 'withdrawals');
   const { data: settings } = useQuery<any>({ queryKey: ['adm-ref-settings'], enabled: view === 'settings', queryFn: async () => (await db.from('referral_settings').select('*').maybeSingle()).data });
@@ -116,6 +118,40 @@ export default function ReferralAdminTab() {
         </>
       )}
 
+      {view === 'applications' && (
+        <Panel title="Affiliate applications">
+          <p className="mb-3 text-sm text-muted-foreground">Approving creates the affiliate account with the rate and code you enter. Leave the rate empty to use the current default. The applicant's message stays private.</p>
+          {apps.isLoading && <p className="text-sm text-muted-foreground">Loading...</p>}
+          {(apps.data ?? []).length === 0 && !apps.isLoading && <p className="text-sm text-muted-foreground">No applications yet.</p>}
+          <ul className="space-y-3">
+            {(apps.data ?? []).map((a: any) => {
+              const f = appForm[a.id] ?? { rate: '', code: a.requested_code ?? '', note: '' };
+              const upd = (patch: Partial<typeof f>) => setAppForm(prev => ({ ...prev, [a.id]: { ...f, ...patch } }));
+              return (
+                <li key={a.id} className="rounded-lg border border-border p-3 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="font-semibold">{a.full_name} <span className="font-normal text-muted-foreground">{a.email}{a.phone ? ` | ${a.phone}` : ''}</span></p>
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs">{a.status}</span>
+                  </div>
+                  <p className="mt-1 text-muted-foreground">{a.platform}: <a className="underline" href={/^https?:\/\//i.test(a.profile_url) ? a.profile_url : `https://${a.profile_url}`} target="_blank" rel="noopener noreferrer">{a.profile_url}</a>{a.audience_size ? ` | ${a.audience_size}` : ''}</p>
+                  {a.message && <p className="mt-1 whitespace-pre-line">{a.message}</p>}
+                  <p className="mt-1 text-xs text-muted-foreground">Applied {day(a.created_at)}{a.requested_code ? ` | wants code ${a.requested_code}` : ''}{a.reviewed_at ? ` | reviewed ${day(a.reviewed_at)}` : ''}{a.review_note ? ` | note: ${a.review_note}` : ''}</p>
+                  {a.status === 'pending' && (
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <Input className="w-36" placeholder="Code" value={f.code} onChange={e => upd({ code: e.target.value.toUpperCase() })} aria-label="Affiliate code" />
+                      <Input className="w-24" placeholder="Rate %" inputMode="decimal" value={f.rate} onChange={e => upd({ rate: e.target.value.replace(/[^\d.]/g, '') })} aria-label="Affiliate rate" />
+                      <Input className="min-w-[10rem] flex-1" placeholder="Note (optional)" value={f.note} onChange={e => upd({ note: e.target.value })} aria-label="Review note" />
+                      <Button type="button" disabled={busy} onClick={() => act(rpc('admin_review_affiliate_application', { _id: a.id, _decision: 'approved', _rate: f.rate ? Number(f.rate) : null, _code: f.code, _note: f.note, _public_page: true }), 'Approved. The affiliate account is ready')}>Approve</Button>
+                      <Button type="button" variant="outline" disabled={busy} onClick={() => act(rpc('admin_review_affiliate_application', { _id: a.id, _decision: 'rejected', _rate: null, _code: null, _note: f.note, _public_page: false }), 'Application rejected')}>Reject</Button>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </Panel>
+      )}
+
       {view === 'commissions' && (
         <>
           <div className="flex flex-wrap gap-2">
@@ -170,6 +206,13 @@ export default function ReferralAdminTab() {
             </div>
             <label className="mt-2 block text-xs">Terms note shown to referrers<Input value={s.terms_note ?? ''} onChange={e => setSt({ ...s, terms_note: e.target.value })} /></label>
             <Button type="button" className="mt-3" disabled={busy} onClick={() => act(rpc('admin_update_referral_settings', { _enabled: !!s.programme_enabled, _hold_days: s.hold_days, _min_kobo: s.min_withdrawal_kobo, _fee_kobo: s.withdrawal_fee_kobo, _methods: s.withdrawal_methods ?? ['bank_transfer'], _terms: s.terms_note ?? '' }), 'Settings saved')}>Save settings</Button>
+          </Panel>
+
+          <Panel title="Public programme page">
+            <p className="text-sm text-muted-foreground">Controls what the public /affiliate page shows. Special affiliate rates are never shown.</p>
+            <label className="mt-2 flex items-center gap-2 text-sm"><input type="checkbox" checked={!!s.show_rate_publicly} onChange={e => setSt({ ...s, show_rate_publicly: e.target.checked })} />Show the standard commission rate on the public page</label>
+            <label className="mt-2 flex items-center gap-2 text-sm"><input type="checkbox" checked={s.applications_open !== false} onChange={e => setSt({ ...s, applications_open: e.target.checked })} />Accept new affiliate applications</label>
+            <Button type="button" className="mt-3" disabled={busy} onClick={() => act(rpc('admin_set_referral_public_options', { _show_rate: !!s.show_rate_publicly, _applications_open: s.applications_open !== false }), 'Public page settings saved')}>Save public page settings</Button>
           </Panel>
 
           <Panel title="Commission rates">

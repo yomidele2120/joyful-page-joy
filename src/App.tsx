@@ -27,6 +27,7 @@ const Feed = lazyPage(() => import("./pages/Feed"));
 const CallHistory = lazyPage(() => import("./pages/CallHistory"));
 const SellOnIthub = lazyPage(() => import("./pages/SellOnIthub"));
 const ReferralLanding = lazyPage(() => import("./pages/ReferralLanding"));
+const AffiliateProgramme = lazyPage(() => import("./pages/AffiliateProgramme"));
 const Products = lazyPage(() => import("./pages/Products"));
 const ProductDetail = lazyPage(() => import("./pages/ProductDetail"));
 const CategoryPage = lazyPage(() => import("./pages/CategoryPage"));
@@ -130,6 +131,7 @@ const App = () => (
               <Route path="/products" element={<Products />} />
               <Route path="/sell" element={<SellOnIthub />} />
               <Route path="/ref/:code" element={<ReferralLanding />} />
+              <Route path="/affiliate" element={<AffiliateProgramme />} />
               <Route path="/product/:slug" element={<ProductDetail />} />
               <Route path="/category/:slug" element={<CategoryPage />} />
               <Route path="/cart" element={<Cart />} />
