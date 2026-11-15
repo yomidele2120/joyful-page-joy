@@ -329,3 +329,30 @@ describe('buildSocialUrl (vendors type only a username)', () => {
     expect(buildSocialUrl('instagram', 'https://www.instagram.com/p/abc123/').ok).toBe(false);
   });
 });
+
+import { availableSocialAccounts, dismissSocialAccount, loadSocialState as loadSocial2, socialSide } from './socialBannerSchedule';
+describe('social card: closing hides only that account', () => {
+  const settings = { display_minutes: 30, rotation_minutes: 60, max_per_day: 3, dismiss_hours: 24 };
+  const accounts = [{ id: 'ig' }, { id: 'fb' }];
+  it('closing one leaves the other available, until the dismissal ends', () => {
+    const now = 1_700_000_000_000;
+    const s = dismissSocialAccount(emptySocialState(now), 'ig', settings, now);
+    expect(availableSocialAccounts(accounts, s, now).map((a) => a.id)).toEqual(['fb']);
+    expect(availableSocialAccounts(accounts, s, now + 25 * 3_600_000).map((a) => a.id)).toEqual(['ig', 'fb']);
+  });
+  it('closing both leaves none', () => {
+    const now = 1_700_000_000_000;
+    const s = dismissSocialAccount(dismissSocialAccount(emptySocialState(now), 'ig', settings, now), 'fb', settings, now);
+    expect(availableSocialAccounts(accounts, s, now)).toEqual([]);
+  });
+  it('stored dismissals survive a reload; garbage and expired ones are dropped', () => {
+    const now = 1_700_000_000_000;
+    const raw = { day: '2023-11-14', dismissed: { ig: now + 1000, old: now - 1000, bad: 'x' } };
+    const s = loadSocial2(JSON.parse(JSON.stringify(raw)), now);
+    expect(Object.keys(s.dismissed)).toEqual(['ig']);
+    expect(loadSocial2('junk', now).dismissed).toEqual({});
+  });
+  it('the card swaps sides each tick', () => {
+    expect([0, 1, 2, 3].map(socialSide)).toEqual(['right', 'left', 'right', 'left']);
+  });
+});

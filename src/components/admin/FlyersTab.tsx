@@ -7,6 +7,7 @@ import { compressImage } from '@/lib/mediaProcessing';
 import type { Tables } from '@/integrations/supabase/types';
 import { PLACEMENTS, placementInfo, type FlyerPlacement } from '@/lib/flyerPlacements';
 import { Button } from '@/components/ui/button';
+import SeasonalHeroPanel from '@/components/admin/SeasonalHeroPanel';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -144,6 +145,8 @@ export default function FlyersTab() {
         </div>
         <Button size="sm" onClick={() => openNew('hero_slide')}><Plus className="mr-1 h-4 w-4" /> Add flyer</Button>
       </div>
+
+      <SeasonalHeroPanel />
 
       {error && (
         <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm">

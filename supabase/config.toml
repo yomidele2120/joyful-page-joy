@@ -97,3 +97,7 @@ verify_jwt = false
 
 [functions.google-ads-check]
 verify_jwt = false
+
+# Monthly seasonal hero banners. Authenticates inside the function (service-role key, AD_WORKER_SECRET, or a signed-in admin).
+[functions.seasonal-hero-generate]
+verify_jwt = false

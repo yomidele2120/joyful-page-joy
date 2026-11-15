@@ -179,7 +179,7 @@ const PALETTES: Record<ArtCategory, string[]> = {
   food: ['warm orange, fresh green and cream', 'deep red, golden yellow and warm brown', 'leafy green, lemon yellow and white', 'rich brown, caramel and cream', 'purple aubergine, fresh green and orange', 'turquoise, sunny yellow and coral'],
   general: ['ITHUBAFRICA teal, warm gold and soft white', 'deep indigo, coral and cream', 'forest green, sand and bright orange', 'charcoal, electric blue and white', 'warm magenta, gold and deep navy', 'ocean blue, sunny yellow and soft grey'],
 };
-const STYLES = [
+export const STYLES = [
   'polished commercial photography with realistic materials',
   'refined three-dimensional render with soft studio lighting',
   'minimal flat vector illustration with layered translucent shapes and soft gradients',
@@ -189,7 +189,7 @@ const STYLES = [
   'soft frosted-glass render with translucent forms and glowing edges',
   'bold abstract geometric composition with smooth gradients and fine grain',
 ];
-const MOODS = [
+export const MOODS = [
   'bright fresh morning light',
   'warm golden-hour glow',
   'cool dramatic evening lighting',
@@ -197,7 +197,7 @@ const MOODS = [
   'vibrant high-contrast studio lighting',
   'calm minimal airy atmosphere',
 ];
-const ANGLES = [
+export const ANGLES = [
   'wide straight-on view',
   'slightly elevated three-quarter view',
   'low angle looking gently upward',

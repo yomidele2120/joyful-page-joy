@@ -15,6 +15,24 @@ function FlyerLink({ flyer, className, children, tabIndex }: { flyer: UploadedFl
   return <a href={href} target="_blank" rel="noopener noreferrer" className={className} aria-label={flyer.title} tabIndex={tabIndex}>{children}</a>;
 }
 
+// Banners made by the monthly seasonal generator carry their words separately from the picture, so the text is always
+// sharp and never invented by the image model. A flyer without a headline (every admin upload) is shown unchanged.
+type FlyerCopyFields = { headline?: string | null; subline?: string | null; cta_label?: string | null };
+function FlyerCopy({ flyer, small = false }: { flyer: UploadedFlyer; small?: boolean }) {
+  const { headline, subline, cta_label } = flyer as UploadedFlyer & FlyerCopyFields;
+  if (!headline) return null;
+  return (
+    <>
+      <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/75 via-black/40 to-transparent" />
+      <span className={`pointer-events-none absolute inset-y-0 left-0 flex flex-col justify-center gap-1 text-white ${small ? 'max-w-[85%] p-3' : 'max-w-[72%] p-4 sm:max-w-[55%] sm:gap-2 sm:p-8'}`}>
+        <span className={`font-heading font-bold leading-tight ${small ? 'text-base sm:text-lg' : 'text-xl sm:text-3xl lg:text-4xl'}`}>{headline}</span>
+        {subline && <span className={`${small ? 'line-clamp-2 text-[11px]' : 'line-clamp-2 text-xs sm:text-sm lg:text-base'} text-white/85`}>{subline}</span>}
+        {cta_label && <span className={`mt-1 inline-flex w-fit rounded-full bg-white font-semibold text-black ${small ? 'px-3 py-1 text-[11px]' : 'px-4 py-1.5 text-xs sm:text-sm'}`}>{cta_label}</span>}
+      </span>
+    </>
+  );
+}
+
 const focusRing = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
 
 function Picture({ flyer, className, eager = false, decorative = false, onLoad }: {
@@ -76,6 +94,7 @@ export function ImageFlyerFill({ flyer, className = '', tabIndex, fit = 'cover',
             flyer={flyer} eager={eager} onLoad={fit === 'auto' ? measure : undefined}
             className={`absolute inset-0 h-full w-full ${mode === 'contain' ? 'object-contain' : 'object-cover'}`}
           />
+          <FlyerCopy flyer={flyer} small={flyer.placement === 'hero_side'} />
         </>
       )}
     </FlyerLink>

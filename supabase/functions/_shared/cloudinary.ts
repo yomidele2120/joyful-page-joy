@@ -99,3 +99,34 @@ export async function uploadAdArtwork(
   if (!res.ok || typeof json.secure_url !== "string") throw new Error(`Cloudinary upload failed (${res.status})`);
   return { url: json.secure_url, publicId: json.public_id };
 }
+
+/**
+ * Uploads a seasonal hero picture to `marketplace/seasonal/<YYYY-MM>/<slot>`.
+ * The picture has no text in it; the website draws the headline over it. Re-running replaces the same file.
+ */
+export async function uploadSeasonalArt(
+  bytes: Uint8Array, contentType: string, season: string, slot: string,
+): Promise<{ url: string; publicId: string }> {
+  const cloud = Deno.env.get("CLOUDINARY_CLOUD_NAME")!;
+  const apiKey = Deno.env.get("CLOUDINARY_API_KEY")!;
+  const secret = Deno.env.get("CLOUDINARY_API_SECRET")!;
+  if (!/^20\d\d-(0[1-9]|1[0-2])$/.test(season) || !/^(slide|tile)-[1-3]$/.test(slot)) throw new Error("Invalid season or slot for hero artwork upload");
+  const publicId = `marketplace/seasonal/${season}/${slot}`;
+  const timestamp = Math.round(Date.now() / 1000);
+  const allowed = "jpg,jpeg,png,webp";
+  const signature = await sha1Hex(`allowed_formats=${allowed}&overwrite=true&public_id=${publicId}&timestamp=${timestamp}${secret}`);
+  const form = new FormData();
+  form.append("file", new Blob([bytes as BlobPart], { type: contentType }), "hero");
+  form.append("api_key", apiKey);
+  form.append("timestamp", String(timestamp));
+  form.append("signature", signature);
+  form.append("public_id", publicId);
+  form.append("overwrite", "true");
+  form.append("allowed_formats", allowed);
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${cloud}/image/upload`, {
+    method: "POST", body: form, signal: AbortSignal.timeout(45_000),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok || typeof json.secure_url !== "string") throw new Error(`Cloudinary upload failed (${res.status})`);
+  return { url: json.secure_url, publicId: json.public_id };
+}
