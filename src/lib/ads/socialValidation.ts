@@ -46,3 +46,21 @@ export function normalizeSocial(platform: string, rawUrl: string, rawHandle = ''
 export function isSafeSocialUrl(platform: string, url: string): boolean {
   return normalizeSocial(platform, url).ok;
 }
+
+/**
+ * Vendors type only their username (with or without @), or paste a profile link. Builds the canonical link and runs it
+ * through the same strict check. Mirrors vendor_upsert_social_handle() in the database, which is the authority.
+ */
+export function buildSocialUrl(platform: string, input: string): SocialResult {
+  let h = (input ?? '').trim();
+  if (!h) return fail('Enter your username.');
+  const fromLink = /(?:instagram\.com|facebook\.com|tiktok\.com)\/(@?[A-Za-z0-9._]+)/i.exec(h);
+  if (/[\/]/.test(h)) { if (!fromLink) return fail('Enter just your username, for example yourshop.'); h = fromLink[1]; }
+  h = h.replace(/^@+/, '');
+  if (!/^[A-Za-z0-9._]+$/.test(h)) return fail('Enter just your username. Letters, numbers, dots and underscores only.');
+  const url = platform === 'instagram' ? `https://www.instagram.com/${h}/`
+    : platform === 'facebook' ? `https://www.facebook.com/${h}`
+    : platform === 'tiktok' ? `https://www.tiktok.com/@${h}` : '';
+  if (!url) return fail('Unsupported platform.');
+  return normalizeSocial(platform, url);
+}

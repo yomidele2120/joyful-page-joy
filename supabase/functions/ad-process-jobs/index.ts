@@ -11,7 +11,7 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import {
-  detectArtCategory, buildImagePrompt, inspectImage, moderationDecision, estimateCostUsd,
+  detectArtCategory, buildImagePrompt, pickVariant, isVariant, variantKey, inspectImage, moderationDecision, estimateCostUsd,
   type ProductForAd,
 } from '../_shared/adBannerCore.ts';
 import { generateBannerArt, generateCopy, moderateImage, ProviderError, textModel } from '../_shared/adAI.ts';
@@ -120,7 +120,12 @@ async function processJob(admin: Admin, job: Record<string, any>): Promise<Recor
     // Only generic category names go into the picture prompt (never product or brand names, never the shop name).
     const subjects = [...new Set(products.map((p) => p.categoryName).filter((n): n is string => !!n))].slice(0, 3);
     const vendorMessage = [campaign.custom_headline, campaign.custom_description].filter(Boolean).join('. ') || vendor.store_description || null;
-    const prompt = buildImagePrompt({ category, vendorHint: vendorMessage, subjects });
+    // A different look every time: avoid the looks of the newest banners in this category (best effort; no failure if the lookup fails).
+    const { data: recentRows } = await admin.from('vendor_advertising_banners').select('generation_metadata')
+      .eq('art_category', category).order('created_at', { ascending: false }).limit(12);
+    const recent = (recentRows ?? []).map((r: any) => r?.generation_metadata?.variant).filter(isVariant);
+    const variant = pickVariant(category, `${jobId}:${job.attempts ?? 0}:${crypto.randomUUID()}`, recent);
+    const prompt = buildImagePrompt({ category, vendorHint: vendorMessage, subjects, variant });
     const promptHash = await sha256Hex(prompt);
 
     // 1. artwork
@@ -152,7 +157,7 @@ async function processJob(admin: Admin, job: Record<string, any>): Promise<Recor
       _meta: {
         image_model: art.model, text_model: copy.model ?? textModel(), copy_source: copy.source, copy_note: copy.note ?? null,
         attempt: job.attempts, kind: job.kind, subjects, image_bytes: info.bytes, image_size: `${info.width}x${info.height}`,
-        aspect_requested: '21:9', moderation: review, estimated_cost_is_estimate: true,
+        aspect_requested: '21:9', variant, variant_key: variantKey(variant), moderation: review, estimated_cost_is_estimate: true,
       },
       _cost: cost(),
       _flags: copy.source === 'template' ? ['template_copy'] : [],

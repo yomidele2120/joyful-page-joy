@@ -280,3 +280,52 @@ describe('external ad exports', () => {
     expect(b).toContain('only after the platform confirms');
   });
 });
+
+import { feedSlots } from './adFeed';
+describe('feedSlots (sponsored cards inside a product grid)', () => {
+  it('places the first card after the 4th product, then every 8, at most 3', () => {
+    expect(feedSlots({ itemCount: 40 })).toEqual([3, 11, 19]);
+  });
+  it('moves a card that would land on a flyer position one product on', () => {
+    expect(feedSlots({ itemCount: 40, reserved: [5, 11] })).toEqual([3, 12, 20]);
+  });
+  it('never ends the page: keeps products after the last card', () => {
+    expect(feedSlots({ itemCount: 6 })).toEqual([3]);
+    expect(feedSlots({ itemCount: 5 })).toEqual([]);
+    expect(feedSlots({ itemCount: 24, reserved: [5, 11] }).every((i) => i <= 24 - 1 - 2)).toBe(true);
+  });
+  it('returns nothing for empty pages or invalid settings', () => {
+    expect(feedSlots({ itemCount: 0 })).toEqual([]);
+    expect(feedSlots({ itemCount: 30, max: 0 })).toEqual([]);
+    expect(feedSlots({ itemCount: 30, first: 0 })).toEqual([]);
+  });
+  it('respects a smaller cap', () => {
+    expect(feedSlots({ itemCount: 60, max: 1 })).toEqual([3]);
+  });
+});
+
+import { buildSocialUrl } from './socialValidation';
+describe('buildSocialUrl (vendors type only a username)', () => {
+  it('builds the link from a plain or @ username', () => {
+    expect(buildSocialUrl('instagram', 'techhub_ng')).toEqual({ ok: true, url: 'https://www.instagram.com/techhub_ng/', handle: 'techhub_ng' });
+    expect(buildSocialUrl('instagram', '@techhub_ng')).toEqual({ ok: true, url: 'https://www.instagram.com/techhub_ng/', handle: 'techhub_ng' });
+    expect(buildSocialUrl('tiktok', '@techhub')).toEqual({ ok: true, url: 'https://www.tiktok.com/@techhub', handle: 'techhub' });
+    expect(buildSocialUrl('facebook', 'techhub.ng')).toEqual({ ok: true, url: 'https://www.facebook.com/techhub.ng', handle: 'techhub.ng' });
+  });
+  it('still accepts a pasted profile link and keeps only the username', () => {
+    const r = buildSocialUrl('instagram', 'https://www.instagram.com/techhub_ng/?hl=en');
+    expect(r.ok && r.handle).toBe('techhub_ng');
+  });
+  it('rejects empty, spaces, symbols, reserved names and the wrong length', () => {
+    expect(buildSocialUrl('instagram', '').ok).toBe(false);
+    expect(buildSocialUrl('instagram', 'tech hub').ok).toBe(false);
+    expect(buildSocialUrl('instagram', 'bad<script>').ok).toBe(false);
+    expect(buildSocialUrl('instagram', 'explore').ok).toBe(false);
+    expect(buildSocialUrl('facebook', 'abc').ok).toBe(false);
+    expect(buildSocialUrl('myspace', 'name').ok).toBe(false);
+  });
+  it('a link to another website or a deeper path is not accepted', () => {
+    expect(buildSocialUrl('instagram', 'https://evil.com/techhub').ok).toBe(false);
+    expect(buildSocialUrl('instagram', 'https://www.instagram.com/p/abc123/').ok).toBe(false);
+  });
+});

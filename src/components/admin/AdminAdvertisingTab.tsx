@@ -137,7 +137,7 @@ function SocialView() {
           <td><a className="text-primary hover:underline" href={p.profile_url} target="_blank" rel="noopener noreferrer nofollow">@{p.handle}</a></td><td>{p.promo_enabled ? 'Yes' : 'No'}</td>
           <td><select className="h-8 rounded-md border border-input bg-background px-1 text-xs" value={p.verification_status} aria-label="Verification" onChange={(e) => run(() => call('admin_set_social_verification', { _profile: p.id, _status: e.target.value }), 'Saved.', q.refresh)}>
             {['unverified', 'verified', 'rejected'].map((s) => <option key={s}>{s}</option>)}</select></td></tr>)}</tbody></table></div>
-      <p className="p-3 text-xs text-muted-foreground">Verify by opening the link and checking it is the vendor's real page. Rejected links stop showing on the shop.</p>
+      <p className="p-3 text-xs text-muted-foreground">Links are accepted automatically when a vendor saves a valid username, so they show straight away. That only checks the link is well formed, not who owns the account. Open a link to check it, and set it to rejected if it is not the vendor's real page: it stops showing and stays rejected.</p>
     </Panel>
   );
 }

@@ -24,6 +24,9 @@ import { useFlyers } from '@/hooks/useFlyers';
 import { ImageFlyerBanner, ImageFlyerFill } from '@/components/flyers/ImageFlyers';
 import { BrandFlyerBanner, BrandFlyerFeedCard, BrandFlyerFill } from '@/components/flyers/BrandFlyerImage';
 import { BRAND_FLYERS } from '@/lib/brandFlyers';
+import SponsoredFeedCard from '@/components/ads/SponsoredFeedCard';
+import { useSponsoredFeed } from '@/components/ads/HomepageAds';
+import { feedSlots } from '@/lib/ads/adFeed';
 
 interface Filters {
   category: string;
@@ -74,6 +77,13 @@ export default function Products() {
   const total = pageData?.total ?? 0;
   const pageCount = pageData?.pageCount ?? 1;
   const current = Math.min(page, pageCount);
+
+  // Sponsored cards between products (grid view only). Flyers already follow the 6th and 12th product (indexes 5 and 11).
+  const sponsorSlots = useMemo(
+    () => (tab === 'products' && view === 'grid' ? feedSlots({ itemCount: pageItems.length, reserved: [5, 11] }) : []),
+    [tab, view, pageItems.length],
+  );
+  const sponsoredAds = useSponsoredFeed(sponsorSlots.length, String(current));
 
   // Record each search once, with how many products it found, so the admin can see searches that came up empty.
   const trackedSearch = useRef('');
@@ -233,6 +243,8 @@ export default function Products() {
                             ? <ImageFlyerBanner key="fb" className="col-span-full" flyer={feedBanners[(current - 1) % feedBanners.length]} />
                             : <BrandFlyerBanner key="fb" className="col-span-full" flyer={current % 2 ? BRAND_FLYERS.seamlessOlive : BRAND_FLYERS.seamlessPurple} />);
                         }
+                        const slot = sponsorSlots.indexOf(i);
+                        if (slot >= 0 && sponsoredAds[slot]) cells.push(<SponsoredFeedCard key={`sp-${sponsoredAds[slot].id}`} ad={sponsoredAds[slot]} />);
                         return cells;
                       })}
                     </div>

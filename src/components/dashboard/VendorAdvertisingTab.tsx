@@ -12,7 +12,7 @@ import { Panel } from '@/components/dashboard/DashboardShell';
 import { supabase } from '@/integrations/supabase/client';
 import { call } from '@/lib/ads/adsApi';
 import { bannerUrl } from '@/lib/ads/adMedia';
-import { normalizeSocial, SOCIAL_PLATFORMS } from '@/lib/ads/socialValidation';
+import { buildSocialUrl, SOCIAL_PLATFORMS } from '@/lib/ads/socialValidation';
 import { campaignStatus, checkMessage, daysLeft, externalStatus, pct, PLATFORM_LABEL } from '@/lib/ads/adStatus';
 import { errText, fmtDate, n, Stat, Status } from '@/components/ads/adUi';
 import AdBoostSection from '@/components/dashboard/AdBoostSection';
@@ -189,26 +189,31 @@ function Social({ o, onChange }: { o: Overview; onChange: () => void }) {
   const allowed = o.entitlement.active && f.social_banner_enabled;
   const profiles: any[] = o.social_profiles ?? [];
   const [platform, setPlatform] = useState<string>('instagram');
-  const [url, setUrl] = useState(''); const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [busy, setBusy] = useState(false);
-  const check = url ? normalizeSocial(platform, url) : null;
+  const built = username ? buildSocialUrl(platform, username) : null;
+  const prefix = platform === 'instagram' ? 'instagram.com/' : platform === 'facebook' ? 'facebook.com/' : 'tiktok.com/@';
   return (
     <Panel title="Social media links">
-      <p className="mb-3 text-xs text-muted-foreground">Add links to your public profiles. Visitors to your shop see a small invitation to follow you. We never ask for a password and never connect to your account. {allowed ? `Your plan allows ${f.max_social_profiles} link(s).` : 'Social banners are included with a Silver or Premium plan; your saved links are kept.'}</p>
+      <p className="mb-3 text-xs text-muted-foreground">Enter your username on Instagram, Facebook or TikTok. We build the link for you, and visitors to your shop see a small invitation to follow you. We never ask for a password and never connect to your account. {allowed ? `Your plan allows ${f.max_social_profiles} link(s).` : 'Social banners are included with a Silver or Premium plan; your saved links are kept.'}</p>
       {profiles.map((p) => (
         <div key={p.id} className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded border border-border p-2 text-sm">
-          <span className="min-w-0 truncate"><b>{PLATFORM_LABEL[p.platform + '_ads'] ? p.platform : p.platform}</b> · @{p.handle} · <span className="text-xs text-muted-foreground">{p.verification_status}</span></span>
-          <span className="flex items-center gap-2"><Switch checked={p.promo_enabled} disabled={busy || !allowed} onCheckedChange={async (v) => { try { await call('vendor_upsert_social_profile', { _platform: p.platform, _url: p.profile_url, _handle: p.handle, _display_name: p.display_name, _enabled: v }); onChange(); } catch (e) { toast.error(errText(e)); } }} aria-label="Show on my shop" />
+          <span className="min-w-0 truncate"><b className="capitalize">{p.platform}</b> · @{p.handle} · <span className="text-xs text-muted-foreground">{p.verification_status === 'rejected' ? 'Rejected by ITHUBAFRICA' : p.promo_enabled ? 'Showing on your shop' : 'Hidden'}</span></span>
+          <span className="flex items-center gap-2"><Switch checked={p.promo_enabled} disabled={busy || !allowed} onCheckedChange={async (v) => { try { await call('vendor_upsert_social_handle', { _platform: p.platform, _username: p.handle, _enabled: v }); onChange(); } catch (e) { toast.error(errText(e)); } }} aria-label="Show on my shop" />
             <Button size="sm" variant="ghost" onClick={async () => { if (!window.confirm('Remove this link?')) return; try { await call('vendor_delete_social_profile', { _id: p.id }); onChange(); } catch (e) { toast.error(errText(e)); } }}>Remove</Button></span>
         </div>))}
-      <div className="grid gap-2 sm:grid-cols-4">
-        <select className="h-10 rounded-md border border-input bg-background px-2 text-sm" value={platform} onChange={(e) => setPlatform(e.target.value)} aria-label="Platform">{SOCIAL_PLATFORMS.map((p) => <option key={p} value={p}>{p}</option>)}</select>
-        <Input className="sm:col-span-2" placeholder="https://www.instagram.com/yourshop" value={url} onChange={(e) => setUrl(e.target.value)} />
-        <Input placeholder="Display name" maxLength={60} value={name} onChange={(e) => setName(e.target.value)} />
+      <div className="grid gap-2 sm:grid-cols-[9rem_1fr]">
+        <select className="h-10 rounded-md border border-input bg-background px-2 text-sm capitalize" value={platform} onChange={(e) => setPlatform(e.target.value)} aria-label="Platform">{SOCIAL_PLATFORMS.map((p) => <option key={p} value={p}>{p}</option>)}</select>
+        <div className="flex h-10 items-center rounded-md border border-input bg-background pl-3 text-sm">
+          <span className="shrink-0 text-muted-foreground">{prefix}</span>
+          <input className="h-full min-w-0 flex-1 bg-transparent px-1 outline-none" placeholder="yourshop" value={username} maxLength={80} autoCapitalize="none" autoCorrect="off" spellCheck={false}
+                 onChange={(e) => setUsername(e.target.value)} aria-label="Your username" />
+        </div>
       </div>
-      {check && !check.ok && <p className="mt-1 text-xs text-destructive">{check.error}</p>}
-      <Button size="sm" className="mt-2" disabled={busy || !allowed || !url || !name || (check ? !check.ok : true)}
-        onClick={async () => { setBusy(true); try { await call('vendor_upsert_social_profile', { _platform: platform, _url: url, _handle: null, _display_name: name, _enabled: true }); toast.success('Saved.'); setUrl(''); setName(''); onChange(); } catch (e) { toast.error(errText(e)); } finally { setBusy(false); } }}>Add link</Button>
+      {built && !built.ok && <p className="mt-1 text-xs text-destructive">{built.error}</p>}
+      {built && built.ok && <p className="mt-1 text-xs text-muted-foreground">Your link will be {built.url}</p>}
+      <Button size="sm" className="mt-2" disabled={busy || !allowed || !username || (built ? !built.ok : true)}
+        onClick={async () => { setBusy(true); try { await call('vendor_upsert_social_handle', { _platform: platform, _username: username, _enabled: true }); toast.success('Saved. Your link is live on your shop.'); setUsername(''); onChange(); } catch (e) { toast.error(errText(e)); } finally { setBusy(false); } }}>Add link</Button>
     </Panel>
   );
 }

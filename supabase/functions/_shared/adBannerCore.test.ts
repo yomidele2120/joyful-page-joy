@@ -194,3 +194,41 @@ test('cost estimate adds text and vision calls to the image cost', () => {
   assert.equal(estimateCostUsd(0.04, 0, 0), 0.04);
   assert.equal(estimateCostUsd(0.04, 1, 1), 0.042);
 });
+
+import { pickVariant, variantKey, isVariant, type Variant } from './adBannerCore.ts';
+
+test('banner variety: same seed gives the same look, different seeds give many looks', () => {
+  assert.deepEqual(pickVariant('electronics', 's1'), pickVariant('electronics', 's1'));
+  const keys = new Set(Array.from({ length: 60 }, (_, i) => variantKey(pickVariant('electronics', `seed-${i}`))));
+  assert.ok(keys.size > 40, `only ${keys.size} different looks`);
+});
+
+test('banner variety: avoids the palettes and styles of the newest banners', () => {
+  const recent: Variant[] = [0, 1, 2, 3, 4].map((i) => ({ palette: i, style: i % 3, mood: i % 2, angle: i % 2 }));
+  for (let i = 0; i < 80; i++) {
+    const v = pickVariant('fashion', `x${i}`, recent);
+    assert.equal(v.palette, 5);                 // only palette 5 was not used by the last five
+    assert.ok(v.style > 2);                     // styles 0, 1, 2 were the last three
+  }
+});
+
+test('banner variety: still picks something when every option was recently used', () => {
+  const recent: Variant[] = Array.from({ length: 12 }, (_, i) => ({ palette: i % 6, style: i % 8, mood: i % 6, angle: i % 5 }));
+  assert.ok(isVariant(pickVariant('home', 'seed', recent)));
+});
+
+test('banner variety: the look reaches the picture prompt, which still forbids text and people', () => {
+  const p = buildImagePrompt({ category: 'fashion', variant: { palette: 2, style: 3, mood: 1, angle: 3 } });
+  for (const part of ['emerald green, gold and off-white', 'isometric', 'golden-hour', 'top-down', 'NO text', 'Do not show identifiable people']) assert.ok(p.includes(part), part);
+});
+
+test('banner variety: without a variant the original default look is used', () => {
+  assert.ok(buildImagePrompt({ category: 'electronics' }).includes('deep navy, electric blue and cool silver'));
+});
+
+test('banner variety: no look can put digits or brand-like words into the prompt', () => {
+  for (const c of CATEGORIES) for (let i = 0; i < 40; i++) {
+    const p = buildImagePrompt({ category: c, variant: pickVariant(c, `d${i}`) });
+    assert.doesNotMatch(p, /[0-9]/);
+  }
+});

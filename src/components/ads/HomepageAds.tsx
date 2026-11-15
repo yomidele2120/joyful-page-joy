@@ -49,7 +49,20 @@ export function useSponsoredRows(rowKeys: readonly string[]) {
 }
 export function SponsoredRowBanner({ ad }: { ad: HomepageAd | null }) {
   if (!ad) return null;
-  return <section aria-label="Sponsored" className="mt-8 sm:mt-10"><AdBanner ad={ad} placement="sponsored_row" /></section>;
+  return <section aria-label="Sponsored" className="mt-8 sm:mt-10"><AdBanner ad={ad} placement="sponsored_row" variant="slim" /></section>;
+}
+
+/**
+ * Ads for cards inside a product grid. Uses the same eligible pool as the sponsored rows (paid plans with sponsored
+ * placement), one ad per vendor, different picks on each page of results. Returns an empty list while ads are off.
+ */
+export function useSponsoredFeed(slotCount: number, pageKey: string): HomepageAd[] {
+  const { data: settings } = useAdSettings();
+  const { data: ads } = useAds('sponsored_row', !!settings?.ads_enabled);
+  return useMemo(
+    () => (settings?.ads_enabled && slotCount > 0 ? pickAds(ads ?? [], { limit: slotCount, seed: `${PAGE_SEED}:p:${pageKey}` }) : []),
+    [ads, settings?.ads_enabled, slotCount, pageKey],
+  );
 }
 
 /** Time-rotating banner: the ad changes every `rotation_minutes` (and while the page stays open). */

@@ -166,10 +166,86 @@ const SCENES: Record<ArtCategory, { scene: string; palette: string }> = {
   general: { scene: 'an inviting modern marketplace atmosphere with abstract shapes, soft depth and gentle lighting', palette: 'ITHUBAFRICA teal, warm gold and soft white' },
 };
 
+// ------------------------------------------------------------------ variety
+// Every banner is drawn with a different look. A "variant" is one choice from each list below. The worker picks one at
+// random for each generation and avoids the looks used by the most recent banners on the platform, so neighbouring
+// ads do not look alike. All options are text-free, people-free and brand-free by construction.
+const PALETTES: Record<ArtCategory, string[]> = {
+  electronics: ['deep navy, electric blue and cool silver', 'charcoal black, neon cyan and soft white', 'graphite grey, amber orange and warm white', 'deep teal, mint green and silver', 'midnight purple, magenta glow and pale lilac', 'slate blue, ice white and bright lime accents'],
+  phones: ['midnight blue, violet and bright cyan highlights', 'warm coral, deep plum and soft peach', 'emerald green, black and champagne', 'sunset orange, rose pink and deep indigo', 'ice blue, white and pale silver', 'forest green, mustard yellow and cream'],
+  fashion: ['warm cream, deep burgundy and gold accents', 'dusty rose, ivory and soft taupe', 'emerald green, gold and off-white', 'terracotta, sand beige and chocolate brown', 'royal blue, white and silver', 'black, blush pink and rose gold'],
+  beauty: ['blush pink, soft peach and champagne gold', 'sage green, cream and pale gold', 'lavender, white and soft silver', 'warm terracotta, apricot and ivory', 'deep plum, rose and gold', 'aqua, pearl white and pale coral'],
+  home: ['warm oak, soft white and sage green', 'deep olive, terracotta and linen beige', 'soft grey, navy blue and brass', 'sunny yellow, white and light wood', 'charcoal, warm copper and cream', 'dusty blue, ivory and walnut brown'],
+  food: ['warm orange, fresh green and cream', 'deep red, golden yellow and warm brown', 'leafy green, lemon yellow and white', 'rich brown, caramel and cream', 'purple aubergine, fresh green and orange', 'turquoise, sunny yellow and coral'],
+  general: ['ITHUBAFRICA teal, warm gold and soft white', 'deep indigo, coral and cream', 'forest green, sand and bright orange', 'charcoal, electric blue and white', 'warm magenta, gold and deep navy', 'ocean blue, sunny yellow and soft grey'],
+};
+const STYLES = [
+  'polished commercial photography with realistic materials',
+  'refined three-dimensional render with soft studio lighting',
+  'minimal flat vector illustration with layered translucent shapes and soft gradients',
+  'clean isometric digital illustration with precise geometry',
+  'layered paper-cut illustration with gentle shadows and depth',
+  'cinematic macro photography with shallow depth of field',
+  'soft frosted-glass render with translucent forms and glowing edges',
+  'bold abstract geometric composition with smooth gradients and fine grain',
+];
+const MOODS = [
+  'bright fresh morning light',
+  'warm golden-hour glow',
+  'cool dramatic evening lighting',
+  'soft diffused overcast light',
+  'vibrant high-contrast studio lighting',
+  'calm minimal airy atmosphere',
+];
+const ANGLES = [
+  'wide straight-on view',
+  'slightly elevated three-quarter view',
+  'low angle looking gently upward',
+  'top-down flat-lay view',
+  'close-up view with soft background blur',
+];
+
+export interface Variant { palette: number; style: number; mood: number; angle: number }
+export const variantKey = (v: Variant) => `${v.palette}-${v.style}-${v.mood}-${v.angle}`;
+export function isVariant(x: unknown): x is Variant {
+  const v = x as Variant | null;
+  return !!v && [v.palette, v.style, v.mood, v.angle].every((n) => Number.isInteger(n) && n >= 0);
+}
+
+/** Small deterministic PRNG so a given seed always gives the same look (tests rely on it). */
+function rng(seed: string): () => number {
+  let h = 1779033703;
+  for (let i = 0; i < seed.length; i++) { h = Math.imul(h ^ seed.charCodeAt(i), 3432918353); h = (h << 13) | (h >>> 19); }
+  let a = (h ^= h >>> 16) >>> 0;
+  return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+
+/**
+ * Picks a look for one banner. `recent` lists the looks of the newest banners (newest first). Each choice avoids what
+ * was used by the last few banners: 5 palettes, 3 styles, 2 moods, 2 angles. If every option was recently used, all
+ * options are allowed again, so a pick is always possible.
+ */
+export function pickVariant(category: ArtCategory, seed: string, recent: readonly Variant[] = []): Variant {
+  const r = rng(`${category}:${seed}`);
+  const choose = (count: number, used: number[]) => {
+    const fresh = Array.from({ length: count }, (_, i) => i).filter((i) => !used.includes(i));
+    const pool = fresh.length ? fresh : Array.from({ length: count }, (_, i) => i);
+    return pool[Math.floor(r() * pool.length)];
+  };
+  const last = (key: keyof Variant, n: number) => recent.slice(0, n).map((v) => v[key]);
+  return {
+    palette: choose((PALETTES[category] ?? PALETTES.general).length, last('palette', 5)),
+    style: choose(STYLES.length, last('style', 3)),
+    mood: choose(MOODS.length, last('mood', 2)),
+    angle: choose(ANGLES.length, last('angle', 2)),
+  };
+}
+
 export interface PromptInput {
   category: ArtCategory;
   vendorHint?: string | null;         // vendor's promotional message or description, sanitised below
   subjects?: string[];                // generic category / product-type words ONLY (never product or brand names)
+  variant?: Variant;                  // look for this banner (see pickVariant); omitted = the original default look
 }
 
 /**
@@ -178,14 +254,17 @@ export interface PromptInput {
  */
 export function buildImagePrompt(input: PromptInput): string {
   const s = SCENES[input.category] ?? SCENES.general;
+  const v = input.variant && isVariant(input.variant) ? input.variant : null;
   const hint = sanitizeForPrompt(input.vendorHint, 80);
   const subjects = (input.subjects ?? []).map((n) => sanitizeForPrompt(n, 30)).filter(Boolean).slice(0, 3);
   const lines = [
     'Create a premium, professional e-commerce advertising banner background image.',
     `Scene: ${s.scene}.`,
-    `Colour palette: ${s.palette}.`,
+    `Colour palette: ${v ? (PALETTES[input.category] ?? PALETTES.general)[v.palette] ?? s.palette : s.palette}.`,
     'Composition: ultra-wide landscape banner. Keep the main visual interest in the centre and right two thirds, and leave the left third calm and uncluttered with soft gradient so text can be placed over it later.',
-    'Style: polished commercial photography / refined digital render, sharp, high quality, balanced lighting, subtle depth of field.',
+    v
+      ? `Style: ${STYLES[v.style] ?? STYLES[0]}. Lighting and mood: ${MOODS[v.mood] ?? MOODS[0]}. Viewpoint: ${ANGLES[v.angle] ?? ANGLES[0]}. Sharp, high quality, premium finish.`
+      : 'Style: polished commercial photography / refined digital render, sharp, high quality, balanced lighting, subtle depth of field.',
   ];
   if (subjects.length) lines.push(`Loose subject inspiration (product types only): ${subjects.join(', ')}.`);
   if (hint) lines.push(`Mood hint: ${hint}.`);
