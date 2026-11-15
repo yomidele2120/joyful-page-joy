@@ -2,6 +2,7 @@ interface Req { method?: string; query?: Record<string, string | string[] | unde
 interface Res { status(code: number): Res; setHeader(name: string, value: string): Res; send(body: string): void }
 interface ProductRow { slug: string; updated_at: string }
 interface CategoryRow { slug: string }
+interface ShopRow { id: string }
 
 const PAGE_SIZE = 1000;
 const SITE_URL = (process.env.SITE_URL || 'https://www.ithubafrica.com').replace(/\/$/, '');
@@ -59,6 +60,15 @@ async function loadCategories(): Promise<CategoryRow[]> {
   return await response.json() as CategoryRow[];
 }
 
+async function loadShops(): Promise<ShopRow[]> {
+  const { base, key } = publicSupabase();
+  const url = new URL('/rest/v1/vendors', base);
+  url.search = new URLSearchParams({ select: 'id', is_approved: 'eq.true', order: 'created_at.desc', limit: '1000' }).toString();
+  const response = await fetch(url, { headers: { apikey: key, Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(8000) });
+  if (!response.ok) return [];   // shops are a bonus: never fail the whole sitemap over them
+  return await response.json() as ShopRow[];
+}
+
 function urlset(urls: { loc: string; lastmod?: string }[]) {
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map(({ loc, lastmod }) => `<url><loc>${xmlEscape(loc)}</loc>${lastmod ? `<lastmod>${xmlEscape(lastmod)}</lastmod>` : ''}</url>`).join('\n')}\n</urlset>`;
 }
@@ -74,11 +84,12 @@ export default async function handler(req: Req, res: Res) {
   try {
     let xml: string;
     if (section === 'static') {
-      const staticPaths = ['/', '/products', '/about', '/contact', '/faq', '/terms', '/privacy-policy', '/cookie-policy', '/shipping-policy', '/returns-policy', '/seller-agreement', '/bnpl-terms', '/preorder-policy', '/dispute-resolution'];
-      const categories = await loadCategories();
+      const staticPaths = ['/', '/products', '/sell', '/about', '/contact', '/faq', '/terms', '/privacy-policy', '/cookie-policy', '/shipping-policy', '/returns-policy', '/seller-agreement', '/bnpl-terms', '/preorder-policy', '/dispute-resolution'];
+      const [categories, shops] = await Promise.all([loadCategories(), loadShops()]);
       xml = urlset([
         ...staticPaths.map(path => ({ loc: `${SITE_URL}${path}` })),
         ...categories.map(category => ({ loc: `${SITE_URL}/category/${encodeURIComponent(category.slug)}` })),
+        ...shops.map(shop => ({ loc: `${SITE_URL}/shop/${encodeURIComponent(shop.id)}` })),
       ]);
     } else if (section === 'products') {
       const products = await loadProducts(page);

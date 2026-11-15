@@ -28,7 +28,7 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": "(?i).*(googlebot|bingbot|facebookexternalhit|facebot|whatsapp|twitterbot|telegrambot|slackbot|linkedinbot|discordbot|pinterest|skypeuripreview|redditbot|embedly|vkshare|viber).*"
+          "value": "(?i).*(googlebot|bingbot|facebookexternalhit|facebot|whatsapp|twitterbot|telegrambot|slackbot|linkedinbot|discordbot|pinterest|skypeuripreview|redditbot|embedly|vkshare|viber|gptbot|oai-searchbot|chatgpt-user|perplexitybot|perplexity-user|claudebot|claude-searchbot|claude-user|anthropic-ai|applebot|duckassistbot|meta-externalagent).*"
         }
       ],
       "destination": "/api/product?slug=:slug"

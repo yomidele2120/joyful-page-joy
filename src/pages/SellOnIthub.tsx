@@ -1,4 +1,6 @@
 import { useEffect } from 'react';
+import JsonLd from '@/components/seo/JsonLd';
+import { faqPage } from '@/lib/seo/structuredData';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Layout from '@/components/layout/Layout';
@@ -74,6 +76,7 @@ export default function SellOnIthub() {
 
   return (
     <Layout>
+      <JsonLd id="sell-faq" data={faqPage(FAQ.map(f => ({ q: f.q, a: f.a })))} />
       <style>{`
         @keyframes ithaCrate { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
         .itha-crate { animation: ithaCrate .5s cubic-bezier(.2,.7,.2,1) both; }

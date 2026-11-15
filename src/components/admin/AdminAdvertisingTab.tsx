@@ -12,6 +12,7 @@ import { campaignStatus, externalStatus, pct, PLATFORM_LABEL } from '@/lib/ads/a
 import { errText, fmtDate, n, Stat, Status } from '@/components/ads/adUi';
 import ExternalExportPanel from '@/components/admin/ExternalExportPanel';
 import AdBoostAdminPanel from '@/components/admin/AdBoostAdminPanel';
+import GoogleAdsConnectionPanel from '@/components/admin/GoogleAdsConnectionPanel';
 
 const TABS = ['campaigns', 'vendors', 'ai', 'social', 'external', 'analytics', 'settings'] as const;
 type TabKey = typeof TABS[number];
@@ -144,8 +145,10 @@ function SocialView() {
 function ExternalView() {
   const q = useAdmin<any[]>('external', 'admin_list_external_campaigns');
   return (
+    <div className="space-y-4">
+    <GoogleAdsConnectionPanel />
     <Panel title="External ad requests">
-      <p className="mb-3 rounded-md bg-amber-50 p-2 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">No ad platform is connected, so a request can never be marked running here. Review it, then run the campaign yourself in the platform's own ads manager if you choose to, and keep the status truthful.</p>
+      <p className="mb-3 rounded-md bg-amber-50 p-2 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">Campaigns are not created in Google or the other platforms from here yet, so a request can never be marked running here. The connection test above only checks your Google Ads keys. Review it, then run the campaign yourself in the platform's own ads manager if you choose to, and keep the status truthful.</p>
       <Loading q={q} />
       <div className="space-y-2">{q.data?.map((r) => { const s = externalStatus(r.status); return (
         <div key={r.id} className="rounded border border-border p-2 text-sm">
@@ -155,6 +158,7 @@ function ExternalView() {
             <Button key={x} size="sm" variant="outline" onClick={() => run(() => call('admin_set_external_status', { _id: r.id, _status: x, _note: null }), 'Updated.', q.refresh)}>{externalStatus(x).label}</Button>)}</div>
         </div>); })}</div>
     </Panel>
+    </div>
   );
 }
 

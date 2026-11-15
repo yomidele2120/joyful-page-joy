@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import JsonLd from '@/components/seo/JsonLd';
+import { shopOrganization } from '@/lib/seo/structuredData';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import ProductCard from '@/components/ProductCard';
@@ -207,6 +209,7 @@ export default function SupplierShop() {
           <p className="text-muted-foreground text-center py-8">This shop hasn't posted any videos yet.</p>
         )}
       </div>
+      <JsonLd id="shop" data={shopOrganization(vendor as any)} />
       <ShopSocialBanner vendorId={vendor.id} isOwnShop={isOwnShop} />
     </Layout>
   );

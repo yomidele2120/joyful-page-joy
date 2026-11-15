@@ -6,7 +6,7 @@ import {
 import { BrandLogo } from '@/components/BrandLogo';
 import CurrencySwitcher from '@/components/currency/CurrencySwitcher';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import SearchBox from '@/components/layout/SearchBox';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from '@/components/ui/sheet';
 import { useCart } from '@/contexts/CartContext';
 import { useInquiryBasket } from '@/contexts/InquiryBasketContext';
@@ -24,7 +24,6 @@ import { formatDistanceToNow } from 'date-fns';
 import HeaderTicker from '@/components/flyers/HeaderTicker';
 import HeaderFlyerStrip from '@/components/flyers/HeaderFlyerStrip';
 
-type SearchScope = 'products' | 'suppliers';
 
 function CountBadge({ count }: { count: number }) {
   if (count <= 0) return null;
@@ -37,8 +36,6 @@ function CountBadge({ count }: { count: number }) {
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [scope, setScope] = useState<SearchScope>('products');
   const { totalItems } = useCart();
   const { count: basketCount } = useInquiryBasket();
   const { user, isAdmin, isVendor, signOut } = useAuth();
@@ -58,15 +55,6 @@ export default function Navbar() {
   const preordersOn = marketplace?.preorder_enabled !== false;
   const navigate = useNavigate();
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    const q = searchQuery.trim();
-    if (!q) return;
-    const params = new URLSearchParams({ search: q });
-    if (scope === 'suppliers') params.set('tab', 'suppliers');
-    navigate(`/products?${params.toString()}`);
-    setMenuOpen(false);
-  };
 
   const accountHref = isAdmin ? '/admin' : isVendor ? '/supplier-dashboard' : '/user-dashboard';
 
@@ -99,32 +87,8 @@ export default function Navbar() {
           <BrandLogo className="h-9 md:h-10" />
         </Link>
 
-        {/* Desktop search with scope switch */}
-        <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-2xl">
-          <div className="flex w-full items-stretch overflow-hidden rounded-full border-2 border-primary bg-background">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button type="button" className="flex shrink-0 items-center gap-1 border-r border-border bg-secondary/50 px-4 text-sm font-medium">
-                  {scope === 'products' ? 'Products' : 'Suppliers'} <ChevronDown className="h-3.5 w-3.5" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                <DropdownMenuItem onClick={() => setScope('products')}>Products</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setScope('suppliers')}>Suppliers</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Input
-              placeholder={scope === 'products' ? 'Enter a keyword to search products' : 'Enter a supplier name'}
-              aria-label="Search"
-              className="h-10 flex-1 rounded-none border-none bg-transparent text-sm focus-visible:ring-0 focus-visible:ring-offset-0"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-            />
-            <button type="submit" aria-label="Search" className="flex shrink-0 items-center justify-center bg-primary px-5 text-primary-foreground">
-              <Search className="h-4 w-4" />
-            </button>
-          </div>
-        </form>
+        {/* One search for products and suppliers */}
+        <div className="hidden md:flex flex-1 max-w-2xl"><SearchBox variant="desktop" /></div>
 
         {/* Desktop actions */}
         <div className="hidden md:flex items-center gap-1">
@@ -219,18 +183,7 @@ export default function Navbar() {
       </div>
 
       {/* Mobile search */}
-      <form onSubmit={handleSearch} className="md:hidden border-t border-border/70 px-3 py-2">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search products"
-            aria-label="Search products"
-            className="h-10 rounded-full border-primary bg-secondary/40 pl-10 pr-4 text-sm"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-          />
-        </div>
-      </form>
+      <div className="md:hidden border-t border-border/70 px-3 py-2"><SearchBox variant="mobile" onDone={() => setMenuOpen(false)} /></div>
 
       {showCategoryChips && !!categories?.length && (
         <nav aria-label="Categories" className="md:hidden border-t border-border/70">

@@ -192,6 +192,17 @@ export default function Products() {
 
             {tab === 'products' ? (
               <>
+                {!!debouncedSearch && !!suppliers?.length && (
+                  <section aria-label="Matching suppliers" className="mb-6">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <h2 className="font-heading text-base font-semibold">Suppliers matching "{debouncedSearch}"</h2>
+                      {suppliers.length > 4 && <button type="button" onClick={() => setTab('suppliers')} className="shrink-0 text-sm font-semibold text-primary hover:underline">See all {suppliers.length}</button>}
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {suppliers.slice(0, 4).map(s => <SupplierCard key={s.id} supplier={s} layout="row" />)}
+                    </div>
+                  </section>
+                )}
                 <p className="mb-3 text-sm text-muted-foreground">{isLoading ? 'Loading products...' : `${formatProductCount(total)} product${total === 1 ? '' : 's'}`}</p>
 
                 {isLoading ? (

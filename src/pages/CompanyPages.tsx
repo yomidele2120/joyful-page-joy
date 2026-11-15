@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import JsonLd from '@/components/seo/JsonLd';
+import { faqPage } from '@/lib/seo/structuredData';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Loader2, Mail, MapPin, Phone } from 'lucide-react';
 import { toast } from 'sonner';
@@ -264,6 +266,7 @@ const FAQ: { group: string; items: { q: string; a: React.ReactNode }[] }[] = [
 export function Faq() {
   return (
     <LegalPage title="Frequently Asked Questions" showUpdated={false} related={['/terms', '/returns-policy', '/shipping-policy']}>
+      <JsonLd id="faq" data={faqPage(FAQ.flatMap(section => section.items))} />
       <div className="mt-6 space-y-8">
         {FAQ.map(section => (
           <section key={section.group}>

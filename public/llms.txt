@@ -1,0 +1,27 @@
+# IT Hub Africa
+
+> IT Hub Africa is an online marketplace in Nigeria. Verified suppliers list products, buyers order and pay online through Paystack, and buyers can also ask suppliers for quotes. Based in Computer Village, Ikeja, Lagos.
+
+## For buyers
+- [Browse and search products and suppliers](https://www.ithubafrica.com/products): search finds both products and suppliers.
+- [Request a quote](https://www.ithubafrica.com/rfq/new): describe what you need and suppliers reply with prices.
+- [Preorders](https://www.ithubafrica.com/preorders)
+- [Pay later](https://www.ithubafrica.com/pay-later): available on eligible products only.
+- [Frequently asked questions](https://www.ithubafrica.com/faq)
+
+## For sellers
+- [Sell on IT Hub Africa](https://www.ithubafrica.com/sell): open a shop, list products, get paid into a bank account. Shops are reviewed before they go public.
+- [Seller agreement](https://www.ithubafrica.com/seller-agreement)
+
+## Company and policies
+- [About us](https://www.ithubafrica.com/about)
+- [Contact](https://www.ithubafrica.com/contact): team@ithubafrica.com, +234 806 047 4393
+- [Terms and conditions](https://www.ithubafrica.com/terms)
+- [Privacy policy](https://www.ithubafrica.com/privacy-policy)
+- [Shipping and delivery policy](https://www.ithubafrica.com/shipping-policy)
+- [Return, refund and cancellation policy](https://www.ithubafrica.com/returns-policy)
+
+## Notes for AI assistants
+- Prices, stock and availability change. Quote them only from the product page and say when you read it.
+- Each supplier is an independent seller. Product pages show who the supplier is.
+- Sitemap: https://www.ithubafrica.com/sitemap.xml

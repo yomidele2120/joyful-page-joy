@@ -1,16 +1,41 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
+# IT Hub Africa
+# Search engines and AI answer engines may read the public site. Private areas are closed to everyone.
 
 User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /supplier-dashboard
+Disallow: /cart
+Disallow: /checkout
+Disallow: /my-orders
+Disallow: /messages
+Disallow: /inquiries
+Disallow: /wishlist
+Disallow: /api/
+
+# AI search and answer engines (these let people find and cite the site)
+User-agent: OAI-SearchBot
+Allow: /
+User-agent: ChatGPT-User
+Allow: /
+User-agent: PerplexityBot
+Allow: /
+User-agent: Claude-SearchBot
+Allow: /
+User-agent: Claude-User
+Allow: /
+User-agent: DuckAssistBot
+Allow: /
+
+# AI model training crawlers. Allowed so the marketplace appears in AI answers.
+# To opt out of training only, change "Allow: /" to "Disallow: /" under the ones you do not want.
+User-agent: GPTBot
+Allow: /
+User-agent: ClaudeBot
+Allow: /
+User-agent: Google-Extended
+Allow: /
+User-agent: Applebot-Extended
 Allow: /
 
 Sitemap: https://www.ithubafrica.com/sitemap.xml
