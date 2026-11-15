@@ -27,6 +27,7 @@ import GoogleMerchantTab from '@/components/admin/GoogleMerchantTab';
 import CallQuotasTab from '@/components/admin/CallQuotasTab';
 import EmailNotificationsTab from '@/components/admin/EmailNotificationsTab';
 import SubscriptionAlertBanner from '@/components/admin/SubscriptionAlertBanner';
+import ApprovalAlerts from '@/components/admin/ApprovalAlerts';
 import { useSubscriptionOverview } from '@/hooks/useSubscriptions';
 import { alertsOf } from '@/lib/subscriptions';
 import { formatNaira } from '@/lib/format';
@@ -324,6 +325,7 @@ export default function AdminDashboard() {
       onSelect={setActiveTab}
       onSignOut={() => { signOut(); navigate('/'); }}
     >
+        <ApprovalAlerts enabled={canFetchAdminData} onOpen={setActiveTab} />
         {activeTab !== 'subscriptions' && <SubscriptionAlertBanner onOpen={() => setActiveTab('subscriptions')} />}
         {hasAdminDataError && (
           <div className="mb-6 rounded-lg border border-destructive/30 bg-destructive/5 p-4 flex items-center gap-3">

@@ -28,7 +28,12 @@ import { functionErrorMessage } from '@/lib/functionError';
 import { BANKS, BANK_PLACEHOLDER, isValidAccountNumber } from '@/lib/banks';
 import { formatNaira } from '@/lib/format';
 import { useCategories } from '@/hooks/useProducts';
-import { Package, ShoppingCart, DollarSign, Plus, LogOut, ArrowLeft, Trash2, Store, Upload, MessageCircle, AlertCircle, Clock, CheckCircle, CreditCard, LayoutDashboard, Film, Settings, ExternalLink, Pencil, Megaphone } from 'lucide-react';
+import { Bell, Wallet, Users, Package, ShoppingCart, DollarSign, Plus, LogOut, ArrowLeft, Trash2, Store, Upload, MessageCircle, AlertCircle, Clock, CheckCircle, CreditCard, LayoutDashboard, Film, Settings, ExternalLink, Pencil, Megaphone } from 'lucide-react';
+import NotificationsPanel from '@/components/dashboard/NotificationsPanel';
+import VendorEarningsPanel, { useVendorBalance } from '@/components/dashboard/VendorEarningsPanel';
+import VendorFollowersPanel from '@/components/dashboard/VendorFollowersPanel';
+import { useUnreadNotificationCount } from '@/hooks/useNotifications';
+import { formatNaira as formatNairaHub } from '@/lib/format';
 import DashboardShell, { Panel, StatCard, WelcomeBanner, useTabParam, type DashNavItem } from '@/components/dashboard/DashboardShell';
 import { BrandFlyerBanner } from '@/components/flyers/BrandFlyerImage';
 import { BRAND_FLYERS } from '@/lib/brandFlyers';
@@ -82,6 +87,8 @@ export default function SupplierDashboard() {
   }, [user, loading, navigate]);
 
   const isApproved = vendor?.is_approved === true;
+  const { data: balance } = useVendorBalance(vendor?.id);
+  const unreadNotes = useUnreadNotificationCount();
 
   // Automatic Paystack setup: once approved and bank details exist, create the
   // subaccount without anyone clicking anything (covers a failed first attempt).
@@ -192,10 +199,13 @@ export default function SupplierDashboard() {
         { key: 'products', label: 'My products', icon: Package, group: 'Store' },
         { key: 'add-product', label: 'Add product', icon: Plus, group: 'Store' },
         { key: 'orders', label: 'Orders', icon: ShoppingCart, group: 'Sales' },
+        { key: 'earnings', label: 'My balance', icon: Wallet, group: 'Sales', hint: balance ? `${formatNairaHub(balance.available)} ready` : undefined },
         { key: 'disputes', label: 'Disputes', icon: AlertCircle, group: 'Sales' },
         { key: 'videos', label: 'Videos', icon: Film, group: 'Grow' },
         { key: 'membership', label: 'Membership', icon: CreditCard, group: 'Grow' },
         { key: 'advertising', label: 'Advertising', icon: Megaphone, group: 'Grow' },
+        { key: 'followers', label: 'Followers', icon: Users, group: 'Grow' },
+        { key: 'notifications', label: 'Notifications', icon: Bell, badge: unreadNotes, group: 'Account' },
         { key: 'shop-settings', label: 'Shop settings', icon: Settings, group: 'Account' },
       ]
     : [{ key: 'shop-settings', label: 'Shop settings', icon: Settings, group: 'Account' }];
@@ -275,6 +285,8 @@ export default function SupplierDashboard() {
   return (
     <DashboardShell
       panelLabel="Seller centre"
+      hub
+      hubImage={vendor.logo_url}
       title={vendor.store_name}
       subtitle={isApproved ? 'Approved seller' : 'Pending approval'}
       items={navItems}
@@ -484,6 +496,9 @@ export default function SupplierDashboard() {
 
             {activeTab === 'membership' && <SupplierMembershipTab vendorId={vendor.id} />}
             {activeTab === 'advertising' && <VendorAdvertisingTab vendorId={vendor.id} />}
+            {activeTab === 'earnings' && <VendorEarningsPanel vendorId={vendor.id} />}
+            {activeTab === 'followers' && <VendorFollowersPanel vendorId={vendor.id} />}
+            {activeTab === 'notifications' && <NotificationsPanel />}
 
             {activeTab === 'add-product' && (
               <SupplierAddProduct vendorId={vendor.id} categories={categories || []} onSuccess={() => {

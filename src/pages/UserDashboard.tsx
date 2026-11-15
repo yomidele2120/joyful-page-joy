@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { formatNaira } from '@/lib/format';
 import { useUnreadCount } from '@/hooks/useChat';
+import NotificationsPanel from '@/components/dashboard/NotificationsPanel';
+import { useUnreadNotificationCount } from '@/hooks/useNotifications';
 import UserMessages from '@/components/dashboard/UserMessages';
 import OrderShipments, { type Shipment } from '@/components/dashboard/OrderShipments';
 import DashboardShell, { Panel, StatCard, WelcomeBanner, useTabParam, type DashNavItem } from '@/components/dashboard/DashboardShell';
@@ -27,6 +29,7 @@ export default function UserDashboard() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useTabParam('overview', ['overview', 'orders', 'wishlist', 'messages', 'profile']);
   const unreadCount = useUnreadCount();
+  const unreadNotes = useUnreadNotificationCount();
 
   // Fetch profile
   const { data: profile, refetch: refetchProfile } = useQuery({
@@ -140,6 +143,7 @@ export default function UserDashboard() {
     { key: 'orders', label: 'My orders', icon: ShoppingBag, group: 'My account' },
     { key: 'wishlist', label: 'Wishlist', icon: Heart, group: 'My account' },
     { key: 'messages', label: 'Messages', icon: MessageCircle, badge: unreadCount, group: 'Connect' },
+    { key: 'notifications', label: 'Notifications', icon: Bell, badge: unreadNotes, group: 'Connect' },
     { key: 'profile', label: 'Profile', icon: UserRound, group: 'Settings' },
   ];
 
@@ -157,6 +161,7 @@ export default function UserDashboard() {
   return (
     <DashboardShell
       panelLabel="My account"
+      hub
       title={displayName}
       subtitle={user?.email}
       items={navItems}
@@ -269,6 +274,8 @@ export default function UserDashboard() {
 
       {/* Messages */}
       {activeTab === 'messages' && <UserMessages />}
+
+      {activeTab === 'notifications' && <NotificationsPanel />}
 
       {/* Profile */}
       {activeTab === 'profile' && (

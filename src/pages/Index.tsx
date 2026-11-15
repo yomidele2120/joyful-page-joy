@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import HeroCarousel from '@/components/HeroCarousel';
 import TrustStrip from '@/components/TrustStrip';
+import HomeQuickStart from '@/components/HomeQuickStart';
+import Showcase3D from '@/components/Showcase3D';
 import ScrollRow, { ScrollItem } from '@/components/ScrollRow';
 import SupplierCard from '@/components/SupplierCard';
 import ProductCard, { ProductCardSkeleton } from '@/components/ProductCard';
@@ -90,6 +92,8 @@ export default function Index() {
     <Layout flushFooter>
       <HeroCarousel images={photos} />
       <TrustStrip />
+      <HomeQuickStart payLater={showPayLater} preorders={showPreorder} />
+      <Showcase3D items={(featured?.length ? featured : products ?? [])} />
       <FeaturedAds className="container max-w-[1440px] pt-4 sm:pt-6" />
 
       <div className="container max-w-[1440px] pb-6">

@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { ChevronRight, Settings } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { ArrowLeft, LogOut, Menu, Store } from 'lucide-react';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
@@ -49,13 +50,21 @@ interface ShellProps {
   headerActions?: React.ReactNode;    // extra buttons in the top bar (desktop and tablet)
   drawerActions?: React.ReactNode;    // extra links at the bottom of the drawer
   notice?: React.ReactNode;           // banner shown above the page content
+  /** Phones: open on a menu of big tiles (like an app's profile page) until a section is picked. Desktop is unchanged. */
+  hub?: boolean;
+  /** Image shown beside the name in the hub header (shop logo, avatar). */
+  hubImage?: string | null;
   children: React.ReactNode;
 }
 
 export default function DashboardShell({
-  panelLabel, title, subtitle, items, active, onSelect, onSignOut, headerActions, drawerActions, notice, children,
+  panelLabel, title, subtitle, items, active, onSelect, onSignOut, headerActions, drawerActions, notice, hub, hubImage, children,
 }: ShellProps) {
   const [open, setOpen] = useState(false);
+  const [params, setParams] = useSearchParams();
+  // With no ?tab= on a phone, show the hub. Picking a tile sets ?tab=, and the back arrow clears it again.
+  const showHub = !!hub && !params.get('tab');
+  const backToMenu = () => { const c = new URLSearchParams(params); c.delete('tab'); c.delete('compose'); setParams(c); window.scrollTo({ top: 0 }); };
   const current = items.find(i => i.key === active) ?? items[0];
   const totalBadges = items.reduce((n, i) => n + (i.badge ?? 0), 0);
 
@@ -75,7 +84,14 @@ export default function DashboardShell({
         />
       </aside>
 
-      <div className="lg:pl-64">
+      {showHub && (
+        <AccountHub
+          title={title} subtitle={subtitle} image={hubImage} items={items} onSelect={select} onSignOut={onSignOut}
+          drawerActions={drawerActions} onSettings={items.find(i => ['shop-settings', 'settings', 'profile'].includes(i.key))?.key}
+        />
+      )}
+
+      <div className={cn('lg:pl-64', showHub && 'hidden lg:block')}>
         {/* Top bar */}
         <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur-md">
           <div className="flex h-14 items-center gap-2 px-3 sm:px-5 lg:px-8">
@@ -105,7 +121,12 @@ export default function DashboardShell({
           </div>
 
           {/* Where am I (phones and tablets) */}
-          <div className="flex items-baseline gap-2 border-t border-border/70 px-4 py-2 lg:hidden">
+          <div className="flex items-center gap-2 border-t border-border/70 px-2 py-1 lg:hidden">
+            {hub && (
+              <button type="button" onClick={backToMenu} aria-label="Back to menu" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full hover:bg-secondary">
+                <ArrowLeft className="h-5 w-5" />
+              </button>
+            )}
             <p className="truncate text-sm font-semibold">{current?.label}</p>
             <span className="ml-auto shrink-0 text-xs text-muted-foreground">{panelLabel}</span>
           </div>
@@ -128,6 +149,63 @@ export default function DashboardShell({
           />
         </SheetContent>
       </Sheet>
+    </div>
+  );
+}
+
+function AccountHub({
+  title, subtitle, image, items, onSelect, onSignOut, drawerActions, onSettings,
+}: {
+  title: string; subtitle?: string; image?: string | null; items: DashNavItem[];
+  onSelect: (key: string) => void; onSignOut: () => void; drawerActions?: React.ReactNode; onSettings?: string;
+}) {
+  return (
+    <div className="min-h-screen bg-secondary/60 pb-24 lg:hidden">
+      <header className="sticky top-0 z-30 border-b-2 border-primary bg-card">
+        <div className="flex items-center gap-3 px-3 py-3">
+          <Link to="/" aria-label="Back to store" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full hover:bg-secondary"><ArrowLeft className="h-5 w-5" /></Link>
+          {image
+            ? <img src={image} alt="" className="h-11 w-11 shrink-0 rounded-xl object-cover" />
+            : <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 font-heading text-lg text-primary">{title.trim().charAt(0).toUpperCase() || '?'}</span>}
+          <div className="min-w-0 flex-1">
+            <p className="line-clamp-2 font-heading text-base leading-tight">{title}</p>
+            {subtitle && <p className="truncate text-xs text-muted-foreground">{subtitle}</p>}
+          </div>
+          {onSettings && (
+            <button type="button" onClick={() => onSelect(onSettings)} aria-label="Settings" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full hover:bg-secondary"><Settings className="h-5 w-5" /></button>
+          )}
+        </div>
+      </header>
+
+      <ul className="grid grid-cols-2 items-start gap-3 p-3">
+        {items.map((item, i) => {
+          const Icon = item.icon;
+          return (
+            <li key={item.key} className={i % 2 === 1 ? 'mt-0' : ''}>
+              <button
+                type="button" onClick={() => onSelect(item.key)}
+                className="relative flex w-full items-center gap-3 rounded-2xl bg-card px-3.5 py-4 text-left shadow-sm ring-1 ring-border/60 transition-transform active:scale-[0.98]"
+              >
+                <Icon className="h-6 w-6 shrink-0 text-primary" aria-hidden="true" />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[15px] font-medium leading-tight">{item.label}</span>
+                  {item.hint && <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{item.hint}</span>}
+                </span>
+                {!!item.badge && item.badge > 0
+                  ? <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-semibold text-accent-foreground">{item.badge > 99 ? '99+' : item.badge}</span>
+                  : <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60" aria-hidden="true" />}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="space-y-2 px-3">
+        {drawerActions}
+        <button type="button" onClick={onSignOut} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-card py-3.5 text-sm font-medium text-red-600 ring-1 ring-border/60">
+          <LogOut className="h-4 w-4" /> Log out
+        </button>
+      </div>
     </div>
   );
 }

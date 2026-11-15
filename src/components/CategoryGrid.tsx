@@ -4,7 +4,7 @@ import { Laptop, Monitor, Printer, Smartphone, Gamepad2, Headphones, Cpu, Batter
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
-const iconMap: Record<string, React.ReactNode> = {
+export const iconMap: Record<string, React.ReactNode> = {
   'laptops-computers': <Laptop className="w-full h-full" />,
   'desktop-computers': <Cpu className="w-full h-full" />,
   'phones': <Smartphone className="w-full h-full" />,
