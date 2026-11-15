@@ -19,11 +19,11 @@ export default function ScrollRow({ title, eyebrow, linkTo, linkLabel = 'View al
     <section className="mt-8 sm:mt-10">
       <div className="mb-3 flex items-end justify-between gap-4">
         <div>
-          {eyebrow && <p className="text-xs font-semibold uppercase tracking-wider text-primary">{eyebrow}</p>}
-          <h2 className="font-heading text-xl font-bold sm:text-2xl">{title}</h2>
+          <h2 className="font-heading text-lg font-bold sm:text-2xl">{title}</h2>
+          {eyebrow && <p className="text-xs text-muted-foreground sm:text-sm">{eyebrow}</p>}
         </div>
         <div className="flex items-center gap-2">
-          {linkTo && <Link to={linkTo} className="shrink-0 text-sm font-medium text-primary hover:underline">{linkLabel}</Link>}
+          {linkTo && <Link to={linkTo} className="shrink-0 rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent hover:bg-accent/20 sm:text-sm">{linkLabel}</Link>}
           <button onClick={() => scroll(-1)} aria-label={`Scroll ${title} left`} className="hidden rounded-full border border-border p-1.5 hover:bg-secondary md:block"><ChevronLeft className="h-4 w-4" /></button>
           <button onClick={() => scroll(1)} aria-label={`Scroll ${title} right`} className="hidden rounded-full border border-border p-1.5 hover:bg-secondary md:block"><ChevronRight className="h-4 w-4" /></button>
         </div>

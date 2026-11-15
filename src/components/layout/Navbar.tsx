@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   ShoppingCart, Search, User, Menu, Heart, LogOut, Store, Clapperboard, Bell, MessageSquare,
   FileText, ClipboardList, ChevronDown, LayoutGrid, Inbox, Package, Wallet, CalendarClock, Phone } from 'lucide-react';
-import { BrandLogo } from '@/components/BrandLogo';
+import { BrandLogo, BrandLogoPill } from '@/components/BrandLogo';
 import CurrencySwitcher from '@/components/currency/CurrencySwitcher';
 import { Button } from '@/components/ui/button';
 import SearchBox from '@/components/layout/SearchBox';
@@ -61,7 +61,7 @@ export default function Navbar() {
   return (
     <>
     <HeaderFlyerStrip />
-    <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-md border-b border-border">
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0a2236] text-white md:border-border md:bg-card/95 md:text-foreground md:backdrop-blur-md">
       {/* Utility bar */}
       <div className="hidden bg-primary py-1 text-xs text-primary-foreground md:block">
         <div className="container flex items-center justify-between">
@@ -84,7 +84,8 @@ export default function Navbar() {
       {/* Row 1: logo, search, actions */}
       <div className="container flex items-center justify-between h-14 gap-3">
         <Link to="/" className="flex items-center shrink-0">
-          <BrandLogo className="h-9 md:h-10" />
+          <span className="md:hidden"><BrandLogoPill logoClassName="h-7" /></span>
+          <span className="hidden md:inline"><BrandLogo className="h-10" /></span>
         </Link>
 
         {/* One search for products and suppliers */}
@@ -183,10 +184,10 @@ export default function Navbar() {
       </div>
 
       {/* Mobile search */}
-      <div className="md:hidden border-t border-border/70 px-3 py-2"><SearchBox variant="mobile" onDone={() => setMenuOpen(false)} /></div>
+      <div className="px-3 pb-3 pt-1 md:hidden"><SearchBox variant="mobile" onDone={() => setMenuOpen(false)} /></div>
 
       {showCategoryChips && !!categories?.length && (
-        <nav aria-label="Categories" className="md:hidden border-t border-border/70">
+        <nav aria-label="Categories" className="md:hidden">
           <ul className="flex gap-2 overflow-x-auto px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {[{ id: 'all', name: 'All', to: '/products' }, ...categories.map(c => ({ id: c.id, name: c.name, to: `/category/${c.slug}` }))].map(chip => {
               const active = chip.to === '/products' ? pathname === '/products' : pathname === chip.to;
@@ -196,7 +197,7 @@ export default function Navbar() {
                     to={chip.to}
                     data-chip-active={active}
                     className={`inline-flex items-center whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors ${
-                      active ? 'bg-primary text-primary-foreground' : 'bg-secondary text-foreground/80 hover:bg-secondary/70'
+                      active ? 'bg-accent text-accent-foreground' : 'bg-white/10 text-white/90 hover:bg-white/20'
                     }`}
                   >
                     {chip.name}

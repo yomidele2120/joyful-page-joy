@@ -28,18 +28,18 @@ export default function Cart() {
 
   return (
     <Layout>
-      <div className="container py-8">
+      <div className="container pb-28 pt-8 md:pb-8">
         <h1 className="font-heading text-3xl font-bold mb-6">Shopping Cart</h1>
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-4">
             {mixed && (
-              <p role="alert" className="border border-destructive/40 bg-destructive/10 p-3 text-sm">
+              <p role="alert" className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm">
                 Your cart mixes preorder and in-stock items. They are paid for in separate orders: remove one type, check out, then order the other.
               </p>
             )}
             {items.map(item => (
-              <div key={item.id} className="flex gap-4 bg-card p-4 rounded-lg card-shadow">
-                <img src={imgSrc(item.image_url, 'thumb') || '/placeholder.svg'} loading="lazy" alt={item.name} className="w-20 h-20 rounded-md object-cover bg-secondary" />
+              <div key={item.id} className="flex gap-4 rounded-2xl bg-card p-4 card-shadow">
+                <img src={imgSrc(item.image_url, 'thumb') || '/placeholder.svg'} loading="lazy" alt={item.name} className="h-20 w-20 rounded-xl object-cover bg-secondary" />
                 <div className="flex-1 min-w-0">
                   <Link to={`/product/${item.slug}`} className="font-heading font-semibold text-sm hover:text-primary line-clamp-2">{item.name}</Link>
                   {item.is_preorder && <PreorderBadge date={item.preorder_release_date} className="mt-1" />}
@@ -67,7 +67,7 @@ export default function Cart() {
             ))}
           </div>
 
-          <div className="bg-card p-6 rounded-lg card-shadow h-fit sticky top-28">
+          <div className="h-fit rounded-2xl bg-card p-6 card-shadow lg:sticky lg:top-28">
             <h3 className="font-heading font-bold text-lg mb-4">Order Summary</h3>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
@@ -84,12 +84,23 @@ export default function Cart() {
               <span className="text-primary">{formatNaira(totalPrice)}</span>
             </div>
             <Link to="/checkout" aria-disabled={mixed} onClick={e => { if (mixed) e.preventDefault(); }}>
-              <Button className="w-full mt-4 font-heading font-semibold" size="lg" disabled={mixed}>
+              <Button variant="cta" className="mt-4 w-full font-heading font-semibold" size="lg" disabled={mixed}>
                 Proceed to Checkout
               </Button>
             </Link>
           </div>
         </div>
+      </div>
+
+      {/* Phones: the total and the checkout button stay in view above the bottom tab bar. */}
+      <div className="fixed inset-x-0 bottom-14 z-40 flex items-center gap-3 rounded-t-2xl border-t border-border bg-background/95 px-4 py-3 shadow-[0_-6px_20px_-10px_rgba(0,0,0,0.25)] backdrop-blur md:hidden">
+        <div className="min-w-0 flex-1">
+          <p className="text-xs text-muted-foreground">Total</p>
+          <p className="truncate font-heading text-lg font-bold">{formatNaira(totalPrice)}</p>
+        </div>
+        <Link to="/checkout" aria-disabled={mixed} onClick={e => { if (mixed) e.preventDefault(); }}>
+          <Button variant="cta" size="lg" disabled={mixed}>Checkout</Button>
+        </Link>
       </div>
     </Layout>
   );

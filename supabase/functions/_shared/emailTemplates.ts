@@ -71,8 +71,6 @@ function subjectFor(eventType: string, data: NotificationEmailData): string {
     'vendor.membership_activated': 'Your supplier membership is active',
     'vendor.membership_expiring': 'Your supplier membership is expiring soon',
     'vendor.membership_payment_failed': 'Your supplier membership payment needs attention',
-    'vendor.payout_paid': 'Your supplier payout has been sent',
-    'vendor.payout_issue': 'There is an update about your supplier payout',
     'vendor.payout_paid': 'Your vendor payout has been sent',
     'vendor.payout_issue': 'There is an update about your vendor payout',
     'buyer.dispute_update': `An update to your dispute for order${order}`,
@@ -116,8 +114,6 @@ function contentFor(eventType: string, data: NotificationEmailData, siteUrl: str
     case 'vendor.membership_payment_failed': heading = 'Membership payment not confirmed'; intro = `We could not confirm payment for your ${data.statusLabel ?? 'supplier'} membership. Your plan has not been upgraded.`; actionPath = '/supplier-dashboard?tab=membership'; break;
     case 'vendor.payout_paid': heading = 'Payout sent'; intro = `A payout of ${money(data.amount)} has been marked as sent to your verified account.`; actionPath = '/supplier-dashboard'; break;
     case 'vendor.payout_issue': heading = 'Payout needs attention'; intro = `A payout of ${money(data.amount)} is ${data.statusLabel ?? 'under review'}.`; if (data.reason) lines.push(data.reason); actionPath = '/supplier-dashboard'; break;
-    case 'vendor.payout_paid': heading = 'Payout sent'; intro = `A payout of ${money(data.amount, data.currency)} has been marked as paid.`; if (data.paymentReference) lines.push(`Transfer reference: ${data.paymentReference}`); actionPath = '/supplier-dashboard'; break;
-    case 'vendor.payout_issue': heading = 'Payout needs attention'; intro = `A payout of ${money(data.amount, data.currency)} could not be completed.`; if (data.reason) lines.push(data.reason); actionPath = '/supplier-dashboard'; break;
     case 'buyer.dispute_update': heading = 'Dispute update'; intro = `Your dispute for ${order} is ${data.statusLabel ?? 'updated'}.`; actionPath = '/my-orders'; break;
     case 'vendor.dispute_update': heading = 'Dispute update'; intro = `A dispute for ${order} is ${data.statusLabel ?? 'updated'}.`; actionPath = '/supplier-dashboard'; break;
     case 'admin.dispute_opened': heading = 'New order dispute'; intro = `${order} has a new buyer dispute that needs review.`; actionPath = '/admin?tab=disputes'; break;
@@ -129,38 +125,99 @@ function contentFor(eventType: string, data: NotificationEmailData, siteUrl: str
   if (data.reason && !eventType.includes('report')) lines.push(`Reason: ${data.reason}`);
 
   const items = data.items ?? [];
-  const itemRows = items.map(item => {
-    const name = item.href ? `<a href="${escapeHtml(item.href)}" style="color:#176b57;text-decoration:none">${escapeHtml(item.name)}</a>` : escapeHtml(item.name);
-    const details = [item.quantity ? `Qty ${item.quantity}` : '', item.unitPrice !== undefined ? money(item.unitPrice, data.currency) : ''].filter(Boolean).join(' · ');
-    return `<tr><td style="padding:10px 0;border-bottom:1px solid #e8eee9">${name}<div style="font-size:12px;color:#60736b">${escapeHtml(details)}</div></td></tr>`;
-  }).join('');
-  const details = lines.map(line => `<p style="margin:8px 0;color:#43564e">${escapeHtml(line)}</p>`).join('');
   const textItems = items.map(item => `- ${item.name}${item.quantity ? ` (qty ${item.quantity})` : ''}${item.unitPrice !== undefined ? `: ${money(item.unitPrice, data.currency)}` : ''}`).join('\n');
   const text = [heading, intro, ...lines, textItems, `${siteUrl}${actionPath}`].filter(Boolean).join('\n\n');
   return {
     subject: subjectFor(eventType, data),
-    heading, intro, details, itemRows, actionUrl: `${siteUrl}${actionPath}`, text,
+    heading, intro, lines, items, currency: data.currency, tone: toneFor(eventType), cta: ctaFor(eventType),
+    actionUrl: `${siteUrl}${actionPath}`, text,
   };
+}
+
+type Tone = 'good' | 'attention' | 'bad' | 'info';
+const TONES: Record<Tone, { bar: string; chipBg: string; chipFg: string; label: string }> = {
+  good: { bar: '#16a34a', chipBg: '#e7f6ec', chipFg: '#14532d', label: 'Good news' },
+  attention: { bar: '#e8590c', chipBg: '#fff1e6', chipFg: '#9a3a05', label: 'Needs attention' },
+  bad: { bar: '#dc2626', chipBg: '#fdecec', chipFg: '#7f1d1d', label: 'Cancelled or failed' },
+  info: { bar: '#2563eb', chipBg: '#e8f0fe', chipFg: '#1e3a8a', label: 'Update' },
+};
+function toneFor(eventType: string): Tone {
+  if (/cancelled|payment_failed|refund_failed/.test(eventType)) return 'bad';
+  if (/payment_issue|payment_alert|expiring|payout_issue|dispute|content_report/.test(eventType)) return 'attention';
+  if (/order_paid|order_received|shipped|delivered|refund_processed|membership_activated|payout_paid|rfq_quote|inquiry_replied|support_reply/.test(eventType)) return 'good';
+  return 'info';
+}
+function ctaFor(eventType: string): string {
+  if (/^buyer\.(order|refund|payment|dispute)/.test(eventType)) return 'View my order';
+  if (eventType === 'vendor.order_received' || eventType === 'vendor.order_cancelled') return 'Open seller dashboard';
+  if (eventType.startsWith('admin.')) return 'Open admin console';
+  if (eventType === 'buyer.rfq_quote') return 'View the quote';
+  if (eventType === 'vendor.new_rfq') return 'View the request';
+  if (/inquiry|support_reply/.test(eventType)) return 'Read and reply';
+  if (eventType.startsWith('vendor.membership')) return 'Manage membership';
+  if (eventType.startsWith('vendor.')) return 'Open seller dashboard';
+  return 'View details';
 }
 
 export function renderNotificationEmail(eventType: string, data: NotificationEmailData, siteUrl: string): RenderedEmail {
   const base = siteUrl.replace(/\/$/, '');
-  const content = contentFor(eventType, data, base);
+  const c = contentFor(eventType, data, base);
+  const tone = TONES[c.tone];
+  const NAVY = '#0a2236';
+  const font = "-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+
+  // "Label: value" lines become a tidy two-column list; anything else stays a paragraph.
+  const rows: string[] = [];
+  const paras: string[] = [];
+  for (const line of c.lines) {
+    const m = /^([^:]{2,32}):\s+(.+)$/.exec(line);
+    if (m) rows.push(`<tr><td style="padding:9px 0;border-bottom:1px solid #e6ebf1;font-size:13px;color:#64748b;width:42%;vertical-align:top">${escapeHtml(m[1])}</td><td style="padding:9px 0;border-bottom:1px solid #e6ebf1;font-size:14px;color:${NAVY};font-weight:600;text-align:right;vertical-align:top">${escapeHtml(m[2])}</td></tr>`);
+    else paras.push(`<p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:#334155">${escapeHtml(line)}</p>`);
+  }
+  const itemRows = c.items.map(item => {
+    const name = item.href ? `<a href="${escapeHtml(item.href)}" style="color:${NAVY};text-decoration:none;font-weight:600">${escapeHtml(item.name)}</a>` : `<span style="font-weight:600;color:${NAVY}">${escapeHtml(item.name)}</span>`;
+    const qty = item.quantity ? `<div style="font-size:12px;color:#64748b;margin-top:2px">Quantity ${escapeHtml(item.quantity)}</div>` : '';
+    const price = item.unitPrice !== undefined ? escapeHtml(money(item.unitPrice, c.currency)) + (item.quantity && item.quantity > 1 ? '<div style="font-size:12px;color:#64748b">each</div>' : '') : '';
+    return `<tr><td style="padding:12px 0;border-bottom:1px solid #e6ebf1;font-size:14px;line-height:1.4">${name}${qty}</td><td style="padding:12px 0;border-bottom:1px solid #e6ebf1;font-size:14px;color:${NAVY};text-align:right;white-space:nowrap;vertical-align:top">${price}</td></tr>`;
+  }).join('');
+
   const html = `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;background:#f2f6f3;font-family:Arial,Helvetica,sans-serif;color:#20332d">
-<div style="display:none;max-height:0;overflow:hidden;opacity:0">${escapeHtml(content.intro)}</div>
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f2f6f3;padding:28px 12px"><tr><td align="center">
-<table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;background:#fff;border:1px solid #dfe8e2;border-radius:8px;overflow:hidden">
-<tr><td style="background:#176b57;padding:20px 28px;color:#fff;font-size:20px;font-weight:700">ITHUBAFRICA</td></tr>
-<tr><td style="padding:30px 28px"><h1 style="margin:0 0 12px;font-size:24px;line-height:1.25;color:#20332d">${escapeHtml(content.heading)}</h1>
-<p style="margin:0 0 20px;font-size:16px;line-height:1.6;color:#43564e">${escapeHtml(content.intro)}</p>
-${content.itemRows ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:12px 0 18px">${content.itemRows}</table>` : ''}
-${content.details}
-<p style="margin:26px 0"><a href="${escapeHtml(content.actionUrl)}" style="display:inline-block;background:#176b57;color:#fff;text-decoration:none;padding:12px 18px;border-radius:5px;font-weight:700">View details</a></p>
-<p style="margin:24px 0 0;font-size:12px;line-height:1.5;color:#708178">This is an automated notification from IT Hub Africa. For help, contact <a style="color:#176b57" href="mailto:team@ithubafrica.com">team@ithubafrica.com</a>.</p>
-</td></tr></table><p style="font-size:11px;color:#819087">© IT Hub Africa</p></td></tr></table></body></html>`;
-  return { subject: content.subject, html, text: content.text };
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light"><meta name="supported-color-schemes" content="light"><title>${escapeHtml(c.subject)}</title></head>
+<body style="margin:0;padding:0;background:#eef2f6;font-family:${font};color:#0f172a;-webkit-text-size-adjust:100%">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent">${escapeHtml(c.intro)}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#eef2f6"><tr><td align="center" style="padding:24px 12px">
+<table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%">
+<tr><td style="background:${NAVY};border-radius:16px 16px 0 0;padding:18px 24px">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr>
+    <td><a href="${escapeHtml(base)}" style="text-decoration:none"><span style="display:inline-block;background:#ffffff;border-radius:10px;padding:7px 12px"><img src="${escapeHtml(base)}/email/logo.png" alt="IT Hub Africa" height="26" style="display:block;height:26px;width:auto;border:0;font-family:${font};font-size:15px;font-weight:700;color:${NAVY}"></span></a></td>
+    <td align="right" style="font-size:12px;color:#9fb3c8">ithubafrica.com</td>
+  </tr></table>
+</td></tr>
+<tr><td style="background:${tone.bar};height:4px;line-height:4px;font-size:0">&nbsp;</td></tr>
+<tr><td style="background:#ffffff;padding:30px 28px 8px">
+  <span style="display:inline-block;background:${tone.chipBg};color:${tone.chipFg};font-size:12px;font-weight:700;border-radius:999px;padding:5px 12px">${escapeHtml(c.heading)}</span>
+  <p style="margin:16px 0 0;font-size:22px;line-height:1.35;font-weight:700;color:${NAVY}">${escapeHtml(c.intro)}</p>
+</td></tr>
+<tr><td style="background:#ffffff;padding:8px 28px 0">
+  ${itemRows ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:14px 0 6px">${itemRows}</table>` : ''}
+  ${paras.length ? `<div style="margin-top:14px">${paras.join('')}</div>` : ''}
+  ${rows.length ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:10px 0 4px">${rows.join('')}</table>` : ''}
+</td></tr>
+<tr><td style="background:#ffffff;padding:22px 28px 32px">
+  <table role="presentation" cellspacing="0" cellpadding="0"><tr><td style="background:#e8590c;border-radius:12px">
+    <a href="${escapeHtml(c.actionUrl)}" style="display:inline-block;padding:14px 26px;font-size:16px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:12px">${escapeHtml(c.cta)}</a>
+  </td></tr></table>
+  <p style="margin:14px 0 0;font-size:12px;line-height:1.5;color:#64748b">Button not working? Copy this link into your browser:<br><a href="${escapeHtml(c.actionUrl)}" style="color:#1d4ed8;word-break:break-all">${escapeHtml(c.actionUrl)}</a></p>
+</td></tr>
+<tr><td style="background:#f8fafc;border-top:1px solid #e6ebf1;border-radius:0 0 16px 16px;padding:20px 28px">
+  <p style="margin:0 0 6px;font-size:12px;line-height:1.6;color:#64748b">You are getting this email because of activity on your IT Hub Africa account. It is sent automatically, so please do not reply to it.</p>
+  <p style="margin:0;font-size:12px;line-height:1.6;color:#64748b">Need help? Write to <a href="mailto:team@ithubafrica.com" style="color:#1d4ed8">team@ithubafrica.com</a> or visit <a href="${escapeHtml(base)}" style="color:#1d4ed8">${escapeHtml(base.replace(/^https?:\/\//, ''))}</a>.</p>
+</td></tr>
+</table>
+<p style="margin:14px 0 0;font-size:11px;color:#94a3b8">© IT Hub Africa</p>
+</td></tr></table></body></html>`;
+  return { subject: c.subject, html, text: c.text };
 }
 
 export function escapeEmailHtml(value: unknown): string { return escapeHtml(value); }

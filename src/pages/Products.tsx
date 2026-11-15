@@ -180,11 +180,11 @@ export default function Products() {
 
               {tab === 'products' && (
                 <>
-                  <Button variant="outline" className="h-10 gap-2 lg:hidden" onClick={() => setFiltersOpen(true)}>
+                  <Button variant="outline" className="h-10 gap-2 rounded-full bg-card lg:hidden" onClick={() => setFiltersOpen(true)}>
                     <SlidersHorizontal className="h-4 w-4" /> Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}
                   </Button>
                   <Select value={sortBy} onValueChange={setSortBy}>
-                    <SelectTrigger className="h-10 w-[180px] bg-card"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-10 w-[180px] rounded-full bg-card"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="newest">Newest first</SelectItem>
                       <SelectItem value="price-low">Price: low to high</SelectItem>
@@ -192,7 +192,7 @@ export default function Products() {
                       <SelectItem value="moq-low">MOQ: low to high</SelectItem>
                     </SelectContent>
                   </Select>
-                  <div className="flex overflow-hidden rounded-md border border-border" role="group" aria-label="View">
+                  <div className="flex overflow-hidden rounded-full border border-border" role="group" aria-label="View">
                     <button onClick={() => setView('list')} aria-label="List view" aria-pressed={view === 'list'} className={`p-2.5 ${view === 'list' ? 'bg-primary text-primary-foreground' : 'bg-card'}`}><List className="h-4 w-4" /></button>
                     <button onClick={() => setView('grid')} aria-label="Grid view" aria-pressed={view === 'grid'} className={`p-2.5 ${view === 'grid' ? 'bg-primary text-primary-foreground' : 'bg-card'}`}><LayoutGrid className="h-4 w-4" /></button>
                   </div>
@@ -213,7 +213,7 @@ export default function Products() {
                     </div>
                   </section>
                 )}
-                <p className="mb-3 text-sm text-muted-foreground">{isLoading ? 'Loading products...' : `${formatProductCount(total)} product${total === 1 ? '' : 's'}`}</p>
+                <p className="mb-3 text-sm font-medium text-muted-foreground">{isLoading ? 'Loading products...' : `${formatProductCount(total)} product${total === 1 ? '' : 's'}`}</p>
 
                 {isLoading ? (
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
@@ -251,8 +251,8 @@ export default function Products() {
                   ) : (
                     <div className="space-y-3">
                       {pageItems.map(product => (
-                        <article key={product.id} className="flex gap-3 border border-border bg-card p-3 sm:gap-4 sm:p-4">
-                          <Link to={`/product/${product.slug}`} className="h-28 w-28 shrink-0 overflow-hidden bg-white sm:h-36 sm:w-36">
+                        <article key={product.id} className="flex gap-3 rounded-2xl bg-card p-3 ring-1 ring-border/60 sm:gap-4 sm:p-4">
+                          <Link to={`/product/${product.slug}`} className="h-28 w-28 shrink-0 overflow-hidden rounded-xl bg-white sm:h-36 sm:w-36">
                             <img src={product.image_url || '/placeholder.svg'} alt={product.name} className="h-full w-full object-contain p-1" loading="lazy" />
                           </Link>
                           <div className="min-w-0 flex-1">
@@ -265,7 +265,7 @@ export default function Products() {
                               <span className="truncate">{product.vendors?.store_name || product.brand || 'IT Hub Africa seller'}</span>
                             </p>
                             <div className="mt-2.5 flex flex-wrap gap-2">
-                              <Button size="sm" className="gap-1.5" onClick={() => openInquiry(product)}><Send className="h-3.5 w-3.5" /> Send inquiry</Button>
+                              <Button size="sm" variant="cta" className="gap-1.5" onClick={() => openInquiry(product)}><Send className="h-3.5 w-3.5" /> Send inquiry</Button>
                               <Button size="sm" variant="outline" className="gap-1.5" onClick={() => openChat(product.vendors?.user_id, product.id)}><MessageSquare className="h-3.5 w-3.5" /> Chat</Button>
                             </div>
                           </div>
@@ -274,7 +274,7 @@ export default function Products() {
                     </div>
                   )
                 ) : (
-                  <div className="border-y border-border py-16 text-center">
+                  <div className="rounded-2xl bg-card py-16 text-center ring-1 ring-border/60">
                     <p className="font-semibold">No products found</p>
                     <p className="mt-1 text-sm text-muted-foreground">Try another search or clear some filters.</p>
                     <Link to="/rfq/new"><Button variant="outline" size="sm" className="mt-4">Post a request instead</Button></Link>

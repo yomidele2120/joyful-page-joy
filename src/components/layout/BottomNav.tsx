@@ -28,13 +28,13 @@ export default function BottomNav() {
 
   return (
     <>
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-background border-t border-border pb-[env(safe-area-inset-bottom)]">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 rounded-t-2xl border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-6px_20px_-10px_rgba(0,0,0,0.25)] backdrop-blur">
         <div className="grid grid-cols-5 h-14">
           <NavTab to="/" icon={<Home className="w-5 h-5" />} label="Home" active={isActive('/')} />
           <NavTab to="/feed" icon={<Clapperboard className="w-5 h-5" />} label="Watch" active={isActive('/feed')} />
 
           <button onClick={handlePlusClick} className="flex flex-col items-center justify-center gap-0.5" aria-label={isVendor ? 'Create' : 'Post RFQ'}>
-            <span className="w-9 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center -mt-1">
+            <span className="-mt-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-accent text-accent-foreground shadow-lg ring-4 ring-background">
               <Plus className="w-5 h-5" />
             </span>
           </button>
@@ -113,7 +113,7 @@ function NavTab({ to, icon, label, active }: { to: string; icon: React.ReactNode
       to={to}
       className={cn(
         'flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium',
-        active ? 'text-primary' : 'text-muted-foreground'
+        active ? 'text-accent' : 'text-muted-foreground'
       )}
     >
       {icon}

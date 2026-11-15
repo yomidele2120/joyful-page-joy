@@ -385,11 +385,11 @@ export default function Checkout() {
           {bnplAvailable && (
             <div className="space-y-2 pt-2">
               <h3 className="font-heading font-bold">Payment method</h3>
-              <label className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 ${method === 'card' ? 'border-primary bg-primary/5' : 'border-border'}`}>
+              <label className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 ${method === 'card' ? 'border-primary bg-primary/5' : 'border-border'}`}>
                 <input type="radio" name="pay-method" className="mt-1" checked={method === 'card'} onChange={() => setMethod('card')} />
                 <span><span className="font-medium">Pay now with card or bank</span><br /><span className="text-sm text-muted-foreground">Secure payment with Paystack.</span></span>
               </label>
-              <label className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 ${method === 'bnpl' ? 'border-primary bg-primary/5' : 'border-border'}`}>
+              <label className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 ${method === 'bnpl' ? 'border-primary bg-primary/5' : 'border-border'}`}>
                 <input type="radio" name="pay-method" className="mt-1" checked={method === 'bnpl'} onChange={() => setMethod('bnpl')} />
                 <span>
                   <span className="font-medium">Buy now, pay later with {providerLabel}</span><br />
@@ -402,7 +402,7 @@ export default function Checkout() {
             </div>
           )}
 
-          <div className="bg-card p-6 rounded-lg card-shadow mt-6">
+          <div className="mt-6 rounded-2xl bg-card p-6 card-shadow">
             <h3 className="font-heading font-bold mb-3">Order Summary</h3>
             {items.map(item => (
               <div key={item.id} className="flex justify-between text-sm py-1">
@@ -481,7 +481,7 @@ export default function Checkout() {
             </div>
           </section>
 
-          <Button type="submit" size="lg" className="w-full font-heading font-semibold mt-4" disabled={loading || !accepted || mixedCart}>
+          <Button type="submit" size="lg" variant="cta" className="mt-4 w-full font-heading font-semibold" disabled={loading || !accepted || mixedCart}>
             {loading ? <span className="inline-flex items-center">Preparing secure payment<AnimatedDots /></span> : usingBnpl ? `Continue with Pay later (${formatNaira(grandTotal)})` : `Pay ${formatNaira(grandTotal)} with Paystack`}
           </Button>
           {loading && (

@@ -14,12 +14,12 @@ export function AuthShell({
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-b from-[#0d2b4c] via-[#0a2240] to-[#06182d] px-4 pb-8 pt-6 sm:pt-10">
       <div className="mx-auto w-full max-w-[480px] flex-1">
-        <div className="rounded-md bg-white p-6 text-slate-800 shadow-xl sm:p-8">
+        <div className="rounded-3xl bg-white p-6 text-slate-800 shadow-2xl sm:p-8">
           {/* "Welcome To IT Hub Africa" lock-up sits at the top of every sign-in and sign-up card */}
           <Link to="/" aria-label="IT Hub Africa home" className="mb-5 block">
             <WelcomeLogo className="h-16 sm:h-20" />
           </Link>
-          <h1 className="mb-7 text-center text-[15px] font-normal uppercase tracking-wide text-slate-600">{title}</h1>
+          <h1 className="mb-7 text-center font-heading text-xl font-bold text-slate-900">{title}</h1>
           {children}
         </div>
 
@@ -46,7 +46,7 @@ export function AuthFooterLink({ text, to, label }: { text: string; to: string; 
 }
 
 const inputBase =
-  'block h-11 w-full rounded-md border border-slate-200 bg-white px-3 text-[15px] text-slate-800 placeholder:text-slate-400 ' +
+  'block h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-[15px] text-slate-800 placeholder:text-slate-400 ' +
   'outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-60';
 
 function FieldLabel({ htmlFor, children, aside }: { htmlFor: string; children: React.ReactNode; aside?: React.ReactNode }) {
@@ -219,7 +219,7 @@ export function SubmitButton({
       type={type}
       onClick={onClick}
       disabled={off}
-      className={`h-12 w-full rounded-md text-base font-semibold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
+      className={`h-12 w-full rounded-xl text-base font-semibold text-white active:scale-[0.99] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
         off ? 'cursor-not-allowed bg-primary/50' : 'bg-primary hover:bg-primary/90 active:bg-primary/80'
       }`}
     >
@@ -233,7 +233,7 @@ export function SecondaryButton({ children, onClick }: { children: React.ReactNo
     <button
       type="button"
       onClick={onClick}
-      className="h-12 shrink-0 rounded-md border border-slate-300 bg-white px-5 text-base font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      className="h-12 shrink-0 rounded-xl border border-slate-300 bg-white px-5 text-base font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
     >
       {children}
     </button>

@@ -44,7 +44,7 @@ export default function SearchBox({ variant, onDone }: { variant: 'desktop' | 'm
   const showList = open && text.trim().length >= 2;
   const wrap = variant === 'desktop'
     ? 'flex w-full items-stretch overflow-hidden rounded-full border-2 border-primary bg-background'
-    : 'flex w-full items-center overflow-hidden rounded-full border border-primary bg-secondary/40';
+    : 'flex w-full items-center overflow-hidden rounded-2xl bg-background text-foreground shadow-md';
 
   return (
     <div ref={boxRef} className="relative w-full">

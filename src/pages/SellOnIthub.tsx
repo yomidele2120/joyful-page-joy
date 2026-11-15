@@ -94,7 +94,7 @@ export default function SellOnIthub() {
               Open a shop, list your products and get paid into your bank account. Start on the free plan.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Link to={cta.to} className="rounded-md bg-[#f26a1b] px-6 py-3 text-base font-semibold text-white transition-colors hover:bg-[#d95c12] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">{cta.label}</Link>
+              <Link to={cta.to} className="rounded-xl bg-[#f26a1b] px-6 py-3 text-base font-semibold text-white transition-colors hover:bg-[#d95c12] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">{cta.label}</Link>
               <a href="#how" className="px-3 py-3 text-base font-medium text-white/80 underline-offset-4 hover:text-white hover:underline">See how it works</a>
             </div>
           </div>
@@ -193,7 +193,7 @@ export default function SellOnIthub() {
       <section className="bg-[#0a2236] py-14 text-white sm:py-20">
         <div className="container max-w-[1200px] flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
           <p style={SIGN} className="max-w-2xl text-4xl font-extrabold uppercase leading-[0.95] sm:text-5xl">Your products, in front of buyers today</p>
-          <Link to={cta.to} className="rounded-md bg-[#f26a1b] px-7 py-3.5 text-base font-semibold text-white transition-colors hover:bg-[#d95c12] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">{cta.label}</Link>
+          <Link to={cta.to} className="rounded-xl bg-[#f26a1b] px-7 py-3.5 text-base font-semibold text-white transition-colors hover:bg-[#d95c12] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">{cta.label}</Link>
         </div>
       </section>
     </Layout>

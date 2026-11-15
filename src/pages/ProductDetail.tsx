@@ -276,13 +276,13 @@ export default function ProductDetail() {
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)] lg:gap-10">
           {/* Gallery */}
           <section className="min-w-0">
-            <div className="relative aspect-square overflow-hidden rounded-lg border border-border bg-white sm:aspect-[1.08/1]">
+            <div className="relative aspect-square overflow-hidden rounded-3xl border border-border bg-white shadow-sm sm:aspect-[1.08/1]">
               {showVideo && product.video_url ? (
                 <video src={product.video_url} controls autoPlay className="h-full w-full bg-black object-contain" />
               ) : (
                 <img src={mainSrc} srcSet={mainSrcSet} sizes="(min-width: 1024px) 50vw, 100vw" alt={product.name} decoding="async" className="h-full w-full object-contain p-3 sm:p-8" />
               )}
-              {product.badge && <Badge className="absolute left-3 top-3 rounded-sm border-none bg-primary/10 text-primary">{product.badge}</Badge>}
+              {product.badge && <Badge className="absolute left-3 top-3 rounded-full border-none bg-background/90 px-3 text-primary shadow-sm">{product.badge}</Badge>}
             </div>
             {(gallery.length > 1 || product.video_url) && (
               <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
@@ -292,7 +292,7 @@ export default function ProductDetail() {
                     onClick={() => setShowVideo(true)}
                     aria-label="Play product video"
                     aria-pressed={showVideo}
-                    className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-md border bg-secondary sm:h-20 sm:w-20 ${showVideo ? 'border-primary ring-1 ring-primary' : 'border-border'}`}
+                    className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border bg-secondary sm:h-20 sm:w-20 ${showVideo ? 'border-primary ring-1 ring-primary' : 'border-border'}`}
                   >
                     <Play className="h-6 w-6 text-primary" />
                   </button>
@@ -304,7 +304,7 @@ export default function ProductDetail() {
                     onClick={() => { setActiveImage(index); setShowVideo(false); }}
                     aria-label={`View product image ${index + 1}`}
                     aria-pressed={!showVideo && activeImage === index}
-                    className={`h-16 w-16 shrink-0 overflow-hidden rounded-md border bg-white p-1 sm:h-20 sm:w-20 ${!showVideo && activeImage === index ? 'border-primary ring-1 ring-primary' : 'border-border'}`}
+                    className={`h-16 w-16 shrink-0 overflow-hidden rounded-xl border bg-white p-1 sm:h-20 sm:w-20 ${!showVideo && activeImage === index ? 'border-primary ring-1 ring-primary' : 'border-border'}`}
                   >
                     <img src={imgSrc(image, 'thumb') ?? image} alt="" loading="lazy" decoding="async" className="h-full w-full object-contain" />
                   </button>
@@ -345,7 +345,7 @@ export default function ProductDetail() {
             )}
 
             {/* Tiered pricing */}
-            <div className="mt-5 grid gap-px overflow-hidden rounded-lg border border-border bg-border" style={{ gridTemplateColumns: `repeat(${Math.min(rows.length, 3)}, minmax(0, 1fr))` }}>
+            <div className="mt-5 grid gap-px overflow-hidden rounded-2xl border border-border bg-border" style={{ gridTemplateColumns: `repeat(${Math.min(rows.length, 3)}, minmax(0, 1fr))` }}>
               {rows.map((row, index) => (
                 <div key={row.from} className={`bg-card p-3 ${index === activeRowIndex && rows.length > 1 ? 'ring-2 ring-inset ring-primary' : ''}`}>
                   <p className="font-heading text-lg font-bold sm:text-xl">{formatDisplay(row.price)}</p>
@@ -429,7 +429,7 @@ export default function ProductDetail() {
 
             {/* Actions */}
             <div className="mt-5 hidden gap-2 md:grid md:grid-cols-2">
-              <Button size="lg" className="h-12 font-semibold" disabled={!canBuy} onClick={handleBuyNow}>
+              <Button size="lg" variant="cta" className="h-12 font-semibold" disabled={!canBuy} onClick={handleBuyNow}>
                 <CreditCard className="mr-2 h-4 w-4" /> {preorderOpen ? 'Preorder now' : 'Buy now'}
               </Button>
               <Button size="lg" variant="outline" className="h-12 font-semibold" disabled={!canBuy} onClick={handleAddToCart}>
@@ -546,7 +546,7 @@ export default function ProductDetail() {
       </div>
 
       {/* Mobile sticky action bar (sits above the bottom tab bar) */}
-      <div className="fixed inset-x-0 bottom-14 z-40 border-t border-border bg-background/95 p-2 backdrop-blur md:hidden pb-2">
+      <div className="fixed inset-x-0 bottom-14 z-40 rounded-t-2xl border-t border-border bg-background/95 p-2 shadow-[0_-6px_20px_-10px_rgba(0,0,0,0.25)] backdrop-blur md:hidden pb-2">
         <div className={`grid gap-2 ${vendor ? 'grid-cols-[auto_auto_1fr_1fr]' : 'grid-cols-2'}`}>
           {vendor && (
             <Button variant="outline" size="icon" className="h-11 w-11" onClick={() => handleInAppChat(vendor.user_id || '', product.id)} aria-label="Chat now">
@@ -563,7 +563,7 @@ export default function ProductDetail() {
           ) : (
             <Button variant="outline" className="h-11 font-semibold" disabled={!canBuy} onClick={handleAddToCart}>Add to cart</Button>
           )}
-          <Button className="h-11 px-2 text-xs font-semibold" disabled={!canBuy} onClick={handleBuyNow}>{preorderOpen ? 'Preorder' : 'Buy now'}</Button>
+          <Button variant="cta" className="h-11 px-2 text-xs font-semibold" disabled={!canBuy} onClick={handleBuyNow}>{preorderOpen ? 'Preorder' : 'Buy now'}</Button>
         </div>
       </div>
 
