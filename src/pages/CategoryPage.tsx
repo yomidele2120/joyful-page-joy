@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import ProductCard from '@/components/ProductCard';
 import ProductPager from '@/components/ProductPager';
@@ -8,8 +8,21 @@ import { formatProductCount } from '@/lib/productSearch';
 
 export default function CategoryPage() {
   const { slug } = useParams<{ slug: string }>();
-  const [page, setPage] = useState(1);
-  useEffect(() => { setPage(1); }, [slug]);
+  const [searchParams, setSearchParams] = useSearchParams();
+  // The page number lives in the address (?page=N), so a refresh, the back button and a shared link keep the same page.
+  const page = Math.max(1, Math.min(10000, parseInt(searchParams.get('page') ?? '1', 10) || 1));
+  const setPage = (n: number) => {
+    const params = new URLSearchParams(searchParams);
+    if (n > 1) params.set('page', String(n)); else params.delete('page');
+    setSearchParams(params, { replace: n === 1 });
+  };
+  // A different category starts at page 1; a refresh of the same category keeps its page.
+  const lastSlug = useRef(slug);
+  useEffect(() => {
+    if (lastSlug.current === slug) return;
+    lastSlug.current = slug;
+    if (searchParams.has('page')) setPage(1);
+  }, [slug]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // One page at a time from the database (a category can hold hundreds of thousands of products).
   const { data, isLoading, unknownCategory } = usePagedProducts({ page, categorySlug: slug });

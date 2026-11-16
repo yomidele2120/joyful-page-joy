@@ -177,8 +177,8 @@ export default function UserDashboard() {
       {activeTab === 'overview' && (
         <div className="space-y-5">
           <WelcomeBanner title={`Welcome, ${displayName}`} text="Track your orders, saved products and conversations with suppliers.">
-            <Button size="sm" variant="secondary" asChild><Link to="/products"><Store className="mr-1.5 h-4 w-4" />Browse products</Link></Button>
-            <Button size="sm" variant="secondary" asChild><Link to="/rfq/new">Request a quote</Link></Button>
+            <Button size="sm" asChild><Link to="/products"><Store className="mr-1.5 h-4 w-4" />Browse products</Link></Button>
+            <Button size="sm" variant="outline" asChild><Link to="/rfq/new">Request a quote</Link></Button>
           </WelcomeBanner>
 
           <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-4">

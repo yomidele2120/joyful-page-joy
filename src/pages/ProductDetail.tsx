@@ -280,7 +280,7 @@ export default function ProductDetail() {
               {showVideo && product.video_url ? (
                 <video src={product.video_url} controls autoPlay className="h-full w-full bg-black object-contain" />
               ) : (
-                <img src={mainSrc} srcSet={mainSrcSet} sizes="(min-width: 1024px) 50vw, 100vw" alt={product.name} decoding="async" className="h-full w-full object-contain p-3 sm:p-8" />
+                <img src={mainSrc} srcSet={mainSrcSet} sizes="(min-width: 1024px) 50vw, 100vw" alt={product.name} decoding="async" referrerPolicy="no-referrer" className="h-full w-full object-contain p-3 sm:p-8" />
               )}
               {product.badge && <Badge className="absolute left-3 top-3 rounded-full border-none bg-background/90 px-3 text-primary shadow-sm">{product.badge}</Badge>}
             </div>
@@ -306,7 +306,7 @@ export default function ProductDetail() {
                     aria-pressed={!showVideo && activeImage === index}
                     className={`h-16 w-16 shrink-0 overflow-hidden rounded-xl border bg-white p-1 sm:h-20 sm:w-20 ${!showVideo && activeImage === index ? 'border-primary ring-1 ring-primary' : 'border-border'}`}
                   >
-                    <img src={imgSrc(image, 'thumb') ?? image} alt="" loading="lazy" decoding="async" className="h-full w-full object-contain" />
+                    <img src={imgSrc(image, 'thumb') ?? image} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" className="h-full w-full object-contain" />
                   </button>
                 ))}
               </div>

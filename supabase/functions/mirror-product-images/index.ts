@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { cloudinaryConfigured, sha1Hex, uploadRemoteImage } from "../_shared/cloudinary.ts";
+import { cloudinaryConfigured, sha1Hex, uploadProductImage, uploadRemoteImage } from "../_shared/cloudinary.ts";
 
 // Scheduled sweep (see CLOUDINARY_SETUP.md): copies product pictures that still point at another website, or at the old
 // Supabase bucket, into Cloudinary, so they survive if the original is removed. Runs with the shared secret in x-cron-secret.
@@ -32,7 +32,18 @@ serve(async (req) => {
         const copy = async (src: string) => {
           if (isCloudinary(src)) return src;
           if (!/^https:\/\//i.test(src)) throw new Error("not an https link");
-          return (await uploadRemoteImage(src, vendor, "products", `m${(await sha1Hex(src)).slice(0, 20)}`)).url; // same source -> same file
+          const name = `m${(await sha1Hex(src)).slice(0, 20)}`; // same source -> same file
+          try {
+            return (await uploadRemoteImage(src, vendor, "products", name)).url; // Cloudinary downloads it itself
+          } catch (first) {
+            // Some shops refuse Cloudinary's downloader. Download it here with a normal browser identity and send the bytes instead.
+            const r = await fetch(src, { headers: { "User-Agent": "Mozilla/5.0 (compatible; ITHUBAFRICA image copy)", Accept: "image/*" }, signal: AbortSignal.timeout(20_000) });
+            const ct = (r.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
+            if (!r.ok || !ct.startsWith("image/")) throw new Error(`${first instanceof Error ? first.message : first}; own download: ${r.status} ${ct || "no type"}`.slice(0, 300));
+            const bytes = new Uint8Array(await r.arrayBuffer());
+            if (bytes.length < 500 || bytes.length > 20 * 1024 * 1024) throw new Error(`own download: size ${bytes.length} not accepted`);
+            return (await uploadProductImage(bytes, ct, vendor, name)).url;
+          }
         };
         const main = await copy(p.image_url);
         const newExtras: string[] = [];

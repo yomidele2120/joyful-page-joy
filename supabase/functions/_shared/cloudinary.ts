@@ -36,9 +36,15 @@ export async function uploadProductImage(
   });
   const json = await res.json().catch(() => ({}));
   if (!res.ok || typeof json.secure_url !== "string") {
-    throw new Error(`Cloudinary upload failed (${res.status})`);
+    throw new Error(`Cloudinary upload failed (${res.status})${cloudinaryReason(json)}`);
   }
   return { url: json.secure_url, publicId: json.public_id };
+}
+
+/** Cloudinary's own explanation (never contains our keys), appended to failure notes so "(401)" becomes readable. */
+function cloudinaryReason(json: unknown): string {
+  const m = (json as { error?: { message?: unknown } })?.error?.message;
+  return typeof m === "string" && m ? `: ${m.replace(/\s+/g, " ").slice(0, 160)}` : "";
 }
 
 /** Copies an image that lives at an https address (Cloudinary fetches it itself) into the vendor's folder. Used for TikTok covers, whose own links expire. */
@@ -62,7 +68,7 @@ export async function uploadRemoteImage(
   form.append("allowed_formats", allowed);
   const res = await fetch(`https://api.cloudinary.com/v1_1/${cloud}/image/upload`, { method: "POST", body: form, signal: AbortSignal.timeout(30_000) });
   const json = await res.json().catch(() => ({}));
-  if (!res.ok || typeof json.secure_url !== "string") throw new Error(`Cloudinary upload failed (${res.status})`);
+  if (!res.ok || typeof json.secure_url !== "string") throw new Error(`Cloudinary upload failed (${res.status})${cloudinaryReason(json)}`);
   return { url: json.secure_url, publicId: json.public_id };
 }
 

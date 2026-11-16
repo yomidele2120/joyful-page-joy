@@ -47,7 +47,13 @@ export default function SupplierShop() {
   useShopAdAttribution(searchParams.toString() ? `?${searchParams.toString()}` : '', !!vendor && user?.id !== vendor.user_id);
 
   // A shop can hold hundreds of thousands of products, so it loads one page at a time from the database.
-  const [page, setPage] = useState(1);
+  // The page number lives in the address (?page=N), so a refresh, the back button and a shared link keep the same page.
+  const page = Math.max(1, Math.min(10000, parseInt(searchParams.get('page') ?? '1', 10) || 1));
+  const setPage = (n: number) => {
+    const params = new URLSearchParams(searchParams);
+    if (n > 1) params.set('page', String(n)); else params.delete('page');
+    setSearchParams(params, { replace: n === 1 });
+  };
   const [search, setSearch] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const debounced = useDebounced(search, 300);

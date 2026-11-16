@@ -76,7 +76,7 @@ export default function SearchBox({ variant, onDone }: { variant: 'desktop' | 'm
                   <Link to={it.to} onClick={finish}
                         className={`flex items-center gap-3 px-3 py-2 text-sm ${i === active ? 'bg-secondary' : 'hover:bg-secondary/60'}`}>
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded bg-secondary">
-                      {it.image ? <img src={it.image} alt="" loading="lazy" className="h-full w-full object-cover" /> : <Store className="h-4 w-4 text-muted-foreground" aria-hidden="true" />}
+                      {it.image ? <img src={it.image} alt="" loading="lazy" referrerPolicy="no-referrer" className="h-full w-full object-cover" /> : <Store className="h-4 w-4 text-muted-foreground" aria-hidden="true" />}
                     </span>
                     <span className="min-w-0 flex-1 truncate">{it.label}</span>
                     <span className="shrink-0 text-xs text-muted-foreground">{it.kind}</span>

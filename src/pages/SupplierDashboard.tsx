@@ -308,8 +308,8 @@ export default function SupplierDashboard() {
             {activeTab === 'overview' && (
               <div className="space-y-5">
                 <WelcomeBanner title={`Welcome back, ${vendor.store_name}`} text="Manage your catalogue, orders and videos from one place.">
-                  <Button size="sm" variant="secondary" onClick={() => setActiveTab('add-product')}><Plus className="mr-1.5 h-4 w-4" />Add product</Button>
-                  <Button size="sm" variant="secondary" asChild><Link to={`/shop/${vendor.id}`}>View my shop</Link></Button>
+                  <Button size="sm" onClick={() => setActiveTab('add-product')}><Plus className="mr-1.5 h-4 w-4" />Add product</Button>
+                  <Button size="sm" variant="outline" asChild><Link to={`/shop/${vendor.id}`}>View my shop</Link></Button>
                 </WelcomeBanner>
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">

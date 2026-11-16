@@ -49,13 +49,26 @@ export default function Products() {
   const [sortBy, setSortBy] = useState('newest');
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [view, setView] = useState<'grid' | 'list'>('grid');
-  const [page, setPage] = useState(1);
+  // The page number lives in the address (?page=10), so a refresh, the back button and a shared link keep the same page.
+  const page = Math.max(1, Math.min(10000, parseInt(searchParams.get('page') ?? '1', 10) || 1));
+  const setPage = (n: number) => {
+    const params = new URLSearchParams(searchParams);
+    if (n > 1) params.set('page', String(n)); else params.delete('page');
+    setSearchParams(params);
+  };
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [inquiryTarget, setInquiryTarget] = useState<InquiryDialogTarget | null>(null);
 
   // Keep the box in step with the header search (which changes the URL).
   useEffect(() => { setSearch(searchFromUrl); }, [searchFromUrl]);
-  useEffect(() => { setPage(1); }, [search, sortBy, filters, tab]);
+  // Searching, sorting, filtering or switching tab starts again at page 1. Only a real change counts, so a refresh keeps the page.
+  const listKey = JSON.stringify([search, sortBy, filters, tab]);
+  const lastKey = useRef(listKey);
+  useEffect(() => {
+    if (lastKey.current === listKey) return;
+    lastKey.current = listKey;
+    if (searchParams.has('page')) setPage(1);
+  }, [listKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // The database does the searching, filtering, sorting and paging: only this page's 24 products are downloaded.
   // The search waits until typing pauses, so it does not fire on every key.
@@ -253,7 +266,7 @@ export default function Products() {
                       {pageItems.map(product => (
                         <article key={product.id} className="flex gap-3 rounded-2xl bg-card p-3 ring-1 ring-border/60 sm:gap-4 sm:p-4">
                           <Link to={`/product/${product.slug}`} className="h-28 w-28 shrink-0 overflow-hidden rounded-xl bg-white sm:h-36 sm:w-36">
-                            <img src={product.image_url || '/placeholder.svg'} alt={product.name} className="h-full w-full object-contain p-1" loading="lazy" />
+                            <img src={product.image_url || '/placeholder.svg'} alt={product.name} className="h-full w-full object-contain p-1" loading="lazy" referrerPolicy="no-referrer" />
                           </Link>
                           <div className="min-w-0 flex-1">
                             <Link to={`/product/${product.slug}`} className="line-clamp-2 text-sm font-medium hover:text-primary sm:text-base">{product.name}</Link>

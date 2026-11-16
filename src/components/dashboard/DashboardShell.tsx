@@ -161,6 +161,12 @@ function AccountHub({
   title: string; subtitle?: string; image?: string | null; items: DashNavItem[];
   onSelect: (key: string) => void; onSignOut: () => void; drawerActions?: React.ReactNode; onSettings?: string;
 }) {
+  const sections: { group?: string; items: DashNavItem[] }[] = [];
+  items.forEach(item => {
+    const last = sections[sections.length - 1];
+    if (last && last.group === item.group) last.items.push(item);
+    else sections.push({ group: item.group, items: [item] });
+  });
   return (
     <div className="min-h-screen bg-secondary/60 pb-24 lg:hidden">
       <header className="sticky top-0 z-30 border-b-2 border-primary bg-card">
@@ -179,32 +185,45 @@ function AccountHub({
         </div>
       </header>
 
-      <ul className="grid grid-cols-2 items-start gap-3 p-3">
-        {items.map((item, i) => {
-          const Icon = item.icon;
-          return (
-            <li key={item.key} className={i % 2 === 1 ? 'mt-0' : ''}>
-              <button
-                type="button" onClick={() => onSelect(item.key)}
-                className="relative flex w-full items-center gap-3 rounded-2xl bg-card px-3.5 py-4 text-left shadow-sm ring-1 ring-border/60 transition-transform active:scale-[0.98]"
-              >
-                <Icon className="h-6 w-6 shrink-0 text-primary" aria-hidden="true" />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-[15px] font-medium leading-tight">{item.label}</span>
-                  {item.hint && <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{item.hint}</span>}
-                </span>
-                {!!item.badge && item.badge > 0
-                  ? <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-semibold text-accent-foreground">{item.badge > 99 ? '99+' : item.badge}</span>
-                  : <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60" aria-hidden="true" />}
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+      {/* Same headings as the desktop sidebar, so a long list is split into short groups of tiles. */}
+      <div className="space-y-5 px-3 pb-2 pt-4">
+        {sections.map((section, si) => (
+          <section key={si} aria-label={section.group}>
+            {section.group && <h2 className="px-1 pb-2 text-xs font-medium text-muted-foreground">{section.group}</h2>}
+            <ul className="grid grid-cols-2 gap-2.5">
+              {section.items.map(item => {
+                const Icon = item.icon;
+                return (
+                  <li key={item.key}>
+                    <button
+                      type="button" onClick={() => onSelect(item.key)}
+                      className="relative flex h-full min-h-[92px] w-full flex-col items-start justify-between gap-3 rounded-2xl bg-card p-3.5 text-left shadow-sm ring-1 ring-border/60 transition active:scale-[0.97] active:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    >
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
+                      </span>
+                      <span className="block min-w-0 max-w-full">
+                        <span className="block text-sm font-medium leading-tight">{item.label}</span>
+                        {item.hint && <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{item.hint}</span>}
+                      </span>
+                      {!!item.badge && item.badge > 0 && (
+                        <span className="absolute right-3 top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-semibold tabular-nums text-accent-foreground">
+                          {item.badge > 99 ? '99+' : item.badge}
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ))}
+      </div>
 
-      <div className="space-y-2 px-3">
+      {/* The shortcut links are styled for the dark sidebar (white text); on this light page they are restyled as matching tiles. */}
+      <div className="space-y-2 px-3 pt-2 [&_a]:flex [&_a]:items-center [&_a]:gap-3 [&_a]:rounded-2xl [&_a]:bg-card [&_a]:px-3.5 [&_a]:py-3.5 [&_a]:text-sm [&_a]:font-medium [&_a]:text-foreground [&_a]:shadow-sm [&_a]:ring-1 [&_a]:ring-border/60 [&_a:hover]:bg-card [&_a:hover]:text-foreground [&_a_svg]:text-primary">
         {drawerActions}
-        <button type="button" onClick={onSignOut} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-card py-3.5 text-sm font-medium text-red-600 ring-1 ring-border/60">
+        <button type="button" onClick={onSignOut} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-card py-3.5 text-sm font-medium text-red-600 shadow-sm ring-1 ring-border/60 active:bg-secondary">
           <LogOut className="h-4 w-4" /> Log out
         </button>
       </div>
@@ -342,7 +361,7 @@ export function WelcomeBanner({ title, text, children }: { title: string; text?:
         <h2 className="font-heading text-2xl">{title}</h2>
         {text && <p className="mt-1 max-w-xl text-sm text-muted-foreground">{text}</p>}
       </div>
-      {children && <div className="flex flex-wrap gap-2">{children}</div>}
+      {children && <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:[&>*]:w-auto [&>*]:w-full">{children}</div>}
     </div>
   );
 }

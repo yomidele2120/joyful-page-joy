@@ -90,6 +90,7 @@ export default function ProductCard({
               alt={name}
               decoding="async"
               loading="lazy"
+              referrerPolicy="no-referrer"
               onLoad={() => setLoaded(true)}
               onError={onImageError}
               className={`h-full w-full object-contain p-2 transition-[opacity,transform] duration-300 group-hover:scale-[1.04] sm:p-3 ${loaded ? 'opacity-100' : 'opacity-0'}`}
