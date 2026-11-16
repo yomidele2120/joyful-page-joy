@@ -17,6 +17,7 @@ import { campaignStatus, checkMessage, daysLeft, externalStatus, pct, PLATFORM_L
 import { errText, fmtDate, n, Stat, Status } from '@/components/ads/adUi';
 import AdWalletPanel from '@/components/dashboard/AdWalletPanel';
 import AdBoostSection from '@/components/dashboard/AdBoostSection';
+import AdCreativeUploader, { type CreativeFile } from '@/components/dashboard/AdCreativeUploader';
 
 type Overview = any;
 
@@ -228,13 +229,15 @@ function External({ o, vendorId, onChange }: { o: Overview; vendorId: string; on
   const [products, setProducts] = useState<string[]>([]);
   const [picking, setPicking] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [media, setMedia] = useState<CreativeFile[]>([]);
+  const [note, setNote] = useState('');
   return (
     <Panel title="Ads on Google, Facebook, Instagram and TikTok">
       <p className="mb-3 rounded-md bg-amber-50 p-2 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">These are requests only. ITHUBAFRICA has not connected these ad platforms, so nothing is published automatically and no money is spent. A request shows as running only after the platform confirms it. Platform ad spend is separate from your ITHUBAFRICA plan.</p>
       {!allowed && <p className="mb-3 text-xs text-muted-foreground">External ad requests are included with the Premium plan.</p>}
       {rows.map((r) => { const s = externalStatus(r.status); return (
         <div key={r.id} className="mb-2 rounded border border-border p-2 text-sm">
-          <div className="flex flex-wrap items-center justify-between gap-2"><span>{PLATFORM_LABEL[r.platform] ?? r.platform} · {r.scope === 'shop' ? 'whole shop' : `${(r.product_ids ?? []).length} product(s)`} · {r.duration_days} days</span><Status info={s} /></div>
+          <div className="flex flex-wrap items-center justify-between gap-2"><span>{PLATFORM_LABEL[r.platform] ?? r.platform} · {r.scope === 'shop' ? 'whole shop' : `${(r.product_ids ?? []).length} product(s)`} · {r.duration_days} days · {(r.creative_files ?? []).length} file(s) attached</span><Status info={s} /></div>
           <p className="text-xs text-muted-foreground">{r.status_detail || s.hint}</p>
           {['draft', 'pending_integration', 'pending_review'].includes(r.status) && <Button size="sm" variant="ghost" onClick={async () => { if (!window.confirm('Cancel this request?')) return; try { await call('vendor_cancel_external_campaign', { _id: r.id }); onChange(); } catch (e) { toast.error(errText(e)); } }}>Cancel request</Button>}
         </div>); })}
@@ -246,8 +249,10 @@ function External({ o, vendorId, onChange }: { o: Overview; vendorId: string; on
           <Input type="number" min={0} placeholder="Budget you want to spend (NGN)" value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} />
           <Input type="number" min={1} max={90} placeholder="Days" value={form.days} onChange={(e) => setForm({ ...form, days: e.target.value })} />
           {form.scope === 'products' && <Button variant="outline" onClick={() => setPicking(true)}>{products.length} product(s) selected</Button>}
+          <AdCreativeUploader vendorId={vendorId} files={media} onChange={setMedia} />
+          <Textarea className="sm:col-span-3" rows={2} maxLength={500} placeholder="Optional note for our team: what to highlight, offer details, the main message (500 characters)" value={note} onChange={(e) => setNote(e.target.value)} />
           <label className="flex items-center gap-2 text-xs sm:col-span-3"><Checkbox checked={form.authorize} onCheckedChange={(v) => setForm({ ...form, authorize: v === true })} /> I authorise this budget. It is paid to the ad platform, not to ITHUBAFRICA, and nothing is spent until the campaign is actually published.</label>
-          <Button className="sm:col-span-3" disabled={busy} onClick={async () => { setBusy(true); try { await call('vendor_request_external_campaign', { _platform: form.platform, _scope: form.scope, _product_ids: form.scope === 'products' ? products : [], _objective: form.objective, _budget: form.budget ? Number(form.budget) : null, _duration_days: Number(form.days), _authorize_spend: form.authorize }); toast.success(form.authorize ? 'Request submitted.' : 'Draft saved.'); onChange(); } catch (e) { toast.error(errText(e)); } finally { setBusy(false); } }}>{form.authorize ? 'Submit request' : 'Save draft'}</Button>
+          <Button className="sm:col-span-3" disabled={busy} onClick={async () => { setBusy(true); try { await call('vendor_request_external_campaign', { _platform: form.platform, _scope: form.scope, _product_ids: form.scope === 'products' ? products : [], _objective: form.objective, _budget: form.budget ? Number(form.budget) : null, _duration_days: Number(form.days), _authorize_spend: form.authorize, _creative_files: media, _creative_note: note.trim() || null }); toast.success(form.authorize ? 'Request submitted.' : 'Draft saved.'); setMedia([]); setNote(''); onChange(); } catch (e) { toast.error(errText(e)); } finally { setBusy(false); } }}>{form.authorize ? 'Submit request' : 'Save draft'}</Button>
         </div>)}
       {picking && <ProductPicker vendorId={vendorId} max={f.max_advertised_products ?? 0} initial={products} onClose={() => setPicking(false)} onSave={async (ids) => { setProducts(ids); setPicking(false); }} />}
     </Panel>

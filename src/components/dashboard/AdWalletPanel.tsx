@@ -11,7 +11,7 @@ import { formatNaira } from '@/lib/format';
 import { errText, fmtDate } from '@/components/ads/adUi';
 
 const naira = (kobo: number) => formatNaira(kobo / 100);
-const KIND: Record<string, string> = { topup: 'Funds added', spend: 'Ad spend', adjustment: 'Adjustment' };
+const KIND: Record<string, string> = { topup: 'Funds added', spend: 'Ad spend', adjustment: 'Adjustment', ai_image: 'AI ad image', ai_image_refund: 'AI image refund' };
 const PLATFORM: Record<string, string> = { google: 'Google', meta: 'Meta', tiktok: 'TikTok', other: 'Other' };
 
 /** The supplier's advertising balance: add funds through Paystack, see the balance and every deposit and spend. */

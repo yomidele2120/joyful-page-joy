@@ -1,1 +1,7 @@
 node_modules
+# Environment files hold keys and tokens. Never commit them (use .env.example for the list of names).
+.env
+.env.*
+!.env.example
+# Build output
+dist

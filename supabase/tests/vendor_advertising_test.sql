@@ -281,7 +281,12 @@ BEGIN
   _ok := false;
   BEGIN PERFORM public.vendor_request_external_campaign('tiktok_ads', 'shop', '{}', 'traffic', NULL, 14, true); EXCEPTION WHEN OTHERS THEN _ok := true; END;
   IF NOT _ok THEN RAISE EXCEPTION 'FAIL 16b: authorising spend without a budget must be refused'; END IF;
-  _res := to_jsonb((SELECT e FROM public.external_ad_campaigns e WHERE e.id = public.vendor_request_external_campaign('google_ads', 'shop', '{}', 'traffic', 5000, 14, true)));
+  _ok := false;
+  BEGIN PERFORM public.vendor_request_external_campaign('google_ads', 'shop', '{}', 'traffic', 5000, 14, true); EXCEPTION WHEN OTHERS THEN _ok := true; END;
+  IF NOT _ok THEN RAISE EXCEPTION 'FAIL 16b2: submitting without a photo or video must be refused'; END IF;
+  INSERT INTO storage.objects (bucket_id, name) VALUES ('ad-creatives', _va::text || '/test-ad.jpg') ON CONFLICT DO NOTHING;
+  _res := to_jsonb((SELECT e FROM public.external_ad_campaigns e WHERE e.id = public.vendor_request_external_campaign('google_ads', 'shop', '{}', 'traffic', 5000, 14, true,
+          jsonb_build_array(jsonb_build_object('kind', 'photo', 'path', _va::text || '/test-ad.jpg', 'name', 'test-ad.jpg', 'size', 1000)), NULL)));
   IF (_res ->> 'status') <> 'pending_integration' THEN RAISE EXCEPTION 'FAIL 16c: must be pending_integration, got %', _res ->> 'status'; END IF;
   IF (_res ->> 'status_detail') NOT LIKE '%no money has been spent%' THEN RAISE EXCEPTION 'FAIL 16d: status must say nothing is running'; END IF;
   PERFORM pg_temp.act_as(_uadmin);

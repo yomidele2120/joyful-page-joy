@@ -33,10 +33,22 @@
       ],
       "destination": "/api/product?slug=:slug"
     },
-    { "source": "/sitemap.xml", "destination": "/api/sitemap" },
-    { "source": "/static-sitemap.xml", "destination": "/api/sitemap?section=static" },
-    { "source": "/product-sitemap.xml", "destination": "/api/sitemap?section=products" },
-    { "source": "/merchant-feed.xml", "destination": "/api/merchant-feed" },
+    {
+      "source": "/sitemap.xml",
+      "destination": "/api/sitemap"
+    },
+    {
+      "source": "/static-sitemap.xml",
+      "destination": "/api/sitemap?section=static"
+    },
+    {
+      "source": "/product-sitemap.xml",
+      "destination": "/api/sitemap?section=products"
+    },
+    {
+      "source": "/merchant-feed.xml",
+      "destination": "/api/merchant-feed"
+    },
     {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
@@ -56,7 +68,7 @@
         },
         {
           "key": "X-Frame-Options",
-          "value": "SAMEORIGIN"
+          "value": "DENY"
         },
         {
           "key": "Referrer-Policy",
@@ -64,11 +76,11 @@
         },
         {
           "key": "Permissions-Policy",
-          "value": "camera=(self), microphone=(self), geolocation=(), payment=(self)"
+          "value": "accelerometer=(), bluetooth=(), browsing-topics=(), camera=(self), display-capture=(self), geolocation=(), gyroscope=(), hid=(), magnetometer=(), microphone=(self), midi=(), payment=(self \"https://checkout.paystack.com\" \"https://standard.paystack.co\"), serial=(), usb=()"
         },
         {
-          "key": "Content-Security-Policy-Report-Only",
-          "value": "default-src 'self'; script-src 'self' blob: 'wasm-unsafe-eval' https://unpkg.com https://vercel.live https://connect.facebook.net https://js.paystack.co https://js.useklump.com https://*.useklump.com https://www.google.com https://www.gstatic.com https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.useklump.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' blob: https://unpkg.com https://api.cloudinary.com https://www.facebook.com https://connect.facebook.net https://*.supabase.co wss://*.supabase.co https://*.paystack.co https://*.useklump.com https://*.videodelivery.net https://*.cloudflarestream.com https://www.google.com https://challenges.cloudflare.com https://*.zego.im wss://*.zego.im https://*.zegocloud.com wss://*.zegocloud.com https://*.zegocdn.com; frame-src https://www.tiktok.com https://vercel.live https://challenges.cloudflare.com https://www.google.com https://recaptcha.google.com https://*.paystack.co https://*.useklump.com https://*.supabase.co; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' blob: https://js.paystack.co https://js.useklump.com https://connect.facebook.net https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/ https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.useklump.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https://cgyzhkeliomwxwrpmnlh.supabase.co https://res.cloudinary.com https://videodelivery.net https://*.videodelivery.net https://*.cloudflarestream.com https://*.zego.im https://*.zegocloud.com; connect-src 'self' blob: https://cgyzhkeliomwxwrpmnlh.supabase.co wss://cgyzhkeliomwxwrpmnlh.supabase.co https://api.cloudinary.com https://unpkg.com https://videodelivery.net https://*.videodelivery.net https://*.cloudflarestream.com https://api.paystack.co https://checkout.paystack.com https://*.useklump.com https://connect.facebook.net https://www.facebook.com/tr/ https://www.google.com/recaptcha/ https://challenges.cloudflare.com https://*.zego.im wss://*.zego.im https://*.zegocloud.com wss://*.zegocloud.com https://*.zegocdn.com; frame-src https://checkout.paystack.com https://standard.paystack.co https://*.useklump.com https://www.tiktok.com/embed/ https://challenges.cloudflare.com https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/ https://www.google.com/maps https://cgyzhkeliomwxwrpmnlh.supabase.co; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
         }
       ]
     },

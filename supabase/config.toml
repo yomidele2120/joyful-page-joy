@@ -110,3 +110,9 @@ verify_jwt = false
 
 [functions.refund-subscription-payment]
 verify_jwt = false
+
+[functions.ad-generate-image]
+verify_jwt = false
+
+[functions.auto-product-images]
+verify_jwt = false

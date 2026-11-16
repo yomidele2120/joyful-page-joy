@@ -56,6 +56,7 @@ Deno.serve(async (req) => {
 
   // Keep stored statuses in step with reality whenever the worker runs (public reads never depend on this).
   try { await admin.rpc('expire_advertising_campaigns'); } catch { /* non-fatal */ }
+  try { await admin.rpc('refund_stuck_ai_images'); } catch { /* non-fatal: refunds AI ad images that never finished */ }
 
   const results: Record<string, unknown>[] = [];
   for (let i = 0; i < max; i++) {

@@ -20,6 +20,15 @@ export default function ExternalExportPanel({ request: r }: { request: any }) {
     },
   });
   const src: any = q.data;
+  const files: { kind: 'photo' | 'video'; path: string; name: string }[] = Array.isArray(r.creative_files) ? r.creative_files : [];
+  const media = useQuery({
+    queryKey: ['ext-vendor-media', r.id], enabled: open && files.length > 0, staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.storage.from('ad-creatives').createSignedUrls(files.map((f) => f.path), 3600);
+      if (error) throw error;
+      return data;
+    },
+  });
   const site = typeof window !== 'undefined' ? window.location.origin : 'https://ithubafrica.com';
   const dest = externalDestination(site, r.vendor_id, r.platform, r.id);
   const formats = EXPORT_FORMATS.filter((f) => f.platform === r.platform);
@@ -31,6 +40,22 @@ export default function ExternalExportPanel({ request: r }: { request: any }) {
       <Button size="sm" variant="ghost" onClick={() => setOpen(!open)}>{open ? 'Hide' : 'Creatives & brief'}</Button>
       {open && (
         <div className="mt-1 space-y-2 rounded bg-muted/40 p-2 text-xs">
+          <div className="rounded border border-border p-2">
+            <p className="font-medium">Vendor's own photos / video ({files.length})</p>
+            {files.length === 0 && <p>The vendor attached nothing (draft).</p>}
+            {r.creative_note && <p className="mt-1">Note from vendor: {r.creative_note}</p>}
+            {media.isError && <p className="text-destructive">Could not load the files.</p>}
+            <div className="mt-1 grid gap-2 sm:grid-cols-3">
+              {files.map((f, i) => { const url = media.data?.[i]?.signedUrl; return (
+                <div key={f.path}>
+                  {!url ? <p>Loading {f.name}…</p> : f.kind === 'video'
+                    ? <video src={url} controls preload="metadata" className="max-h-40 w-full rounded" />
+                    : <img src={url} alt={f.name} loading="lazy" className="max-h-40 w-auto rounded" />}
+                  {url && <a className="underline" href={url} download={f.name}>Download</a>}
+                </div>); })}
+            </div>
+            <p className="mt-1 text-muted-foreground">Download links expire after an hour. Reopen this panel for fresh ones.</p>
+          </div>
           {q.isLoading && <p>Loading…</p>}
           {q.isError && <p className="text-destructive">Could not load the vendor's banner.</p>}
           {!q.isLoading && !src && <p>This vendor has no approved banner artwork yet, so there is nothing to export.</p>}

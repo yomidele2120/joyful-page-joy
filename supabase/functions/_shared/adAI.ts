@@ -189,3 +189,30 @@ export async function askText(system: string, user: string, maxTokens = 900): Pr
   const data = await post('/responses', { model, instructions: system, input: user, max_output_tokens: maxTokens }, 40_000);
   return { text: outputText(data), model };
 }
+
+/** Square ad image from a vendor's own description. Same models, key and safety rules as the banner artwork. */
+export async function generateSquareArt(prompt: string): Promise<GeneratedArt> {
+  let lastError: ProviderError | null = null;
+  for (const model of imageModels()) {
+    try {
+      const data = await post('/images/generations', {
+        model, prompt, n: 1, size: '1024x1024', quality: imageQuality(), output_format: 'jpeg', output_compression: 90,
+      }, 120_000);
+      const b64 = data?.data?.[0]?.b64_json;
+      if (typeof b64 !== 'string' || !b64) throw new ProviderError('The AI provider returned no image.', 'provider_no_image', true);
+      return { bytes: base64ToBytes(b64), base64: b64, mime: 'image/jpeg', model: `${model}@1024x1024` };
+    } catch (e) {
+      if (e instanceof ProviderError && e.code === 'provider_model_not_found') { lastError = e; continue; }
+      throw e;
+    }
+  }
+  throw lastError ?? new ProviderError('No image model is available. Set AD_IMAGE_MODEL.', 'provider_model_not_found', false);
+}
+
+/** Checks a vendor's description with OpenAI's moderation endpoint BEFORE any image is made. Throws if it cannot run (fail closed). */
+export async function promptIsAllowed(text: string): Promise<boolean> {
+  const data = await post('/moderations', { model: 'omni-moderation-latest', input: text }, 20_000);
+  const r = data?.results?.[0];
+  if (!r || typeof r.flagged !== 'boolean') throw new ProviderError('The prompt safety check returned an unreadable answer.', 'moderation_unavailable', true);
+  return !r.flagged;
+}

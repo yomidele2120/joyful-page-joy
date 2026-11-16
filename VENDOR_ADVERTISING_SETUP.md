@@ -42,3 +42,13 @@ select cron.schedule('call-queue-sweep', '* * * * *', $$ select public.cq_sweep(
 5. Add a social link (instagram.com/yourshop); open the shop in a private window: the follow card appears.
 6. Calls: with calls switched on, start a call as buyer A to a supplier, then as buyer B: B is placed on the waiting list; end A's call and B is offered the turn.
 7. Admin > Audit log: your setting changes appear with old and new values.
+
+## 6. Automatic product pictures (TechHub Operations Limited only)
+Run `20261116080000_auto_product_images.sql`, then deploy `auto-product-images` (uses the same `OPENAI_API_KEY`, Cloudinary secrets and `AD_WORKER_SECRET` as the other workers) and schedule it:
+```sql
+select cron.schedule('auto-product-images', '*/10 * * * *', $$
+  select net.http_post(url := 'https://<project-ref>.supabase.co/functions/v1/auto-product-images',
+    headers := jsonb_build_object('Content-Type','application/json','x-ad-worker-secret','<AD_WORKER_SECRET>'),
+    body := '{"max": 3}'::jsonb); $$);
+```
+The migration switches the feature on for the one vendor whose store name is exactly "TechHub Operations Limited" (it does nothing if it finds zero or several). Daily cap: `auto_image_settings.daily_limit` (100). To add or remove a vendor: `select admin_set_auto_product_images('<vendor id>', true/false);`.
