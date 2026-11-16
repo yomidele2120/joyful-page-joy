@@ -3,7 +3,7 @@
 // every 10 minutes. Platform pays for these pictures; the database enforces a daily cap.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { generateSquareArt, moderateImage, promptIsAllowed, ProviderError } from '../_shared/adAI.ts';
-import { inspectImage } from '../_shared/adBannerCore.ts';
+import { inspectImage, SQUARE_IMAGE } from '../_shared/adBannerCore.ts';
 import { cloudinaryConfigured, uploadProductImage } from '../_shared/cloudinary.ts';
 import { checkLink, productState } from '../_shared/imageCheck.ts';
 
@@ -52,7 +52,8 @@ Deno.serve(async (req) => {
       const prompt = buildPrompt(j);
       if (!(await promptIsAllowed(prompt))) { await admin.rpc('fail_auto_product_image', { _product: id, _code: 'prompt_blocked', _retry: false }); results.push({ id, status: 'blocked' }); continue; }
       const art = await generateSquareArt(prompt);
-      if (!inspectImage(art.bytes).ok) throw new ProviderError('Unusable image', 'bad_image', true);
+      const info = inspectImage(art.bytes, SQUARE_IMAGE);
+      if (!info.ok) { console.log(`auto-product-images: image rejected for ${id}: ${info.reason}`); throw new ProviderError('Unusable image', 'bad_image', true); }
       const review = await moderateImage(art.base64, art.mime);
       if (!review.safe || review.contains_text || review.contains_logo) { await admin.rpc('fail_auto_product_image', { _product: id, _code: 'image_blocked', _retry: true }); results.push({ id, status: 'rejected' }); continue; }
       const up = await uploadProductImage(art.bytes, art.mime, String(j.vendor_id), `ai-${id}`);

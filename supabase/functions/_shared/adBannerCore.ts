@@ -345,9 +345,14 @@ const MAX_BYTES = 10 * 1024 * 1024;
 const MIN_WIDTH = 800;
 
 /** Checks the real file signature (never trusts the declared type) and reads the pixel size. */
-export function inspectImage(bytes: Uint8Array): ImageInfo {
+export interface InspectOptions { minBytes?: number; minWidth?: number; minRatio?: number; maxRatio?: number }
+/** Limits for a SQUARE picture (product photos and vendor ad images). Banners keep the wide defaults above. */
+export const SQUARE_IMAGE: InspectOptions = { minBytes: 4_000, minWidth: 512, minRatio: 0.8, maxRatio: 1.25 };
+
+export function inspectImage(bytes: Uint8Array, opts: InspectOptions = {}): ImageInfo {
   const n = bytes.length;
-  if (n < MIN_BYTES) return { ok: false, reason: 'image is too small', bytes: n };
+  const minBytes = opts.minBytes ?? MIN_BYTES, minWidth = opts.minWidth ?? MIN_WIDTH, minRatio = opts.minRatio ?? 1.2, maxRatio = opts.maxRatio ?? 3.6;
+  if (n < minBytes) return { ok: false, reason: 'image is too small', bytes: n };
   if (n > MAX_BYTES) return { ok: false, reason: 'image is too large', bytes: n };
   let mime: string | undefined; let width = 0; let height = 0;
 
@@ -380,9 +385,9 @@ export function inspectImage(bytes: Uint8Array): ImageInfo {
   }
 
   if (!width || !height) return { ok: false, reason: 'could not read image size', mime, bytes: n };
-  if (width < MIN_WIDTH) return { ok: false, reason: `image is only ${width}px wide`, mime, width, height, bytes: n };
+  if (width < minWidth) return { ok: false, reason: `image is only ${width}px wide`, mime, width, height, bytes: n };
   const ratio = width / height;
-  if (ratio < 1.2 || ratio > 3.6) return { ok: false, reason: `unsuitable shape (${width}x${height})`, mime, width, height, bytes: n };
+  if (ratio < minRatio || ratio > maxRatio) return { ok: false, reason: `unsuitable shape (${width}x${height})`, mime, width, height, bytes: n };
   return { ok: true, mime, width, height, bytes: n };
 }
 

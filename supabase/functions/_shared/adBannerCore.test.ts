@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   detectArtCategory, sanitizeForPrompt, containsUnsafeTerms, copyIsSafe, validateCopy, parseCopyResponse, templateCopy,
-  buildImagePrompt, buildCopyPrompt, parseModerationResponse, moderationDecision, inspectImage, estimateCostUsd,
+  buildImagePrompt, buildCopyPrompt, parseModerationResponse, moderationDecision, inspectImage, SQUARE_IMAGE, estimateCostUsd,
   classifyProviderStatus, type ArtCategory, MODERATION_PROMPT,
 } from './adBannerCore.ts';
 
@@ -231,4 +231,14 @@ test('banner variety: no look can put digits or brand-like words into the prompt
     const p = buildImagePrompt({ category: c, variant: pickVariant(c, `d${i}`) });
     assert.doesNotMatch(p, /[0-9]/);
   }
+});
+
+test('square pictures (product photos, vendor ad images) pass the square limits but still fail the banner limits', () => {
+  const sq = inspectImage(jpeg(1024, 1024, 9_000), SQUARE_IMAGE);   // a plain studio photo compresses small
+  assert.ok(sq.ok, String(sq.reason));
+  assert.equal(inspectImage(jpeg(1024, 1024, 9_000)).ok, false);    // the wide-banner defaults reject it
+  assert.equal(inspectImage(png(1024, 1024, 500), SQUARE_IMAGE).ok, false);   // too small to be real
+  assert.equal(inspectImage(png(300, 300), SQUARE_IMAGE).ok, false);          // too few pixels
+  assert.equal(inspectImage(png(2100, 900), SQUARE_IMAGE).ok, false);         // wide is not square
+  assert.equal(inspectImage(new TextEncoder().encode('<html>'.repeat(3000)), SQUARE_IMAGE).ok, false);
 });

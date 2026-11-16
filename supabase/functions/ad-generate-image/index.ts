@@ -5,7 +5,7 @@
 // OPENAI_API_KEY stays in this server code; the browser never sees it.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { generateSquareArt, moderateImage, promptIsAllowed, ProviderError } from '../_shared/adAI.ts';
-import { inspectImage } from '../_shared/adBannerCore.ts';
+import { inspectImage, SQUARE_IMAGE } from '../_shared/adBannerCore.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
     if (!(await promptIsAllowed(prompt))) return await fail('prompt_blocked', 'That description cannot be used. The charge was refunded.', 422);
     // 2b. make the image, check it is a real image, and have it reviewed (an AI-made face is allowed; text, logos and unsafe content are not)
     const art = await generateSquareArt(wrap(prompt.trim()));
-    const info = inspectImage(art.bytes);
+    const info = inspectImage(art.bytes, SQUARE_IMAGE);
     if (!info.ok) return await fail('bad_image', 'The image was not usable. The charge was refunded.');
     const review = await moderateImage(art.base64, art.mime);
     if (!review.safe || review.contains_text || review.contains_logo) {
