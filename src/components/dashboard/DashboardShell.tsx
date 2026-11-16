@@ -155,6 +155,9 @@ export default function DashboardShell({
   );
 }
 
+// Each tile gets its own icon colour, by its place in the list.
+const HUB_TONES = ['text-rose-500', 'text-sky-500', 'text-amber-500', 'text-emerald-500', 'text-violet-500', 'text-orange-500', 'text-teal-500', 'text-pink-500'];
+
 function AccountHub({
   title, subtitle, image, items, onSelect, onSignOut, drawerActions, onSettings,
 }: {
@@ -186,31 +189,30 @@ function AccountHub({
       </header>
 
       {/* Same headings as the desktop sidebar, so a long list is split into short groups of tiles. */}
-      <div className="space-y-5 px-3 pb-2 pt-4">
+      <div className="space-y-4 px-3 pb-2 pt-3">
         {sections.map((section, si) => (
           <section key={si} aria-label={section.group}>
-            {section.group && <h2 className="px-1 pb-2 text-xs font-medium text-muted-foreground">{section.group}</h2>}
-            <ul className="grid grid-cols-2 gap-2.5">
+            {section.group && <h2 className="px-1 pb-1.5 text-sm font-medium">{section.group}</h2>}
+            <ul className="grid grid-cols-2 gap-1">
               {section.items.map(item => {
                 const Icon = item.icon;
+                const tone = HUB_TONES[items.indexOf(item) % HUB_TONES.length];
                 return (
                   <li key={item.key}>
                     <button
                       type="button" onClick={() => onSelect(item.key)}
-                      className="relative flex h-full min-h-[92px] w-full flex-col items-start justify-between gap-3 rounded-2xl bg-card p-3.5 text-left shadow-sm ring-1 ring-border/60 transition active:scale-[0.97] active:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      className="relative flex h-14 w-full items-center justify-between gap-2 rounded-xl bg-card pl-3.5 pr-3 text-left ring-1 ring-border/50 transition active:scale-[0.98] active:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                     >
-                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                        <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
-                      </span>
-                      <span className="block min-w-0 max-w-full">
-                        <span className="block text-sm font-medium leading-tight">{item.label}</span>
-                        {item.hint && <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{item.hint}</span>}
+                      <span className="min-w-0 flex-1">
+                        <span className="line-clamp-2 block text-[13.5px] font-medium leading-tight">{item.label}</span>
+                        {item.hint && <span className="block truncate text-[10.5px] leading-tight text-muted-foreground">{item.hint}</span>}
                       </span>
                       {!!item.badge && item.badge > 0 && (
-                        <span className="absolute right-3 top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-semibold tabular-nums text-accent-foreground">
+                        <span className="flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold tabular-nums text-accent-foreground">
                           {item.badge > 99 ? '99+' : item.badge}
                         </span>
                       )}
+                      <Icon className={cn('h-7 w-7 shrink-0', tone)} aria-hidden="true" />
                     </button>
                   </li>
                 );
