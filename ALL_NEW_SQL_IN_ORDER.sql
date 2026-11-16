@@ -483,3 +483,4 @@ BEGIN
 END $$;
 REVOKE ALL ON FUNCTION public.finish_auto_product_image(uuid, text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.finish_auto_product_image(uuid, text) TO service_role;
+

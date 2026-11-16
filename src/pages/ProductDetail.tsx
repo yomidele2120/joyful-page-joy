@@ -282,7 +282,6 @@ export default function ProductDetail() {
               ) : (
                 <img src={mainSrc} srcSet={mainSrcSet} sizes="(min-width: 1024px) 50vw, 100vw" alt={product.name} decoding="async" className="h-full w-full object-contain p-3 sm:p-8" />
               )}
-              {(product as any).ai_generated_image && !showVideo && <span className="absolute bottom-3 left-3 rounded-full bg-background/90 px-3 py-1 text-xs text-muted-foreground shadow-sm">AI-generated illustration. The real item may look different.</span>}
               {product.badge && <Badge className="absolute left-3 top-3 rounded-full border-none bg-background/90 px-3 text-primary shadow-sm">{product.badge}</Badge>}
             </div>
             {(gallery.length > 1 || product.video_url) && (
