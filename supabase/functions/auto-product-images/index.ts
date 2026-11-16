@@ -5,6 +5,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { generateSquareArt, moderateImage, promptIsAllowed, ProviderError } from '../_shared/adAI.ts';
 import { inspectImage } from '../_shared/adBannerCore.ts';
 import { cloudinaryConfigured, uploadProductImage } from '../_shared/cloudinary.ts';
+import { checkLink, productState } from '../_shared/imageCheck.ts';
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 function safeEqual(a: string, b: string): boolean {
@@ -31,6 +32,16 @@ Deno.serve(async (req) => {
   if (!cloudinaryConfigured()) return json({ error: 'Cloudinary is not configured' }, 500);
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
   let body: { max?: number } = {}; try { body = await req.json(); } catch { /* empty body is fine */ }
+  // 0. find pictures that no longer load (only for switched-on vendors); a product whose pictures are ALL broken is queued below
+  let checked = 0;
+  try {
+    const { data: toCheck } = await admin.rpc('claim_auto_image_checks', { _max: 15 });
+    for (const c of (toCheck ?? []) as { product_id: string; urls: string[] }[]) {
+      const state = productState(await Promise.all(c.urls.map((u) => checkLink(u))));
+      await admin.rpc('record_auto_image_check', { _product: c.product_id, _urls: c.urls, _status: state });
+      checked++;
+    }
+  } catch { /* checking is best effort; making pictures below still runs */ }
   const { data: jobs, error } = await admin.rpc('claim_auto_product_images', { _max: Math.min(Math.max(Number(body?.max) || 3, 1), 5) });
   if (error) return json({ error: 'claim_failed' }, 500);
   const started = Date.now(); const results: Record<string, unknown>[] = [];
@@ -55,5 +66,5 @@ Deno.serve(async (req) => {
       results.push({ id, status: 'failed', code });
     }
   }
-  return json({ processed: results.length, results });
+  return json({ processed: results.length, checked, results });
 });

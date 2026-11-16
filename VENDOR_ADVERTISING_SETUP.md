@@ -52,3 +52,5 @@ select cron.schedule('auto-product-images', '*/10 * * * *', $$
     body := '{"max": 3}'::jsonb); $$);
 ```
 The migration switches the feature on for the one vendor whose store name is exactly "TechHub Operations Limited" (it does nothing if it finds zero or several). Daily cap: `auto_image_settings.daily_limit` (100). To add or remove a vendor: `select admin_set_auto_product_images('<vendor id>', true/false);`.
+
+Broken pictures: run `20261116090000_auto_image_broken_links.sql` and redeploy `auto-product-images`. For switched-on vendors the worker also checks product pictures; a product whose pictures ALL definitely fail to load (404/410, or a web page instead of an image) gets a new AI picture. Unreachable sites are retried later and never cause a replacement.
