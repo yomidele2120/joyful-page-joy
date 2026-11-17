@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
+import BlackFridayBanner from '@/components/BlackFridayBanner';
 import HeroCarousel from '@/components/HeroCarousel';
 import TrustStrip from '@/components/TrustStrip';
 import HomeQuickStart from '@/components/HomeQuickStart';
@@ -92,6 +93,7 @@ export default function Index() {
 
   return (
     <Layout flushFooter>
+      <BlackFridayBanner />
       <HeroCarousel images={photos} />
       <TrustStrip />
       <HomeQuickStart payLater={showPayLater} preorders={showPreorder} />
