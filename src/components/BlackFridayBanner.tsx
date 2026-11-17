@@ -61,3 +61,48 @@ export default function BlackFridayBanner() {
     </section>
   );
 }
+
+/** Black Friday as the FIRST slide of the home page slider. A different look from the banner above the hero:
+ *  bright amber, black block lettering and a price-tag countdown. The slider is always 2:1, so it is laid out for that shape. */
+export function BlackFridaySlide({ tabIndex = 0 }: { tabIndex?: number }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+  const phase = blackFridayPhase(now);
+  const t = splitDuration((phase === 'coming' ? BLACK_FRIDAY_START : BLACK_FRIDAY_END) - now);
+  const units: [string, number][] = [['d', t.days], ['h', t.hours], ['m', t.minutes], ['s', t.seconds]];
+  return (
+    <div className="relative isolate flex h-full w-full items-center justify-between gap-3 overflow-hidden bg-amber-400 px-4 pb-4 pt-2 text-black sm:gap-6 sm:px-12 sm:pb-6">
+      {/* Hazard-style stripe along the bottom edge. */}
+      <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-2.5 sm:h-4" style={{ background: 'repeating-linear-gradient(-45deg, #0b0b0c 0 10px, transparent 10px 20px)' }} />
+      <div className="min-w-0">
+        <BrandLogoPill className="px-2 py-1 shadow-none sm:px-3 sm:py-1.5" logoClassName="h-5 sm:h-8 lg:h-9" />
+        <h2 className="mt-2 font-heading font-black uppercase leading-[0.9] tracking-tight sm:mt-4">
+          <span className="block text-[1.9rem] sm:text-6xl lg:text-7xl">Black</span>
+          <span className="mt-0.5 inline-block -rotate-2 bg-black px-2 text-[1.9rem] text-amber-400 sm:mt-1 sm:px-3 sm:text-6xl lg:text-7xl">Friday</span>
+        </h2>
+        <p className="mt-2 text-[11px] font-bold sm:mt-3 sm:text-base">
+          {phase === 'coming' ? 'Starts Friday 27 November' : 'On until Monday 30 November'}
+        </p>
+      </div>
+
+      {/* Price-tag countdown */}
+      <div className="relative shrink-0 rotate-3 rounded-xl bg-black p-2.5 pt-4 text-white shadow-lg sm:rounded-2xl sm:p-5 sm:pt-7">
+        <span aria-hidden="true" className="absolute left-1/2 top-1.5 h-2 w-2 -translate-x-1/2 rounded-full bg-amber-400 sm:top-2.5 sm:h-3 sm:w-3" />
+        <p className="text-center text-[10px] font-semibold text-amber-300 sm:text-sm">{phase === 'coming' ? 'Starts in' : 'Ends in'}</p>
+        <div className="mt-0.5 flex items-baseline justify-center gap-1 font-heading font-extrabold tabular-nums sm:mt-1 sm:gap-2" role="timer" aria-live="off">
+          {units.map(([label, value]) => (
+            <span key={label} className="text-lg leading-none sm:text-4xl">
+              {pad(value)}<span className="ml-px text-[9px] font-semibold text-amber-300 sm:text-sm">{label}</span>
+            </span>
+          ))}
+        </div>
+        <Link to="/products" tabIndex={tabIndex} className="mt-2 flex items-center justify-center rounded-full bg-amber-400 px-3 py-1.5 text-[11px] font-bold text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white sm:mt-4 sm:py-2.5 sm:text-base">
+          Shop the deals
+        </Link>
+      </div>
+    </div>
+  );
+}

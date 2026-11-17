@@ -8,6 +8,8 @@ import { CtaPill, FlyerArt, TONES, pickImages } from '@/components/flyers/Flyers
 import { ImageFlyerFill } from '@/components/flyers/ImageFlyers';
 import { BrandFlyerFill } from '@/components/flyers/BrandFlyerImage';
 import { HERO_IMAGE_SLIDES, HERO_SIDE_FLYERS } from '@/lib/brandFlyers';
+import { BlackFridaySlide } from '@/components/BlackFridayBanner';
+import { blackFridayPhase } from '@/lib/blackFriday';
 
 // Hero = category list | auto-playing flyer slider | two flyer tiles (desktop).
 // On phones the slider comes first and the two tiles sit right under it.
@@ -41,12 +43,21 @@ export default function HeroCarousel({ images }: { images: string[] }) {
   // Slides whose pictures may load: the first two to begin with, then whatever is shown or next up.
   const [seen, setSeen] = useState<ReadonlySet<number>>(() => new Set([0, 1]));
 
+  // Black Friday is always the FIRST slide while the sale (or its countdown) is running, then it drops out by itself.
+  const [bfOn, setBfOn] = useState(() => blackFridayPhase(Date.now()) !== 'over');
+  useEffect(() => {
+    const id = window.setInterval(() => setBfOn(blackFridayPhase(Date.now()) !== 'over'), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
+  const BF = bfOn ? 1 : 0;
+
   const uploadedSlides = forPlacement('hero_slide');
   const uploadedSide = forPlacement('hero_side').slice(0, 2);
-  const U = uploadedSlides.length;
+  const UP = uploadedSlides.length;
+  const U = BF + UP; // slides before the built-in ones
   // Uploaded slides always come first. Built-in slides keep the slideshow
   // moving until the admin has uploaded 3 or more of their own.
-  const showBuiltIn = U < 3;
+  const showBuiltIn = UP < 3;
 
   const picks = (featured ?? []).filter(p => !!p.image_url).slice(0, 4);
   // The Pay later, clothing and preorder flyers are pinned: they stay in the slider even after the admin has
@@ -54,7 +65,7 @@ export default function HeroCarousel({ images }: { images: string[] }) {
   const imageSlides = showBuiltIn ? HERO_IMAGE_SLIDES : HERO_IMAGE_SLIDES.filter(f => f.pinned);
   const IMG = imageSlides.length;
   const builtInCount = IMG + (showBuiltIn ? SLIDE_FLYERS.length + (picks.length >= 2 ? 1 : 0) : 0);
-  const total = !ready ? 0 : U + builtInCount;
+  const total = !ready ? BF : U + builtInCount; // while the other flyers load, Black Friday is already showing
 
   const go = useCallback((next: number) => total > 0 && setIndex(((next % total) + total) % total), [total]);
 
@@ -127,12 +138,18 @@ export default function HeroCarousel({ images }: { images: string[] }) {
             onTouchCancel={() => { touchStart.current = null; setPaused(false); }}
           >
           {!ready ? (
-            <div className="h-full w-full animate-pulse bg-secondary" />
+            bfOn ? <BlackFridaySlide /> : <div className="h-full w-full animate-pulse bg-secondary" />
           ) : (
             <div className="flex h-full transition-transform duration-500 ease-out motion-reduce:transition-none" style={{ transform: `translateX(-${index * 100}%)` }}>
+              {bfOn && (
+                <div className="h-full w-full shrink-0" aria-hidden={index !== 0}>
+                  <BlackFridaySlide tabIndex={index === 0 ? 0 : -1} />
+                </div>
+              )}
+
               {uploadedSlides.map((flyer, i) => (
-                <div key={flyer.id} className="h-full w-full shrink-0" aria-hidden={index !== i}>
-                  <ImageFlyerFill flyer={flyer} tabIndex={index === i ? 0 : -1} fit="auto" load={seen.has(i)} eager={i === 0} />
+                <div key={flyer.id} className="h-full w-full shrink-0" aria-hidden={index !== BF + i}>
+                  <ImageFlyerFill flyer={flyer} tabIndex={index === BF + i ? 0 : -1} fit="auto" load={seen.has(BF + i)} eager={BF + i === 0} />
                 </div>
               ))}
 

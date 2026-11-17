@@ -107,8 +107,13 @@
   * {
     @apply border-border;
   }
-  html, body {
+  /* Hide sideways overflow WITHOUT making the page body a scroll container: with overflow-x:hidden on both html and
+     body, position:sticky stops working and the header scrolls away. 'clip' hides the overflow but is not a scroller. */
+  html {
     @apply overflow-x-hidden;
+  }
+  body {
+    overflow-x: clip;
   }
   body {
     @apply bg-background text-foreground font-body antialiased;

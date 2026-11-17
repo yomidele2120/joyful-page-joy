@@ -183,32 +183,6 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Mobile search */}
-      <div className="px-3 pb-3 pt-1 md:hidden"><SearchBox variant="mobile" onDone={() => setMenuOpen(false)} /></div>
-
-      {showCategoryChips && !!categories?.length && (
-        <nav aria-label="Categories" className="md:hidden">
-          <ul className="flex gap-2 overflow-x-auto px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {[{ id: 'all', name: 'All', to: '/products' }, ...categories.map(c => ({ id: c.id, name: c.name, to: `/category/${c.slug}` }))].map(chip => {
-              const active = chip.to === '/products' ? pathname === '/products' : pathname === chip.to;
-              return (
-                <li key={chip.id} className="shrink-0">
-                  <Link
-                    to={chip.to}
-                    data-chip-active={active}
-                    className={`inline-flex items-center whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors ${
-                      active ? 'bg-accent text-accent-foreground' : 'bg-white/10 text-white/90 hover:bg-white/20'
-                    }`}
-                  >
-                    {chip.name}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
-      )}
-
       {/* Desktop category and marketplace links */}
       <nav aria-label="Primary navigation" className="hidden border-t border-border md:block">
         <div className="container flex h-11 items-center justify-between gap-3 text-xs lg:text-sm">
@@ -240,6 +214,34 @@ export default function Navbar() {
         </div>
       </nav>
     </header>
+    {/* Phones: the search box and category chips scroll away with the page; only the top row above stays fixed, to save screen space. */}
+    <div className="border-b border-white/10 bg-[#0a2236] text-white md:hidden">
+      <div className="px-3 pb-3 pt-1"><SearchBox variant="mobile" onDone={() => setMenuOpen(false)} /></div>
+
+      {showCategoryChips && !!categories?.length && (
+        <nav aria-label="Categories">
+          <ul className="flex gap-2 overflow-x-auto px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {[{ id: 'all', name: 'All', to: '/products' }, ...categories.map(c => ({ id: c.id, name: c.name, to: `/category/${c.slug}` }))].map(chip => {
+              const active = chip.to === '/products' ? pathname === '/products' : pathname === chip.to;
+              return (
+                <li key={chip.id} className="shrink-0">
+                  <Link
+                    to={chip.to}
+                    data-chip-active={active}
+                    className={`inline-flex items-center whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors ${
+                      active ? 'bg-accent text-accent-foreground' : 'bg-white/10 text-white/90 hover:bg-white/20'
+                    }`}
+                  >
+                    {chip.name}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      )}
+
+    </div>
     </>
   );
 }
