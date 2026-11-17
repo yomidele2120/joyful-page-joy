@@ -2,12 +2,15 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { prefetchProduct } from '@/hooks/useProducts';
-import { BadgeCheck, ImageOff } from 'lucide-react';
+import { BadgeCheck, Heart, ImageOff, ShoppingCart } from 'lucide-react';
+import { toast } from 'sonner';
+import { useCart } from '@/contexts/CartContext';
+import { useWishlist } from '@/hooks/useWishlist';
 import { Badge } from '@/components/ui/badge';
 import { formatNaira } from '@/lib/format';
 import { useCurrency } from '@/hooks/useCurrency';
 import { listImage } from '@/lib/images';
-import { formatMoq, priceRange } from '@/lib/pricing';
+import { formatMoq, getMoq, priceRange } from '@/lib/pricing';
 import type { Json } from '@/integrations/supabase/types';
 import { PayLaterBadge, PreorderBadge } from '@/components/ProductBadges';
 import { bnplEligibleForPrice, usePayLaterAvailable, usePublicFinance } from '@/hooks/useMarketplace';
@@ -36,14 +39,14 @@ export interface ProductCardProps {
   preorder_release_date?: string | null;
 }
 
-export function ProductPrice({ product, className = '', compact = false }: { product: Pick<ProductCardProps, 'price' | 'price_tiers' | 'compare_at_price'>; className?: string; compact?: boolean }) {
+export function ProductPrice({ product, className = '', compact = false, fromOnly = false }: { product: Pick<ProductCardProps, 'price' | 'price_tiers' | 'compare_at_price'>; className?: string; compact?: boolean; /** Tiered prices show as "From ₦X" instead of a long range (used on cards, where space is tight). */ fromOnly?: boolean }) {
   const { min, max } = priceRange({ price: product.price, price_tiers: product.price_tiers });
   const hasRange = max > min;
   const { format } = useCurrency();
   return (
     <div className={`flex flex-wrap items-baseline gap-x-1.5 ${className}`}>
       <span className={`font-heading font-bold tabular-nums text-foreground ${compact ? 'text-sm leading-tight sm:text-base' : 'text-base'}`}>
-        {hasRange ? `${format(min)} - ${format(max)}` : format(min)}
+        {hasRange ? (fromOnly ? `From ${format(min)}` : `${format(min)} - ${format(max)}`) : format(min)}
       </span>
       {!hasRange && product.compare_at_price && (
         <span className={`text-muted-foreground line-through text-xs`}>{format(product.compare_at_price)}</span>
@@ -53,7 +56,7 @@ export function ProductPrice({ product, className = '', compact = false }: { pro
 }
 
 export default function ProductCard({
-  name, slug, price, compare_at_price, image_url, thumb_url, badge, brand, stock_quantity, moq, unit, price_tiers, vendors,
+  id, name, slug, price, compare_at_price, image_url, thumb_url, badge, brand, stock_quantity, moq, unit, price_tiers, vendors,
   bnpl_eligible, is_pinned, is_preorder, preorder_approved, preorder_release_date,
 }: ProductCardProps) {
   // Pay later is only advertised when it is genuinely on and this product fits the limits; preorders never offer it.
@@ -68,6 +71,22 @@ export default function ProductCard({
   const discount = !hasTiers && compare_at_price ? Math.round(((compare_at_price - price) / compare_at_price) * 100) : 0;
 
   const soldOut = typeof stock_quantity === 'number' && stock_quantity <= 0;
+  // A short nudge when only a few are left (in-stock products only; preorders have their own places left).
+  const lowStock = !showPreorder && typeof stock_quantity === 'number' && stock_quantity > 0 && stock_quantity <= 5;
+  const { isSaved, toggleSaved } = useWishlist();
+  const saved = isSaved(id);
+  const { items: cartItems, addItem } = useCart();
+  // Quick add (desktop hover): in-stock products only, at the minimum order. Preorders and anything the stock can't cover go through the product page.
+  const minQty = getMoq({ price, moq });
+  const canQuickAdd = !showPreorder && !soldOut && !(typeof stock_quantity === 'number' && stock_quantity < minQty);
+  const quickAdd = () => {
+    if (cartItems.some(i => !!i.is_preorder)) {
+      toast.error('Your cart has a preorder. Preorders are paid for separately, so finish or clear it first.');
+      return;
+    }
+    addItem({ id, name, price, image_url: image_url ?? null, slug, moq: minQty, unit: unit ?? undefined, price_tiers: price_tiers ?? undefined, is_preorder: false });
+    toast.success(minQty > 1 ? `Added ${minQty} to cart (minimum order)` : 'Added to cart');
+  };
   const seller = vendors?.store_name || brand || 'IT Hub Africa seller';
 
   // Photo states: a soft shimmer while it loads, then it fades in. If the small copy fails we try the full photo,
@@ -81,7 +100,8 @@ export default function ProductCard({
 
   return (
     <div className="group flex h-full flex-col overflow-hidden rounded-2xl bg-card ring-1 ring-border/50 transition-shadow duration-200 animate-fade-in hover:shadow-lg">
-      <Link to={`/product/${slug}`} className="relative m-1.5 block aspect-square overflow-hidden rounded-xl bg-white" onPointerEnter={warm} onFocus={warm} onTouchStart={warm}>
+      <div className="relative m-1.5">
+      <Link to={`/product/${slug}`} className="relative block aspect-square overflow-hidden rounded-xl bg-white" onPointerEnter={warm} onFocus={warm} onTouchStart={warm}>
         {src ? (
           <>
             {!loaded && <span aria-hidden="true" className="absolute inset-0 animate-pulse bg-secondary/60" />}
@@ -107,9 +127,6 @@ export default function ProductCard({
             {badge}
           </Badge>
         )}
-        {is_pinned && (
-          <span className="absolute right-1.5 top-1.5 rounded-full bg-primary/90 px-2 py-0.5 text-[10px] font-semibold text-primary-foreground shadow-sm">Promoted</span>
-        )}
         {discount > 0 && (
           <span className="absolute bottom-1.5 left-1.5 rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-accent-foreground">
             -{discount}%
@@ -117,17 +134,41 @@ export default function ProductCard({
         )}
       </Link>
 
+      {/* Save for later: always visible, on phones and desktop. Sits outside the photo link so a tap never opens the product. */}
+      <button
+        type="button"
+        onClick={() => toggleSaved(id)}
+        aria-label={saved ? 'Remove from wishlist' : 'Save to wishlist'}
+        aria-pressed={saved}
+        className="absolute right-1.5 top-1.5 flex h-8 w-8 items-center justify-center rounded-full bg-background/90 shadow-sm transition-transform active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      >
+        <Heart className={`h-4 w-4 ${saved ? 'fill-red-500 text-red-500' : 'text-foreground/70'}`} aria-hidden="true" />
+      </button>
+
+      {/* Desktop only: a quick "Add to cart" appears over the bottom of the photo on hover or keyboard focus. */}
+      {canQuickAdd && (
+        <button
+          type="button"
+          onClick={quickAdd}
+          className="absolute inset-x-0 bottom-0 hidden items-center justify-center gap-1.5 rounded-b-xl bg-primary/95 py-2 text-xs font-semibold text-primary-foreground opacity-0 transition-opacity duration-150 hover:bg-primary focus-visible:opacity-100 focus-visible:outline-none group-hover:opacity-100 md:flex"
+        >
+          <ShoppingCart className="h-3.5 w-3.5" aria-hidden="true" /> Add to cart
+        </button>
+      )}
+      </div>
+
       <div className="flex flex-1 flex-col px-2.5 pb-3 pt-1 sm:px-3">
         <Link to={`/product/${slug}`} className="min-h-[2.5rem]" onPointerEnter={warm} onFocus={warm} onTouchStart={warm}>
           <h3 className="line-clamp-2 text-[13px] font-medium leading-snug text-foreground transition-colors group-hover:text-primary sm:text-sm">
             {name}
           </h3>
         </Link>
-        <ProductPrice product={{ price, price_tiers, compare_at_price }} className="mt-1.5" />
+        <ProductPrice product={{ price, price_tiers, compare_at_price }} className="mt-1.5" fromOnly />
         {/* MOQ and seller are the two facts a B2B buyer needs, so they show on phones too */}
         <p className="mt-0.5 text-xs text-muted-foreground">{formatMoq({ price, moq, unit })}</p>
-        {(showPreorder || showPayLater) && (
+        {(showPreorder || showPayLater || is_pinned) && (
           <div className="mt-1.5 flex flex-wrap gap-1">
+            {is_pinned && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">Promoted</span>}
             {showPreorder && <PreorderBadge date={preorder_release_date} />}
             {showPayLater && <PayLaterBadge />}
           </div>
@@ -138,6 +179,7 @@ export default function ProductCard({
             <span className="truncate">{seller}</span>
           </span>
           {soldOut && <span className="shrink-0 font-medium text-destructive">Sold out</span>}
+          {lowStock && <span className="shrink-0 font-medium text-amber-600 dark:text-amber-400">Only {stock_quantity} left</span>}
         </div>
       </div>
     </div>

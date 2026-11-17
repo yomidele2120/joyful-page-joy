@@ -124,6 +124,7 @@ export default function UserDashboard() {
     await supabase.from('wishlist').delete().eq('id', id);
     toast.success('Removed from wishlist');
     queryClient.invalidateQueries({ queryKey: ['user-wishlist'] });
+    queryClient.invalidateQueries({ queryKey: ['wishlist-ids'] }); // the hearts on product cards
   };
 
   const statusColor = (status: string) => {

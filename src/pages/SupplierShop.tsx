@@ -18,6 +18,7 @@ import { formatCompactNumber } from '@/lib/format';
 import { toast } from 'sonner';
 import CallButtons from '@/components/calls/CallButtons';
 import { formatResponseTime, useVendorReputation } from '@/hooks/useVendorReputation';
+import SupplierReviews from '@/components/SupplierReviews';
 import ShopSocialBanner from '@/components/ads/ShopSocialBanner';
 import { useShopAdAttribution } from '@/components/ads/useAdAttribution';
 
@@ -32,7 +33,8 @@ export default function SupplierShop() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get('view') === 'posts' ? 'posts' : 'products';
+  const view = searchParams.get('view');
+  const activeTab = view === 'posts' ? 'posts' : view === 'reviews' ? 'reviews' : 'products';
 
   const { data: vendor, isLoading } = useQuery({
     queryKey: ['shop-vendor', vendorId],
@@ -203,12 +205,15 @@ export default function SupplierShop() {
           <div className="flex gap-1 rounded-full bg-secondary p-1">
             <button onClick={() => setSearchParams({})} className={tabBtn(activeTab === 'products')}>Products</button>
             <button onClick={() => setSearchParams({ view: 'posts' })} className={tabBtn(activeTab === 'posts')}>Videos &amp; posts ({posts?.length || 0})</button>
+            <button onClick={() => setSearchParams({ view: 'reviews' })} className={tabBtn(activeTab === 'reviews')}>Reviews{reputation?.review_count ? ` (${reputation.review_count})` : ''}</button>
           </div>
         </div>
       </div>
 
       <div className="container px-4 py-5">
-        {activeTab === 'products' ? (
+        {activeTab === 'reviews' ? (
+          <SupplierReviews vendorId={vendor.id} userId={user?.id} isOwnShop={isOwnShop} />
+        ) : activeTab === 'products' ? (
           <>
             {shopCategories.length > 1 && (
               <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
