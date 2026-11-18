@@ -4,7 +4,7 @@
 //   3. any failure at all -> the database refunds the price once. A crash is covered by refund_stuck_ai_images().
 // OPENAI_API_KEY stays in this server code; the browser never sees it.
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { generateSquareArt, moderateImage, promptIsAllowed, ProviderError } from '../_shared/adAI.ts';
+import { generateSquareArt, moderateImage, promptIsAllowed, ProviderError, withAiContext, setAiContext } from '../_shared/adAI.ts';
 import { inspectImage, SQUARE_IMAGE } from '../_shared/adBannerCore.ts';
 
 const cors = {
@@ -19,7 +19,9 @@ const wrap = (p: string) =>
   'Rules: no text, no letters, no numbers, no logos, no watermarks, no brand names, no real or famous people, no recognisable celebrities, ' +
   'no sale stickers or price tags. Show the subject honestly and attractively.';
 
-Deno.serve(async (req) => {
+Deno.serve((req: Request) => withAiContext({ feature: 'ad_ai_image' }, () => handle(req)));
+
+async function handle(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
   if (req.method !== 'POST') return reply({ error: 'Method not allowed' }, 405);
 
@@ -29,6 +31,7 @@ Deno.serve(async (req) => {
   const userClient = createClient(url, Deno.env.get('SUPABASE_ANON_KEY')!, { global: { headers: { Authorization: authHeader } }, auth: { persistSession: false } });
   const { data: claims, error: claimsError } = await userClient.auth.getClaims(authHeader.replace(/^Bearer\s+/i, ''));
   if (claimsError || !claims?.claims?.sub) return reply({ error: 'Please sign in again.' }, 401);
+  setAiContext({ userId: String(claims.claims.sub) });
 
   const body = await req.json().catch(() => ({}));
   const prompt = typeof body?.prompt === 'string' ? body.prompt : '';
@@ -71,4 +74,4 @@ Deno.serve(async (req) => {
     const code = e instanceof ProviderError ? e.code : 'unexpected';
     return await fail(code, 'The image service had a problem. The charge was refunded. Please try again.');
   }
-});
+}

@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 // Server-side OpenAI calls for advertising banners (Deno edge functions only).
 // The key is read from the OPENAI_API_KEY secret here and nowhere else. It is sent only in the Authorization header
 // to api.openai.com, is never returned to a browser, and is never placed in an error message, database row or log line.
@@ -26,6 +27,40 @@ export class ProviderError extends Error {
 }
 
 const API = 'https://api.openai.com/v1';
+
+// ---- Cost ledger -----------------------------------------------------------------------------------------------
+// Every request to OpenAI is booked in ai_cost_ledger (database function record_ai_usage). The database works out the
+// cost and the 2x service charge; this file only reports what happened. Booking can never break the AI feature itself.
+export interface AiContext { feature?: string; userId?: string | null; vendorId?: string | null }
+const als = new AsyncLocalStorage<AiContext>();
+/** Runs a request handler with its own context object, so concurrent requests never mix up who asked. */
+export const withAiContext = <T>(init: AiContext, fn: () => Promise<T>): Promise<T> => als.run({ ...init }, fn);
+/** Fills in who/what is behind the AI calls that follow (user and vendor are known only after sign-in or a lookup). */
+export const setAiContext = (patch: AiContext) => { const c = als.getStore(); if (c) Object.assign(c, patch); };
+
+const SERVICE_BY_PATH: Record<string, string> = { '/images/generations': 'image_generation', '/moderations': 'prompt_moderation', '/responses': 'text_generation' };
+
+async function bookUsage(key: string, service: string, model: string | null, status: 'succeeded' | 'failed', data: any) {
+  const url = Deno.env.get('SUPABASE_URL'); const svc = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!url || !svc) return;
+  const c = als.getStore() ?? {};
+  const body = JSON.stringify({
+    _key: key, _service: service, _feature: c.feature ?? null, _model: model, _status: status,
+    _user: c.userId ?? null, _vendor: c.vendorId ?? null,
+    _input_tokens: Number.isFinite(data?.usage?.input_tokens) ? data.usage.input_tokens : null,
+    _output_tokens: Number.isFinite(data?.usage?.output_tokens) ? data.usage.output_tokens : null,
+    _images: service === 'image_generation' && Array.isArray(data?.data) ? data.data.length : 0,
+  });
+  for (let attempt = 0; attempt < 2; attempt++) {     // same key on the retry, so a repeat can never double-book
+    try {
+      const res = await fetch(`${url}/rest/v1/rpc/record_ai_usage`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', apikey: svc, Authorization: `Bearer ${svc}` }, body, signal: AbortSignal.timeout(8000),
+      });
+      if (res.ok) return;
+    } catch { /* try once more */ }
+  }
+  console.error('ai ledger: could not record request', key.slice(0, 12));
+}
 const DEFAULT_IMAGE_MODELS = ['gpt-image-2', 'gpt-image-1.5'];
 const DEFAULT_TEXT_MODEL = 'gpt-6-luna';
 const MODEL_PATTERN = /^[a-zA-Z0-9._-]+$/;
@@ -62,7 +97,9 @@ function scrub(text: string): string {
   return text.replace(/sk-[A-Za-z0-9_-]{16,}/g, '[hidden]').replace(/Bearer\s+\S+/gi, 'Bearer [hidden]').slice(0, 300);
 }
 
-async function post(path: string, body: unknown, timeoutMs: number): Promise<any> {
+async function post(path: string, body: unknown, timeoutMs: number, service?: string): Promise<any> {
+  const svc = service ?? SERVICE_BY_PATH[path] ?? 'text_generation';
+  const model = typeof (body as any)?.model === 'string' ? (body as any).model : null;
   let res: Response;
   try {
     res = await fetch(`${API}${path}`, {
@@ -74,9 +111,12 @@ async function post(path: string, body: unknown, timeoutMs: number): Promise<any
   } catch (e) {
     if (e instanceof ProviderError) throw e;
     // Deliberately no error text from the network error itself.
+    await bookUsage(`net_${crypto.randomUUID()}`, svc, model, 'failed', null);
     throw new ProviderError('The request to the AI provider failed or timed out.', 'provider_network', true);
   }
+  const requestId = res.headers.get('x-request-id') || `gen_${crypto.randomUUID()}`;
   if (!res.ok) {
+    await bookUsage(requestId, svc, model, 'failed', null);
     const kind = classifyProviderStatus(res.status);
     let detail = ''; let providerCode = '';
     try {
@@ -93,7 +133,9 @@ async function post(path: string, body: unknown, timeoutMs: number): Promise<any
     }
     throw new ProviderError(`AI provider returned HTTP ${res.status}${detail ? `: ${detail}` : ''}`, kind.code, kind.retryable);
   }
-  return await res.json();
+  const out = await res.json();
+  await bookUsage(requestId, svc, model, 'succeeded', out);
+  return out;
 }
 
 function base64ToBytes(b64: string): Uint8Array {
@@ -177,7 +219,7 @@ export async function moderateImage(base64: string, mime: string): Promise<Moder
       { type: 'input_image', image_url: `data:${mime};base64,${base64}` },
     ] }],
     max_output_tokens: 400,
-  }, 60_000);
+  }, 60_000, 'image_review');
   const parsed = parseModerationResponse(outputText(data));
   if (!parsed) throw new ProviderError('The image safety review returned an unreadable answer.', 'moderation_unavailable', true);
   return parsed;

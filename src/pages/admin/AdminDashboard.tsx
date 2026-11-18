@@ -16,6 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { lazyPage } from '@/lib/lazyPage';
+const ServiceCostsPanel = lazyPage(() => import('@/components/admin/ServiceCostsPanel'));
 const SubscriptionsTab = lazyPage(() => import('@/components/admin/SubscriptionsTab'));
 const SupplierPlansTab = lazyPage(() => import('@/components/admin/SupplierPlansTab'));
 const SubscriptionPricingAdmin = lazyPage(() => import('@/components/admin/SubscriptionPricingAdmin'));
@@ -40,7 +41,7 @@ import {
   Package, ShoppingCart, Users, DollarSign, Plus, LogOut, ArrowLeft,
   Trash2, Store, CheckCircle, XCircle, Eye, BarChart3, CreditCard,
   FileText, AlertCircle, TrendingUp, Layers, FolderPlus, Pencil, Flag, Image as ImageIcon,
-  LayoutDashboard, Megaphone, Settings, Wallet, ChevronRight, Landmark, Percent, Activity, Video, Copy, Phone, CalendarClock,
+  LayoutDashboard, Megaphone, Settings, Wallet, ChevronRight, Landmark, Percent, Activity, Video, Copy, Phone, CalendarClock, Receipt,
   RefreshCw, Mail, Sparkles, BadgeDollarSign, ShieldAlert, Globe, ShoppingBag,
 } from 'lucide-react';
 import DashboardShell, { Panel, StatCard, StatusDot, WelcomeBanner, useTabParam, type DashNavItem } from '@/components/dashboard/DashboardShell';
@@ -317,6 +318,7 @@ export default function AdminDashboard() {
     { key: 'users', label: 'Users', icon: Users, group: 'Community' },
     { key: 'moderation', label: 'Moderation', icon: Flag, badge: pendingReports?.length ?? 0, group: 'Community' },
     { key: 'subscriptions', label: 'Subscriptions', icon: CalendarClock, badge: subscriptionAlerts, group: 'System' },
+    { key: 'service-costs', label: 'Subscription & API usage', icon: Receipt, group: 'System' },
     { key: 'email-notifications', label: 'Email notifications', icon: Mail, group: 'System' },
     { key: 'audit-log', label: 'Audit log', icon: ShieldAlert, group: 'System' },
     { key: 'settings', label: 'Settings', icon: Settings, group: 'System' },
@@ -683,6 +685,7 @@ export default function AdminDashboard() {
         {activeTab === 'calls' && <div className="max-w-4xl space-y-4"><CallsSwitch /><CallQuotasTab /></div>}
         {activeTab === 'email-notifications' && <EmailNotificationsTab />}
         {activeTab === 'subscriptions' && <SubscriptionsTab />}
+        {activeTab === 'service-costs' && <ServiceCostsPanel />}
         {activeTab === 'supplier-plans' && <div className="space-y-6"><SupplierPlansTab /><SubscriptionPricingAdmin /></div>}
         {activeTab === 'referrals' && <ReferralAdminTab />}
         {activeTab === 'ai-intelligence' && <AiProductIntelligenceTab />}

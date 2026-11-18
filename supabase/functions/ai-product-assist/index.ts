@@ -4,7 +4,7 @@
 // An admin must switch the feature on (ai_feature_settings) and per-user daily limits apply (ai_assist_settings).
 // Results are only suggestions: nothing is saved to a product here.
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { askText, ProviderError } from '../_shared/adAI.ts';
+import { askText, ProviderError, withAiContext, setAiContext } from '../_shared/adAI.ts';
 import { buildListingPrompt, buildSearchPrompt, findDuplicates, parseListing, parseSearch } from '../_shared/aiProductCore.ts';
 
 const cors = {
@@ -13,7 +13,9 @@ const cors = {
 };
 const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 
-Deno.serve(async (req) => {
+Deno.serve((req: Request) => withAiContext({ feature: 'listing_assist' }, () => handle(req)));
+
+async function handle(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
   if (req.method !== 'POST') return reply({ error: 'Method not allowed' }, 405);
   const authHeader = req.headers.get('Authorization');
@@ -28,6 +30,7 @@ Deno.serve(async (req) => {
   const action = body?.action;
   if (action !== 'listing' && action !== 'search') return reply({ error: 'Unknown action' }, 400);
   if (!Deno.env.get('OPENAI_API_KEY')) return reply({ error: 'The AI service is not configured yet.' }, 503);
+  setAiContext({ userId, feature: action === 'search' ? 'search_assist' : 'listing_assist' });
 
   const admin = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
   const { data: logId, error: gateError } = await admin.rpc('ai_assist_begin', { _user: userId, _feature: action });
@@ -70,4 +73,4 @@ Deno.serve(async (req) => {
     const quota = known?.code === 'provider_quota';
     return reply({ error: quota ? 'The AI service is temporarily unavailable.' : 'The assistant could not answer right now. Please try again.' }, 502);
   }
-});
+}

@@ -2,7 +2,7 @@
 // Server-to-server only: authenticate with the service-role key or x-ad-worker-secret (same secret as ad-process-jobs). Schedule it
 // every 10 minutes. Platform pays for these pictures; the database enforces a daily cap.
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { generateSquareArt, moderateImage, promptIsAllowed, ProviderError } from '../_shared/adAI.ts';
+import { generateSquareArt, moderateImage, promptIsAllowed, ProviderError, withAiContext, setAiContext } from '../_shared/adAI.ts';
 import { inspectImage, SQUARE_IMAGE } from '../_shared/adBannerCore.ts';
 import { cloudinaryConfigured, uploadProductImage } from '../_shared/cloudinary.ts';
 import { checkLink, productState } from '../_shared/imageCheck.ts';
@@ -19,7 +19,9 @@ function authorized(req: Request): boolean {
   return (service.length > 0 && safeEqual(bearer, service)) || (secret.length >= 16 && safeEqual(header, secret));
 }
 
-Deno.serve(async (req) => {
+Deno.serve((req: Request) => withAiContext({ feature: 'auto_product_image' }, () => handle(req)));
+
+async function handle(req: Request): Promise<Response> {
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
   if (!authorized(req)) return json({ error: 'Unauthorized' }, 401);
   if (!cloudinaryConfigured()) return json({ error: 'Cloudinary is not configured' }, 500);
@@ -42,6 +44,7 @@ Deno.serve(async (req) => {
     const id = String(j.product_id);
     if (Date.now() - started > 60_000) { await admin.rpc('fail_auto_product_image', { _product: id, _code: 'out_of_time', _retry: true }); results.push({ id, status: 'requeued' }); continue; }
     try {
+      setAiContext({ vendorId: j.vendor_id ? String(j.vendor_id) : null });
       const prompt = buildProductPrompt(j);
       if (!(await promptIsAllowed(prompt))) { await admin.rpc('fail_auto_product_image', { _product: id, _code: 'prompt_blocked', _retry: false }); results.push({ id, status: 'blocked' }); continue; }
       const art = await generateSquareArt(prompt);
@@ -65,4 +68,4 @@ Deno.serve(async (req) => {
     }
   }
   return json({ processed: results.length, checked, results });
-});
+}

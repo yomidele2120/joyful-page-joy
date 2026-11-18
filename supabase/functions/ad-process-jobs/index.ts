@@ -14,7 +14,7 @@ import {
   detectArtCategory, buildImagePrompt, pickVariant, isVariant, variantKey, inspectImage, moderationDecision, estimateCostUsd,
   type ProductForAd,
 } from '../_shared/adBannerCore.ts';
-import { generateBannerArt, generateCopy, moderateImage, ProviderError, textModel } from '../_shared/adAI.ts';
+import { generateBannerArt, generateCopy, moderateImage, ProviderError, textModel, withAiContext, setAiContext } from '../_shared/adAI.ts';
 import { cloudinaryConfigured, uploadAdArtwork } from '../_shared/cloudinary.ts';
 
 const json = (body: unknown, status = 200) =>
@@ -42,7 +42,9 @@ async function sha256Hex(text: string): Promise<string> {
 
 type Admin = ReturnType<typeof createClient>;
 
-Deno.serve(async (req) => {
+Deno.serve((req: Request) => withAiContext({ feature: 'ad_campaign_banner' }, () => handle(req)));
+
+async function handle(req: Request): Promise<Response> {
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
   if (!authorized(req)) return json({ error: 'Unauthorized' }, 401);
 
@@ -67,7 +69,7 @@ Deno.serve(async (req) => {
     results.push(await processJob(admin, job as Record<string, any>));
   }
   return json({ processed: results.length, results });
-});
+}
 
 async function processJob(admin: Admin, job: Record<string, any>): Promise<Record<string, unknown>> {
   const jobId = String(job.id);
@@ -93,6 +95,7 @@ async function processJob(admin: Admin, job: Record<string, any>): Promise<Recor
       return { job: jobId, status: 'cancelled' };
     }
 
+    setAiContext({ vendorId: campaign.vendor_id });
     const { data: vendor } = await admin.from('vendors')
       .select('store_name, store_description, business_type, product_categories').eq('id', campaign.vendor_id).maybeSingle();
     if (!vendor) throw new ProviderError('The vendor no longer exists.', 'vendor_missing', false);

@@ -158,7 +158,11 @@ test('the API key is only ever sent to OpenAI, never stored or returned', async 
   const { json } = await run();
   assert.doesNotMatch(JSON.stringify(json), /sk-proj|FAKEKEY/);
   assert.doesNotMatch(JSON.stringify(calls.rpc), /sk-proj|FAKEKEY/);
-  assert.ok(calls.fetch.filter((f) => !f.url.includes('cloudinary')).every((f) => f.url.startsWith('https://api.openai.com/')));
+  // The only other call allowed is the cost ledger in our own database, and it must never carry the OpenAI key.
+  const ledger = calls.fetch.filter((f) => f.url === 'https://example.supabase.co/rest/v1/rpc/record_ai_usage');
+  assert.ok(ledger.length > 0, 'every OpenAI request is booked in the ledger');
+  assert.doesNotMatch(JSON.stringify(ledger.map((f) => f.body)), /sk-proj|FAKEKEY/);
+  assert.ok(calls.fetch.filter((f) => !f.url.includes('cloudinary') && !ledger.includes(f)).every((f) => f.url.startsWith('https://api.openai.com/')));
   assert.equal(uploads().every((u) => !u.url.includes('key=')), true);
 });
 

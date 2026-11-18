@@ -7,7 +7,7 @@
 // in one step. Calls: the service-role key, the AD_WORKER_SECRET header (schedule), or a signed-in admin (the button).
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { inspectImage, isVariant, moderationDecision, pickVariant, variantKey, type Variant } from '../_shared/adBannerCore.ts';
-import { generateBannerArt, moderateImage, ProviderError } from '../_shared/adAI.ts';
+import { generateBannerArt, moderateImage, ProviderError, withAiContext, setAiContext } from '../_shared/adAI.ts';
 import { cloudinaryConfigured, uploadSeasonalArt } from '../_shared/cloudinary.ts';
 import { allCopySafe, buildSeasonalPrompt, croppedUrl, heroSlots, isSeasonKey, seasonKey, type HeroSlot } from '../_shared/seasonalHeroCore.ts';
 
@@ -25,26 +25,29 @@ function safeEqual(a: string, b: string): boolean {
   return d === 0;
 }
 
-async function caller(req: Request): Promise<{ ok: boolean; admin: boolean }> {
+async function caller(req: Request): Promise<{ ok: boolean; admin: boolean; userId: string | null }> {
   const bearer = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
   const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
   const secret = Deno.env.get('AD_WORKER_SECRET') ?? '';
   const header = req.headers.get('x-ad-worker-secret') ?? '';
-  if ((service && safeEqual(bearer, service)) || (secret.length >= 16 && safeEqual(header, secret))) return { ok: true, admin: false };
-  if (!bearer) return { ok: false, admin: false };
+  if ((service && safeEqual(bearer, service)) || (secret.length >= 16 && safeEqual(header, secret))) return { ok: true, admin: false, userId: null };
+  if (!bearer) return { ok: false, admin: false, userId: null };
   const userClient = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, { global: { headers: { Authorization: `Bearer ${bearer}` } } });
   const { data: claims } = await userClient.auth.getClaims(bearer);
   const userId = claims?.claims?.sub;
-  if (!userId) return { ok: false, admin: false };
+  if (!userId) return { ok: false, admin: false, userId: null };
   const { data: isAdmin } = await userClient.rpc('has_role', { _user_id: userId, _role: 'admin' });
-  return { ok: !!isAdmin, admin: !!isAdmin };
+  return { ok: !!isAdmin, admin: !!isAdmin, userId: String(userId) };
 }
 
-Deno.serve(async (req) => {
+Deno.serve((req: Request) => withAiContext({ feature: 'seasonal_hero' }, () => handle(req)));
+
+async function handle(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
   if (req.method !== 'POST') return reply({ error: 'Method not allowed' }, 405);
   const who = await caller(req);
   if (!who.ok) return reply({ error: 'Unauthorized' }, 401);
+  setAiContext({ userId: who.userId });
 
   const body = await req.json().catch(() => ({})) as { season?: string; force?: boolean; max?: number };
   const season = body.season ?? seasonKey(new Date());
@@ -102,7 +105,7 @@ Deno.serve(async (req) => {
   const { data: published, error: publishError } = await admin.rpc('seasonal_hero_publish', { _run: run, _season: season, _items: items });
   if (publishError) return fail(admin, run, `Publishing failed: ${publishError.message}`);
   return reply({ status: 'published', season, published: !!published?.published, total: slots.length });
-});
+}
 
 async function paint(admin: any, run: string, season: string, slot: HeroSlot, variant: Variant, imageCost: number) {
   const art = await generateBannerArt(buildSeasonalPrompt(slot, variant));
