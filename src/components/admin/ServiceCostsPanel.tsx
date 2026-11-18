@@ -70,11 +70,10 @@ export default function ServiceCostsPanel() {
       <section aria-label="Summary" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Cloudinary, annual allocation" value={ngn(cloud?.annual_allocation)} />
         <Stat label="Resend, annual allocation" value={ngn(resend?.annual_allocation)} />
-        <Stat label="OpenAI operational credit allocation" value={usd(s.openai_allocation_usd)} hint="Displayed figure" />
-        <Stat label="OpenAI funded balance" value={usd(s.openai_funded_usd)} hint="Actually paid in" />
-        <Stat label="Actual API expenditure" value={usd(s.actual_spend_usd)} hint={`${s.billed_calls.toLocaleString()} billed requests`} />
-        <Stat label="Remaining actual API balance" value={usd(s.remaining_actual_usd)} hint="Funded balance minus actual expenditure" />
-        <Stat label="Internal AI service charges" value={usd(s.service_charges_usd)} hint="2x actual cost. Tracked separately" />
+        <Stat label="OpenAI funded amount" value={usd(s.openai_funded_usd)} />
+        <Stat label="Actual API expenditure" value={usd(s.actual_spend_usd)} hint={`${s.billed_calls.toLocaleString()} billed requests. What OpenAI charges`} />
+        <Stat label="Remaining OpenAI balance" value={usd(s.remaining_actual_usd)} hint="Funded amount minus the 2x service charges" />
+        <Stat label="Internal AI service charges" value={usd(s.service_charges_usd)} hint="2x actual cost. Deducted from the balance" />
       </section>
 
       <section aria-label="Service records" className="space-y-3">
@@ -83,7 +82,7 @@ export default function ServiceCostsPanel() {
           <div key={sv.service_key} className="rounded-lg bg-card p-4 card-shadow">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="font-medium">{sv.service_name}</h3>
-              <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium">{sv.payment_status}</span>
+              {sv.currency === 'USD' && <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium">{sv.payment_status}</span>}
             </div>
             {sv.currency === 'NGN' ? (
               <dl className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
@@ -93,14 +92,12 @@ export default function ServiceCostsPanel() {
                 <Fact label="Actual amount paid" value={ngn(sv.actual_amount_paid)} />
               </dl>
             ) : (
-              <dl className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-                <Fact label="Displayed credit allocation" value={usd(sv.annual_allocation)} />
-                <Fact label="Actual funded balance" value={usd(sv.funded_balance)} />
-                <Fact label="Actual API expenditure" value={usd(s.actual_spend_usd)} />
-                <Fact label="Remaining actual credit" value={usd(s.remaining_actual_usd)} />
+              <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                <Fact label="Funded amount" value={usd(sv.funded_balance)} />
+                <Fact label="Remaining balance (after 2x charges)" value={usd(s.remaining_actual_usd)} />
               </dl>
             )}
-            {sv.note && <p className="mt-3 text-xs text-muted-foreground">{sv.note}</p>}
+            {sv.note && sv.currency === 'USD' && <p className="mt-3 text-xs text-muted-foreground">{sv.note}</p>}
           </div>
         ))}
       </section>
@@ -109,7 +106,7 @@ export default function ServiceCostsPanel() {
         <h2 className="font-heading text-base font-semibold">AI usage</h2>
         <p className="text-xs text-muted-foreground">
           Actual cost is what OpenAI takes from the balance (estimated from tokens and image counts; check it against your OpenAI usage page).
-          The service charge is a fixed 2x of that cost and never reduces the OpenAI balance.
+          The service charge is a fixed 2x of that cost, and it is the amount deducted from the $170 balance.
           {s.tracking_since ? ` Tracking since ${new Date(s.tracking_since).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}. Spend before that is not in this ledger.` : ''}
         </p>
         <div className="overflow-x-auto rounded-lg bg-card card-shadow">

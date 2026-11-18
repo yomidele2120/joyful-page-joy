@@ -28,8 +28,10 @@ INSERT INTO public.service_allocations
 VALUES
   ('cloudinary', 'Cloudinary', 'NGN', 7000, 12, 84000, 'Free tier', 0, NULL, 1, 'Allocation is a budget line; nothing is being charged.'),
   ('resend', 'Resend', 'NGN', 7000, 12, 84000, 'Free tier', 0, NULL, 2, 'Allocation is a budget line; nothing is being charged.'),
-  ('openai', 'OpenAI API', 'USD', NULL, NULL, 170, 'Prepaid credit', 0, 99, 3, 'Displayed allocation is $170. The funded balance (about $99) is what was really paid in.')
-ON CONFLICT (service_key) DO NOTHING;   -- a re-run never overwrites a value an admin corrected in SQL
+  ('openai', 'OpenAI API', 'USD', NULL, NULL, 170, 'Prepaid credit', 0, 170, 3, 'One funded amount: $170. Actual API cost is deducted from it.')
+ON CONFLICT (service_key) DO UPDATE
+  SET funded_balance = 170, annual_allocation = 170, note = EXCLUDED.note
+  WHERE public.service_allocations.service_key = 'openai';   -- also fixes the earlier $99 figure if this file was already run
 
 -- 2. Rates used to turn token counts into dollars (text models only). Server-side, admin-readable.
 --    These are ESTIMATES: OpenAI's reply carries token counts, not dollars. Check them against OpenAI's pricing page.
@@ -114,7 +116,7 @@ BEGIN
     'openai_allocation_usd', _alloc,
     'openai_funded_usd', _funded,
     'actual_spend_usd', round(_spent, 4),
-    'remaining_actual_usd', round(coalesce(_funded, 0) - _spent, 4),
+    'remaining_actual_usd', round(coalesce(_funded, 0) - _charges, 4),   -- the single $170 balance falls by the 2x charge
     'service_charges_usd', round(_charges, 4),
     'billed_calls', _n,
     'tracking_since', _since);
