@@ -1,6 +1,6 @@
 import { BrandLogoPill } from '@/components/BrandLogo';
 import { Link } from 'react-router-dom';
-import { Globe, Mail, MapPin, Phone } from 'lucide-react';
+import { ChevronDown, Globe, Mail, MapPin, Phone } from 'lucide-react';
 import { useCategories } from '@/hooks/useProducts';
 import { BUSINESS, COMPANY_LINKS, LEGAL_LINKS } from '@/config/business';
 import { useConsent } from '@/contexts/ConsentContext';
@@ -11,8 +11,8 @@ const linkCls = 'text-white/70 transition-colors hover:text-white';
 function Column({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <h4 className="mb-4 text-xs font-semibold uppercase tracking-wider text-white/90">{title}</h4>
-      <ul className="space-y-2.5 text-sm">{children}</ul>
+      <h4 className="mb-2.5 text-xs md:mb-4 font-semibold uppercase tracking-wider text-white/90">{title}</h4>
+      <ul className="space-y-2 text-sm md:space-y-2.5">{children}</ul>
     </div>
   );
 }
@@ -33,16 +33,16 @@ export default function Footer({ flush = false }: { flush?: boolean }) {
           : 'mt-16'
       }`}
     >
-      <div className="container grid grid-cols-2 gap-x-6 gap-y-10 py-12 lg:grid-cols-12 lg:gap-x-8">
+      <div className="container grid grid-cols-2 gap-x-6 gap-y-7 py-8 md:gap-y-10 md:py-12 lg:grid-cols-12 lg:gap-x-8">
         {/* Brand */}
         <div className="col-span-2 lg:col-span-4">
-          <Link to="/" aria-label="IT Hub Africa home" className="mb-4 inline-block">
+          <Link to="/" aria-label="IT Hub Africa home" className="mb-3 inline-block md:mb-4">
             <BrandLogoPill logoClassName="h-10" />
           </Link>
           <p className="max-w-xs text-sm leading-relaxed text-white/60">
             Buy, Sell, and Grow With Confidence. Nigeria's trusted online marketplace.
           </p>
-          <div className="mt-5 flex flex-wrap gap-2">
+          <div className="mt-3 flex flex-wrap gap-2 md:mt-5">
             <Link to="/products" className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90">Shop now</Link>
             <Link to="/sell" className="rounded-md border border-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10">Sell with us</Link>
           </div>
@@ -57,7 +57,7 @@ export default function Footer({ flush = false }: { flush?: boolean }) {
             {payLaterOn && <li><Link to="/pay-later" className={linkCls}>Pay Later</Link></li>}
             {marketplace?.preorder_enabled !== false && <li><Link to="/preorders" className={linkCls}>Preorders</Link></li>}
             {(categories ?? []).slice(0, 3).map(cat => (
-              <li key={cat.id}><Link to={`/category/${cat.slug}`} className={linkCls}>{cat.name}</Link></li>
+              <li key={cat.id} className="hidden md:list-item"><Link to={`/category/${cat.slug}`} className={linkCls}>{cat.name}</Link></li>
             ))}
           </Column>
         </div>
@@ -107,9 +107,22 @@ export default function Footer({ flush = false }: { flush?: boolean }) {
       </div>
 
       <div className="border-t border-white/10">
-        <div className="container flex flex-col items-center gap-4 py-5 text-xs text-white/50 md:flex-row md:justify-between">
-          <p>© {year} IT Hub Africa. All rights reserved.</p>
-          <nav aria-label="Policies and company">
+        <div className="container flex flex-col gap-3 py-4 text-xs text-white/50 md:flex-row md:items-center md:justify-between md:gap-4 md:py-5">
+          {/* Phones: all policies fold into one tap-to-open row, so they take one line instead of six. */}
+          <details className="group md:hidden">
+            <summary className="flex cursor-pointer list-none items-center justify-between rounded-lg bg-white/5 px-3 py-2.5 text-sm font-medium text-white/80 [&::-webkit-details-marker]:hidden">
+              Policies and company
+              <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden="true" />
+            </summary>
+            <ul className="grid grid-cols-2 gap-x-4 gap-y-2.5 px-1 pt-3">
+              {[...LEGAL_LINKS, ...COMPANY_LINKS].map(link => (
+                <li key={link.to}><Link to={link.to} className="block transition-colors hover:text-white">{link.label}</Link></li>
+              ))}
+              <li><button type="button" onClick={openPreferences} className="transition-colors hover:text-white">Cookie settings</button></li>
+            </ul>
+          </details>
+          <p className="text-center md:text-left">© {year} IT Hub Africa. All rights reserved.</p>
+          <nav aria-label="Policies and company" className="hidden md:block">
             <ul className="flex flex-wrap justify-center gap-x-5 gap-y-2">
               {[...LEGAL_LINKS, ...COMPANY_LINKS].map(link => (
                 <li key={link.to}><Link to={link.to} className="transition-colors hover:text-white">{link.label}</Link></li>

@@ -15,8 +15,11 @@ export function useVendorBalance(vendorId?: string) {
     queryFn: async (): Promise<VendorBalance> => {
       const { data, error } = await (supabase as any).from('order_item_payables').select('vendor_net, payout_status').eq('vendor_id', vendorId).limit(5000);
       if (error) throw error;
+      // Corrections and money moved to the advertising balance that the next payout will apply.
+      const { data: adj } = await (supabase as any).from('supplier_adjustments').select('amount').eq('vendor_id', vendorId).is('applied_payout_id', null);
+      const pendingAdjust = (adj ?? []).reduce((n: number, r: any) => n + Number(r.amount || 0), 0);
       const sum = (s: string) => (data ?? []).filter((r: any) => r.payout_status === s).reduce((n: number, r: any) => n + Number(r.vendor_net || 0), 0);
-      return { available: sum('available'), held: sum('held'), processing: sum('processing'), paid: sum('paid') };
+      return { available: Math.max(sum('available') + pendingAdjust, 0), held: sum('held'), processing: sum('processing'), paid: sum('paid') };
     },
   });
 }
@@ -35,7 +38,7 @@ export default function VendorEarningsPanel({ vendorId }: { vendorId: string }) 
   return (
     <div className="max-w-3xl space-y-4">
       <div className="grid grid-cols-2 gap-3">
-        <StatCard icon={<Wallet />} label="Ready to pay out" value={formatNaira(b?.available ?? 0)} loading={isLoading} />
+        <StatCard icon={<Wallet />} label="Ready to pay out" value={formatNaira(b?.available ?? 0)} loading={isLoading} hint="After any money moved to advertising" />
         <StatCard icon={<Wallet />} tone="sky" label="Held until delivery" value={formatNaira(b?.held ?? 0)} loading={isLoading} hint="Released when the order completes" />
         <StatCard icon={<Wallet />} tone="accent" label="On the way to your bank" value={formatNaira(b?.processing ?? 0)} loading={isLoading} />
         <StatCard icon={<Wallet />} label="Paid out so far" value={formatNaira(b?.paid ?? 0)} loading={isLoading} />

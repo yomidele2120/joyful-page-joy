@@ -230,7 +230,7 @@ export function ShippingPolicy() {
       </Section>
       <Section title="2. Delivery cost and time">
         <p>
-          The checkout total is the price of the goods plus 7.5% VAT; it does not add a separate delivery fee. Delivery charges, delivery areas and delivery times, where they apply, are set by each seller. Confirm them with the seller before you order, using
+          The checkout total is the price of the goods plus 7.5% VAT; it does not add a separate delivery fee. Delivery charges, delivery areas and lead time, where they apply, are set by each seller. Confirm them with the seller before you order, using
           <strong className="text-foreground"> Chat now</strong> or <strong className="text-foreground">Send inquiry</strong> on the product page. Delivery dates are estimates, not guarantees.
         </p>
         <p>Money you pay a seller outside our checkout (for example a delivery fee sent directly) is not covered by our dispute process.</p>

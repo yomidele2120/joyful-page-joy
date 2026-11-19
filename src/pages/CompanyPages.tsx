@@ -219,7 +219,7 @@ const FAQ: { group: string; items: { q: string; a: React.ReactNode }[] }[] = [
       { q: 'What does MOQ mean?', a: 'MOQ is the minimum order quantity: the smallest number of units a supplier will sell in one order. Some products also get cheaper per unit as you order more. The price for your quantity is shown on the product page and checked again when you order.' },
       { q: 'Is VAT included in the price?', a: 'No. Prices are shown before VAT. VAT of 7.5% is added at checkout and shown before you pay.' },
       { q: 'How do I ask a supplier a question before buying?', a: 'Use Chat now or Send inquiry on the product page. If you cannot find a product, post a request for quotation (RFQ) and suppliers can send you quotes.' },
-      { q: 'Is delivery included?', a: <>The checkout total is the goods plus VAT. Delivery charges and times are set by each supplier, so confirm them before you order. See the <Link to="/shipping-policy" className="text-primary hover:underline">Shipping and Delivery Policy</Link>.</> },
+      { q: 'Is delivery included?', a: <>The checkout total is the goods plus VAT. Delivery charges and lead time are set by each supplier, so confirm them before you order. See the <Link to="/shipping-policy" className="text-primary hover:underline">Shipping and Delivery Policy</Link>.</> },
       { q: 'How do I follow my order?', a: <>Open <Link to="/my-orders" className="text-primary hover:underline">My orders</Link>. You also get a notification each time the status changes.</> },
     ],
   },

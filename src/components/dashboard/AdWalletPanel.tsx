@@ -20,6 +20,11 @@ export default function AdWalletPanel() {
   const { data, isLoading } = useQuery<any>({ queryKey: ['my-ad-wallet'], queryFn: () => call('my_ad_wallet'), staleTime: 15_000 });
   const [amount, setAmount] = useState('');
   const [busy, setBusy] = useState(false);
+  // Money the supplier has already earned and that is released from the hold ("Ready to pay out").
+  const { data: earn } = useQuery<any>({ queryKey: ['my-earnings-for-ads'], queryFn: () => call('my_earnings_for_ads'), staleTime: 15_000, retry: false });
+  const [fromSales, setFromSales] = useState('');
+  const [movingFromSales, setMovingFromSales] = useState(false);
+  const [requestId, setRequestId] = useState(() => crypto.randomUUID());   // same id on a double tap = only one transfer
 
   // Coming back from Paystack: ask the server to confirm the payment (never trust the redirect itself).
   useEffect(() => {
@@ -50,6 +55,22 @@ export default function AdWalletPanel() {
   };
 
   const quick = [5000, 10000, 20000, 50000].filter(q => q >= min && q <= max);
+
+  const availableNaira = Math.floor(Number(earn?.available_kobo ?? 0) / 100);
+  const salesValue = Number(fromSales);
+  const salesValid = Number.isInteger(salesValue) && salesValue >= min && salesValue <= Math.min(max, availableNaira);
+  const moveFromSales = async () => {
+    setMovingFromSales(true);
+    try {
+      await call('topup_ad_wallet_from_earnings', { _amount_naira: salesValue, _request_id: requestId });
+      toast.success(`${formatNaira(salesValue)} moved from your earnings to your advertising balance.`);
+      setFromSales(''); setRequestId(crypto.randomUUID());
+      qc.invalidateQueries({ queryKey: ['my-ad-wallet'] });
+      qc.invalidateQueries({ queryKey: ['my-earnings-for-ads'] });
+      qc.invalidateQueries({ queryKey: ['vendor-balance'] });
+    } catch (e) { toast.error(errText(e)); }
+    finally { setMovingFromSales(false); }
+  };
 
   return (
     <Panel title="Advertising balance">
@@ -87,6 +108,25 @@ export default function AdWalletPanel() {
           )}
         </div>
       ) : <p className="mt-3 text-sm font-medium">Adding funds is switched off right now.</p>}
+      {earn?.enabled && (
+        <div className="mt-3 rounded-2xl border border-border p-3">
+          <p className="text-sm font-medium">Pay from your sales</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Use earnings that are already released from the hold. You can move up to <span className="font-semibold text-foreground">{formatNaira(availableNaira)}</span> now.
+            It is taken off your next payout. Earnings still on hold cannot be used.
+          </p>
+          {availableNaira >= min ? (
+            <div className="mt-2 flex gap-2">
+              <Input id="wallet-from-sales" inputMode="numeric" aria-label="Amount to move from your earnings" value={fromSales}
+                onChange={e => setFromSales(e.target.value.replace(/[^0-9]/g, ''))} placeholder={`₦${min.toLocaleString('en-NG')} or more`} className="h-11 min-w-0 flex-1 rounded-xl" />
+              <Button variant="outline" className="h-11 shrink-0 rounded-xl px-3" onClick={() => setFromSales(String(Math.min(max, availableNaira)))}>All</Button>
+              <Button variant="cta" className="h-11 shrink-0 rounded-xl px-4" disabled={!salesValid || movingFromSales} onClick={moveFromSales}>{movingFromSales ? 'Moving…' : 'Move funds'}</Button>
+            </div>
+          ) : (
+            <p className="mt-2 rounded-lg bg-secondary p-2.5 text-xs text-muted-foreground">You need at least {formatNaira(min)} of released earnings to use this. Use a card or bank transfer above instead.</p>
+          )}
+        </div>
+      )}
       {!!data.pending?.length && <p className="mt-2 text-xs text-muted-foreground">{data.pending.length} payment{data.pending.length === 1 ? ' is' : 's are'} waiting for Paystack to confirm. Funds appear here once it does.</p>}
       <p className="mt-2 text-xs text-muted-foreground">Pays for ads on Google, Meta and TikTok. Each cost is taken from this balance and listed in your history.</p>
 

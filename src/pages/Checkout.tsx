@@ -464,7 +464,7 @@ export default function Checkout() {
               </div>
             )}
             <p className="text-muted-foreground">
-              Delivery charges and times are arranged with the seller (see the{' '}
+              Delivery charges and lead time are arranged with the seller (see the{' '}
               <Link to="/shipping-policy" target="_blank" className="text-primary hover:underline">Shipping Policy</Link>).
               Cancellations and refunds follow the{' '}
               <Link to="/returns-policy" target="_blank" className="text-primary hover:underline">Return, Refund and Cancellation Policy</Link>.
