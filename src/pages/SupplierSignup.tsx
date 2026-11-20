@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useCaptcha } from '@/components/auth/Captcha';
 import { trackRegistration } from '@/lib/tracking';
 import SupplierTermsBox, { type CurrentTerms } from '@/components/suppliers/SupplierTermsBox';
 import { BANKS, BANK_PLACEHOLDER, isValidAccountNumber } from '@/lib/banks';
+import { useBankAccountName, lookupMessage } from '@/hooks/useBankAccountName';
 import { Upload } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -51,6 +52,12 @@ export default function SupplierSignup() {
     !!form.businessName.trim() && !!form.firstName.trim() && !!form.lastName.trim() && !!form.email.trim() &&
     !!form.phone && !!form.whatsappNumber && form.password.length >= 8 && !!form.businessType;
   const step2Ready = !!form.companyAddress.trim();
+  const lookup = useBankAccountName(form.bankName, form.bankAccountNumber);
+  useEffect(() => {
+    // Paystack's name replaces anything typed. If the check is unavailable, the supplier types it instead.
+    if (lookup.state === 'verified') setForm(f => (f.bankAccountName === lookup.name ? f : { ...f, bankAccountName: lookup.name }));
+    else if (lookup.state !== 'unavailable') setForm(f => (f.bankAccountName ? { ...f, bankAccountName: '' } : f));
+  }, [lookup]);
   const bankReady =
     !!form.bankName && form.bankName !== BANK_PLACEHOLDER &&
     isValidAccountNumber(form.bankAccountNumber) && !!form.bankAccountName.trim();
@@ -251,7 +258,12 @@ export default function SupplierSignup() {
             <p className="-mt-3 mb-5 text-sm text-slate-500">Required. Your payment account is set up automatically from these details once an admin approves you. You can change them later in your dashboard.</p>
             <SelectField label="Bank name" value={form.bankName || BANK_PLACEHOLDER} onChange={v => set('bankName', v === BANK_PLACEHOLDER ? '' : v)} options={[BANK_PLACEHOLDER, ...BANKS]} />
             <Field label="Account number (10 digits)" inputMode="numeric" maxLength={10} value={form.bankAccountNumber} onChange={e => set('bankAccountNumber', e.target.value.replace(/\D/g, ''))} />
-            <Field label="Account name" value={form.bankAccountName} onChange={e => set('bankAccountName', e.target.value)} />
+            <Field label="Account name" value={form.bankAccountName} readOnly={lookup.state !== 'unavailable'}
+              placeholder={lookup.state === 'unavailable' ? '' : 'Shows here after you enter your account number'}
+              onChange={e => set('bankAccountName', e.target.value)} />
+            {lookup.state === 'verified'
+              ? <p className="-mt-3 mb-5 text-sm font-medium text-emerald-700" role="status">Verified by Paystack. Is this your account?</p>
+              : lookupMessage(lookup) && <p className={`-mt-3 mb-5 text-sm ${lookup.state === 'not_found' || lookup.state === 'bank_unsupported' ? 'text-red-600' : 'text-slate-500'}`} role="status">{lookupMessage(lookup)}</p>}
             <SupplierTermsBox onChange={(a, t) => { setTermsAccepted(a); setTerms(t); }} />
             <div className="flex gap-3">
               <SecondaryButton onClick={() => setStep(2)}>Back</SecondaryButton>

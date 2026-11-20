@@ -26,6 +26,7 @@ import { PriceEditor } from '@/components/seller/PriceEditor';
 import { ProductEditor } from '@/components/seller/ProductEditor';
 import { functionErrorMessage } from '@/lib/functionError';
 import { BANKS, BANK_PLACEHOLDER, isValidAccountNumber } from '@/lib/banks';
+import { useBankAccountName, lookupMessage } from '@/hooks/useBankAccountName';
 import { formatNaira } from '@/lib/format';
 import { useCategories } from '@/hooks/useProducts';
 import { Bell, Wallet, Users, Package, ShoppingCart, DollarSign, Plus, LogOut, ArrowLeft, Trash2, Store, Upload, MessageCircle, AlertCircle, Clock, CheckCircle, CreditCard, LayoutDashboard, Film, Settings, ExternalLink, Pencil, Megaphone, Pin, Gift } from 'lucide-react';
@@ -806,6 +807,11 @@ function BankDetails({ vendor, onUpdate }: { vendor: any; onUpdate: () => void }
   const [accountNumber, setAccountNumber] = useState<string>(vendor.bank_account_number || '');
   const [accountName, setAccountName] = useState<string>(vendor.bank_account_name || '');
   const [saving, setSaving] = useState(false);
+  const lookup = useBankAccountName(bankName, accountNumber);
+  useEffect(() => {
+    if (lookup.state === 'verified') setAccountName(lookup.name);
+    else if (lookup.state !== 'unavailable') setAccountName('');
+  }, [lookup]);
 
   const valid = !!bankName && isValidAccountNumber(accountNumber) && !!accountName.trim();
   const changed =
@@ -854,7 +860,14 @@ function BankDetails({ vendor, onUpdate }: { vendor: any; onUpdate: () => void }
           </Select>
         </div>
         <div><Label>Account number (10 digits)</Label><Input inputMode="numeric" maxLength={10} value={accountNumber} onChange={e => setAccountNumber(e.target.value.replace(/\D/g, ''))} /></div>
-        <div><Label>Account name</Label><Input value={accountName} onChange={e => setAccountName(e.target.value)} /></div>
+        <div>
+          <Label>Account name</Label>
+          <Input value={accountName} readOnly={lookup.state !== 'unavailable'} onChange={e => setAccountName(e.target.value)}
+            placeholder={lookup.state === 'unavailable' ? '' : 'Shows after you enter your account number'} />
+          {lookup.state === 'verified'
+            ? <p className="mt-1 text-xs font-medium text-emerald-600" role="status">Verified by Paystack</p>
+            : lookupMessage(lookup) && <p className={`mt-1 text-xs ${lookup.state === 'not_found' || lookup.state === 'bank_unsupported' ? 'text-destructive' : 'text-muted-foreground'}`} role="status">{lookupMessage(lookup)}</p>}
+        </div>
       </div>
       <Button onClick={handleSave} disabled={saving || !valid || !changed}>{saving ? 'Saving...' : 'Save bank details'}</Button>
     </div>
