@@ -13,6 +13,8 @@ export interface NotificationEmailData {
   paymentReference?: string;
   paymentMethod?: string;
   storeName?: string;
+  courier?: string;
+  waybill?: string;
   vendorName?: string;
   productName?: string;
   quantity?: number;
@@ -64,11 +66,11 @@ function subjectFor(eventType: string, data: NotificationEmailData): string {
     'buyer.inquiry_replied': 'A supplier replied to your inquiry',
     'buyer.rfq_quote': 'You received a quote for your request',
     'vendor.new_rfq': 'A new request for quotation matches your shop',
-    'admin.new_vendor': 'A new vendor registered on IT Hub Africa',
-    'admin.new_buyer': 'A new buyer registered on IT Hub Africa',
-    'user.welcome': 'Welcome to IT Hub Africa',
+    'admin.new_vendor': 'A new vendor registered on ITHUBAFRICA',
+    'admin.new_buyer': 'A new buyer registered on ITHUBAFRICA',
+    'user.welcome': 'Welcome to ITHUBAFRICA',
     'admin.content_report': 'A marketplace content report needs review',
-    'user.support_reply': 'The IT Hub Africa support team replied',
+    'user.support_reply': 'The ITHUBAFRICA support team replied',
     'vendor.membership_activated': 'Your supplier membership is active',
     'vendor.membership_expiring': 'Your supplier membership is expiring soon',
     'vendor.membership_payment_failed': 'Your supplier membership payment needs attention',
@@ -78,14 +80,14 @@ function subjectFor(eventType: string, data: NotificationEmailData): string {
     'vendor.dispute_update': `An update to a dispute for order${order}`,
     'admin.dispute_opened': 'A new order dispute needs review',
   };
-  return subjects[eventType] ?? 'An update from IT Hub Africa';
+  return subjects[eventType] ?? 'An update from ITHUBAFRICA';
 }
 
 function contentFor(eventType: string, data: NotificationEmailData, siteUrl: string) {
   const order = data.orderNumber ? `Order #${data.orderNumber}` : 'Your order';
   const lines: string[] = [];
   let heading = 'Marketplace update';
-  let intro = 'There is a new update from IT Hub Africa.';
+  let intro = 'There is a new update from ITHUBAFRICA.';
   let actionPath = data.actionPath ?? '/';
 
   switch (eventType) {
@@ -94,7 +96,7 @@ function contentFor(eventType: string, data: NotificationEmailData, siteUrl: str
     case 'vendor.order_received':
       heading = 'New paid order'; intro = `${order} has been paid. Prepare the items below and update the order from your supplier dashboard.`; actionPath = '/supplier-dashboard'; break;
     case 'buyer.order_processing': heading = 'Being prepared'; intro = `${order} is being prepared by the supplier.`; actionPath = '/my-orders'; break;
-    case 'buyer.order_shipped': heading = 'Your order has shipped'; intro = `${order} has been marked as shipped.`; actionPath = '/my-orders'; break;
+    case 'buyer.order_shipped': heading = 'Your order has shipped'; intro = data.storeName ? `${data.storeName} has shipped your items from ${order}.` : `${order} has been marked as shipped.`; if (data.courier) lines.push(`Courier: ${data.courier}`); if (data.waybill) lines.push(`Waybill or tracking number: ${data.waybill}`); lines.push('Open your order to follow the delivery.'); actionPath = '/my-orders'; break;
     case 'buyer.order_delivered': heading = 'Order delivered'; intro = `${order} has been marked as delivered.`; actionPath = '/my-orders'; break;
     case 'buyer.order_cancelled':
     case 'vendor.order_cancelled': heading = 'Order cancelled'; intro = `${order} has been cancelled. Any applicable refund will be handled through the marketplace payment process.`; actionPath = eventType.startsWith('vendor.') ? '/supplier-dashboard' : '/my-orders'; break;
@@ -108,7 +110,7 @@ function contentFor(eventType: string, data: NotificationEmailData, siteUrl: str
     case 'vendor.new_rfq': heading = 'New matching request'; intro = `A buyer posted a request that matches ${data.storeName ?? 'your shop'}${data.title ? `: ${data.title}` : ''}.`; if (data.description) lines.push(data.description); if (data.quantity) lines.push(`Quantity: ${data.quantity} ${data.unit ?? 'Piece'}`); if (data.destination) lines.push(`Destination: ${data.destination}`); if (data.targetPrice != null) lines.push(`Target price: ${money(data.targetPrice)}`); actionPath = '/rfq'; break;
     case 'admin.new_vendor': heading = 'New vendor registration'; intro = `${data.storeName ?? 'A new vendor'} has registered and may need review.`; actionPath = '/admin?tab=suppliers'; break;
     case 'user.welcome':
-      heading = 'Welcome to IT Hub Africa';
+      heading = 'Welcome to ITHUBAFRICA';
       intro = 'Your account is ready. You can now buy from suppliers across the marketplace.';
       lines.push('Browse products and compare suppliers.', 'Send an inquiry or request a quote from a supplier.', 'Track your orders from your account.');
       actionPath = '/products'; break;
@@ -197,7 +199,7 @@ export function renderNotificationEmail(eventType: string, data: NotificationEma
 <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%">
 <tr><td style="background:${NAVY};border-radius:16px 16px 0 0;padding:18px 24px">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr>
-    <td><a href="${escapeHtml(base)}" style="text-decoration:none"><span style="display:inline-block;background:#ffffff;border-radius:10px;padding:7px 12px"><img src="${escapeHtml(base)}/email/logo.png" alt="IT Hub Africa" height="26" style="display:block;height:26px;width:auto;border:0;font-family:${font};font-size:15px;font-weight:700;color:${NAVY}"></span></a></td>
+    <td><a href="${escapeHtml(base)}" style="text-decoration:none"><span style="display:inline-block;background:#ffffff;border-radius:10px;padding:7px 12px"><img src="${escapeHtml(base)}/email/logo.png" alt="ITHUBAFRICA" height="26" style="display:block;height:26px;width:auto;border:0;font-family:${font};font-size:15px;font-weight:700;color:${NAVY}"></span></a></td>
     <td align="right" style="font-size:12px;color:#9fb3c8">ithubafrica.com</td>
   </tr></table>
 </td></tr>
@@ -218,11 +220,11 @@ export function renderNotificationEmail(eventType: string, data: NotificationEma
   <p style="margin:14px 0 0;font-size:12px;line-height:1.5;color:#64748b">Button not working? Copy this link into your browser:<br><a href="${escapeHtml(c.actionUrl)}" style="color:#1d4ed8;word-break:break-all">${escapeHtml(c.actionUrl)}</a></p>
 </td></tr>
 <tr><td style="background:#f8fafc;border-top:1px solid #e6ebf1;border-radius:0 0 16px 16px;padding:20px 28px">
-  <p style="margin:0 0 6px;font-size:12px;line-height:1.6;color:#64748b">You are getting this email because of activity on your IT Hub Africa account. It is sent automatically, so please do not reply to it.</p>
+  <p style="margin:0 0 6px;font-size:12px;line-height:1.6;color:#64748b">You are getting this email because of activity on your ITHUBAFRICA account. It is sent automatically, so please do not reply to it.</p>
   <p style="margin:0;font-size:12px;line-height:1.6;color:#64748b">Need help? Write to <a href="mailto:team@ithubafrica.com" style="color:#1d4ed8">team@ithubafrica.com</a> or visit <a href="${escapeHtml(base)}" style="color:#1d4ed8">${escapeHtml(base.replace(/^https?:\/\//, ''))}</a>.</p>
 </td></tr>
 </table>
-<p style="margin:14px 0 0;font-size:11px;color:#94a3b8">© IT Hub Africa</p>
+<p style="margin:14px 0 0;font-size:11px;color:#94a3b8">© ITHUBAFRICA</p>
 </td></tr></table></body></html>`;
   return { subject: c.subject, html, text: c.text };
 }

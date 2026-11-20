@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { Truck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { formatNaira } from '@/lib/format';
+import { COURIERS } from '@/lib/couriers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -79,7 +80,8 @@ function OrderCard({ o, onChanged }: { o: VendorOrder; onChanged: () => void }) 
         {o.ship_status === 'pending' && (
           <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
             <div className="space-y-1"><Label>Courier</Label>
-              <Input value={courier} onChange={e => setCourier(e.target.value)} placeholder="e.g. GIG Logistics" maxLength={80} /></div>
+              <Input value={courier} onChange={e => setCourier(e.target.value)} placeholder="Choose or type a courier" maxLength={80} list="courier-list" />
+              <datalist id="courier-list">{COURIERS.map(c => <option key={c.name} value={c.name} />)}</datalist></div>
             <div className="space-y-1"><Label>Waybill or tracking no.</Label>
               <Input value={waybill} onChange={e => setWaybill(e.target.value)} placeholder="e.g. 7003419928" maxLength={80} /></div>
             <Button onClick={ship} disabled={busy || !courier.trim() || !waybill.trim()}>

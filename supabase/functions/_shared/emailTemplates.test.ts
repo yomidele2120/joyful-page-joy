@@ -42,3 +42,10 @@ test('cancelled and failed events use the warning colour, good news uses green',
   assert.match(renderNotificationEmail('buyer.order_cancelled', {}, SITE).html, /#dc2626/);
   assert.match(renderNotificationEmail('buyer.order_shipped', {}, SITE).html, /#16a34a/);
 });
+
+test('the shipped email carries the supplier, courier and waybill, safely escaped', () => {
+  const e = renderNotificationEmail('buyer.order_shipped', { orderNumber: 'AB12CD34', storeName: 'Techhub', courier: 'GIG <i>Logistics</i>', waybill: '7003419928' }, SITE);
+  assert.match(e.text, /Techhub has shipped your items/);
+  assert.match(e.text, /7003419928/);
+  assert.doesNotMatch(e.html, /<i>Logistics<\/i>/);
+});

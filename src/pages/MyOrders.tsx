@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import SmartReorder from '@/components/orders/SmartReorder';
+import OrderTracking, { type TrackedShipment } from '@/components/orders/OrderTracking';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/hooks/useAuth';
@@ -35,6 +36,7 @@ interface OrderItem {
 interface OrderRow {
   id: string; status: string; total: number; created_at: string; payment_method: string; is_preorder: boolean;
   order_items: OrderItem[];
+  order_shipments: TrackedShipment[];
 }
 
 const ORDER_STATUS: Record<string, string> = {
@@ -67,7 +69,7 @@ export default function MyOrders() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('orders')
-        .select('id, status, total, created_at, payment_method, is_preorder, order_items(quantity, price, products(id, name, slug, image_url, vendor_id, is_preorder, preorder_release_date, preorder_delivery_estimate, preorder_status, price, moq, unit, price_tiers, is_active, stock_quantity, preorder_approved, vendors(id, store_name)))')
+        .select('id, status, total, created_at, payment_method, is_preorder, order_shipments(id, vendor_id, status, courier, waybill, shipped_at, delivered_at, created_at, vendors(store_name)), order_items(quantity, price, products(id, name, slug, image_url, vendor_id, is_preorder, preorder_release_date, preorder_delivery_estimate, preorder_status, price, moq, unit, price_tiers, is_active, stock_quantity, preorder_approved, vendors(id, store_name)))')
         .eq('user_id', user!.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -236,6 +238,8 @@ export default function MyOrders() {
                       </li>
                     ))}
                   </ul>
+
+                  {PAID_STATES.includes(order.status) && <OrderTracking shipments={order.order_shipments ?? []} orderDate={order.created_at} />}
 
                   <div className="space-y-2 border-t border-border p-3 text-sm">
                     <p className="flex justify-between"><span className="text-muted-foreground">Total</span><span className="font-heading font-bold">{formatNaira(order.total)}</span></p>

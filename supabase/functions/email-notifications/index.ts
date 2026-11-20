@@ -66,6 +66,8 @@ async function enrich(db: ReturnType<typeof adminDb>, job: Job): Promise<Notific
   const data: NotificationEmailData = {};
   const payload = job.payload ?? {};
   const orderId = text(payload.order_id);
+  data.courier = text(payload.courier);
+  data.waybill = text(payload.waybill);
   if (orderId && job.event_type.startsWith("buyer.order_") || orderId && job.event_type.startsWith("vendor.order_")) {
     const { data: order, error } = await db.from("orders")
       .select("id,total,email,status,payment_method,shipping_city,shipping_state")
