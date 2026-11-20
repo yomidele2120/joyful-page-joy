@@ -65,15 +65,14 @@ export default function ServiceCostsPanel() {
 
   return (
     <div className="max-w-5xl space-y-6">
-      <p className="text-sm text-muted-foreground">Fixed service records and every AI request the website has made. These figures are read-only.</p>
-
+      
       <section aria-label="Summary" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Cloudinary, annual allocation" value={ngn(cloud?.annual_allocation)} />
         <Stat label="Resend, annual allocation" value={ngn(resend?.annual_allocation)} />
         <Stat label="OpenAI funded amount" value={usd(s.openai_funded_usd)} />
-        <Stat label="Actual API expenditure" value={usd(s.actual_spend_usd)} hint={`${s.billed_calls.toLocaleString()} billed requests. What OpenAI charges`} />
-        <Stat label="Remaining OpenAI balance" value={usd(s.remaining_actual_usd)} hint="Funded amount minus the 2x service charges" />
-        <Stat label="Internal AI service charges" value={usd(s.service_charges_usd)} hint="2x actual cost. Deducted from the balance" />
+        <Stat label="Actual API expenditure" value={usd(s.actual_spend_usd)} />
+        <Stat label="Remaining OpenAI balance" value={usd(s.remaining_actual_usd)} />
+        <Stat label="Internal AI service charges" value={usd(s.service_charges_usd)} />
       </section>
 
       <section aria-label="Service records" className="space-y-3">
@@ -94,21 +93,15 @@ export default function ServiceCostsPanel() {
             ) : (
               <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
                 <Fact label="Funded amount" value={usd(sv.funded_balance)} />
-                <Fact label="Remaining balance (after 2x charges)" value={usd(s.remaining_actual_usd)} />
+                <Fact label="Remaining balance" value={usd(s.remaining_actual_usd)} />
               </dl>
             )}
-            {sv.note && sv.currency === 'USD' && <p className="mt-3 text-xs text-muted-foreground">{sv.note}</p>}
           </div>
         ))}
       </section>
 
       <section aria-label="AI usage" className="space-y-3">
         <h2 className="font-heading text-base font-semibold">AI usage</h2>
-        <p className="text-xs text-muted-foreground">
-          Actual cost is what OpenAI takes from the balance (estimated from tokens and image counts; check it against your OpenAI usage page).
-          The service charge is a fixed 2x of that cost, and it is the amount deducted from the $170 balance.
-          {s.tracking_since ? ` Tracking since ${new Date(s.tracking_since).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}. Spend before that is not in this ledger.` : ''}
-        </p>
         <div className="overflow-x-auto rounded-lg bg-card card-shadow">
           <table className="w-full min-w-[720px] text-sm">
             <thead>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Copy, Mail, MessageCircle, Send } from 'lucide-react';
@@ -8,6 +8,7 @@ import { Panel } from '@/components/dashboard/DashboardShell';
 import { supabase } from '@/integrations/supabase/client';
 import { formatNaira } from '@/lib/format';
 import { BANKS, BANK_PLACEHOLDER, isValidAccountNumber } from '@/lib/banks';
+import { useBankAccountName, lookupMessage } from '@/hooks/useBankAccountName';
 
 const rpc = (fn: string, args?: Record<string, unknown>) => (supabase as any).rpc(fn, args);
 const naira = (kobo: unknown) => formatNaira(Number(kobo ?? 0) / 100);
@@ -34,6 +35,12 @@ export default function ReferralPanel() {
   const [bank, setBank] = useState(BANK_PLACEHOLDER);
   const [acct, setAcct] = useState('');
   const [acctName, setAcctName] = useState('');
+  // Paystack supplies the account holder's name; it is typed by hand only when the check is unavailable.
+  const lookup = useBankAccountName(bank === BANK_PLACEHOLDER ? '' : bank, acct);
+  useEffect(() => {
+    if (lookup.state === 'verified') setAcctName(lookup.name);
+    else if (lookup.state !== 'unavailable') setAcctName('');
+  }, [lookup]);
 
   const { data: ov, isLoading, error } = useQuery<any>({ queryKey: ['my-referral-overview'], queryFn: async () => { const { data, error } = await rpc('my_referral_overview'); if (error) throw error; return data; } });
   const { data: vendors = [] } = useQuery<any[]>({ queryKey: ['my-referred-vendors'], queryFn: async () => (await rpc('my_referred_vendors')).data ?? [] });
@@ -101,8 +108,12 @@ export default function ReferralPanel() {
             {[BANK_PLACEHOLDER, ...BANKS].map(b => <option key={b}>{b}</option>)}
           </select>
           <Input value={acct} onChange={e => setAcct(e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="10-digit account number" inputMode="numeric" aria-label="Account number" />
-          <Input value={acctName} onChange={e => setAcctName(e.target.value)} placeholder="Account name" aria-label="Account name" />
+          <Input value={acctName} readOnly={lookup.state !== 'unavailable'} onChange={e => setAcctName(e.target.value)}
+            placeholder={lookup.state === 'unavailable' ? 'Account name' : 'Name shows after you enter your account number'} aria-label="Account name" />
         </div>
+        {lookup.state === 'verified'
+          ? <p className="mt-2 text-xs font-medium text-emerald-600" role="status">Verified by Paystack</p>
+          : lookupMessage(lookup) && <p className={`mt-2 text-xs ${lookup.state === 'not_found' || lookup.state === 'bank_unsupported' ? 'text-destructive' : 'text-muted-foreground'}`} role="status">{lookupMessage(lookup)}</p>}
         <div className="mt-3 flex flex-wrap gap-2">
           <Button type="button" variant="outline" disabled={busy || bank === BANK_PLACEHOLDER || !isValidAccountNumber(acct) || !acctName.trim()}
             onClick={() => run('save_my_payout_account', { _bank: bank, _number: acct, _name: acctName }, ov.has_payout_account ? 'Payout account updated' : 'Payout account saved')}>
