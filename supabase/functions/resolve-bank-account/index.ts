@@ -33,9 +33,9 @@ Deno.serve(async (req) => {
     if (!bankName || !/^\d{10}$/.test(accountNumber)) return reply({ ok: false, code: 'bad_request' });
 
     const secret = Deno.env.get('PAYSTACK_SECRET_KEY');
-    if (!secret) return reply({ ok: false, code: 'unavailable' });
+    if (!secret) { console.error('resolve-bank-account: PAYSTACK_SECRET_KEY is not set'); return reply({ ok: false, code: 'unavailable', detail: 'Paystack key is not set on the server' }); }
     const banks = await loadBanks(secret);
-    if (!banks) return reply({ ok: false, code: 'unavailable' });
+    if (!banks) { console.error('resolve-bank-account: could not load the Paystack bank list'); return reply({ ok: false, code: 'unavailable', detail: 'Could not load the bank list from Paystack' }); }
     const bank = findBank(bankName, banks);
     if (!bank) return reply({ ok: false, code: 'bank_unsupported' });
 
@@ -46,9 +46,12 @@ Deno.serve(async (req) => {
     if (res.ok && j?.status && typeof j.data?.account_name === 'string' && j.data.account_name.trim()) {
       return reply({ ok: true, account_name: j.data.account_name.trim() });
     }
-    // 422 / 404 from Paystack = no such account. Anything else (rate limit, outage, test-mode key) = lookup unavailable.
-    return reply({ ok: false, code: res.status === 422 || res.status === 404 ? 'not_found' : 'unavailable' });
-  } catch {
-    return reply({ ok: false, code: 'unavailable' });
+    const notFound = res.status === 422 || res.status === 404;
+    if (!notFound) console.error('resolve-bank-account: Paystack said', res.status, String(j?.message ?? '').slice(0, 200));
+    // 422 / 404 = no such account. Anything else (rate limit, outage, test-mode key, resolve not allowed) = lookup unavailable.
+    return reply({ ok: false, code: notFound ? 'not_found' : 'unavailable', detail: notFound ? undefined : String(j?.message ?? `Paystack error ${res.status}`).slice(0, 160) });
+  } catch (e) {
+    console.error('resolve-bank-account failed', e instanceof Error ? e.message : e);
+    return reply({ ok: false, code: 'unavailable', detail: 'The lookup service did not respond' });
   }
 });
