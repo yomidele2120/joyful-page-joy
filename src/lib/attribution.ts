@@ -41,6 +41,8 @@ export async function recordOrderAttribution(orderId: string): Promise<void> {
       _utm: { utm_source: a.utm_source, utm_medium: a.utm_medium, utm_campaign: a.utm_campaign, utm_content: a.utm_content, ad_campaign: a.ad_campaign, ad_vendor: a.ad_vendor, ad_product: a.ad_product },
       _page_url: window.location.href.split('?')[0],
       _user_agent: navigator.userAgent,
+      _fbp: consent ? cookie('_fbp') : null,
+      _fbc: consent ? cookie('_fbc') : null,
     } as never);
   } catch { /* attribution is optional */ }
 }

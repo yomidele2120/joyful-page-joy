@@ -35,7 +35,7 @@ export default function SponsoredAdminPanel() {
       {tab === 'campaigns' && <Campaigns onPick={id => { setPickCampaign(id); setTab('products'); }} />}
       {tab === 'products' && <Catalog campaignId={pickCampaign} setCampaignId={setPickCampaign} />}
       {tab === 'report' && <SponsoredReport mode="admin" />}
-      {tab === 'events' && <TikTokEventsLog />}
+      {tab === 'events' && <div className="space-y-8"><TikTokEventsLog /><TikTokEventsLog platform="meta" /></div>}
     </div>
   );
 }

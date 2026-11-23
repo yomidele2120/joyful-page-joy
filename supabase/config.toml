@@ -122,3 +122,6 @@ verify_jwt = false
 
 [functions.tiktok-events-send]
 verify_jwt = false
+
+[functions.meta-events-send]
+verify_jwt = false

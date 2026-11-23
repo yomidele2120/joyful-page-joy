@@ -10,26 +10,30 @@ import { Stat } from '@/components/ads/adUi';
 const db = supabase as any;
 const TONE: Record<string, 'good' | 'warn' | 'bad' | 'idle'> = { sent: 'good', pending: 'warn', failed: 'bad', skipped: 'idle' };
 
-export default function TikTokEventsLog() {
+export default function TikTokEventsLog({ platform = 'tiktok' }: { platform?: 'tiktok' | 'meta' }) {
+  const meta = platform === 'meta';
+  const table = meta ? 'meta_event_log' : 'tiktok_event_log';
+  const fn = meta ? 'meta-events-send' : 'tiktok-events-send';
+  const name = meta ? 'Meta' : 'TikTok';
   const qc = useQueryClient(); const [busy, setBusy] = useState(false);
   const { data: rows = [] } = useQuery<any[]>({
-    queryKey: ['tiktok-event-log'],
-    queryFn: async () => { const { data, error } = await db.from('tiktok_event_log').select('id, order_id, event_name, status, attempts, http_status, detail, created_at, sent_at').order('created_at', { ascending: false }).limit(100); if (error) throw error; return data; },
+    queryKey: [table],
+    queryFn: async () => { const { data, error } = await db.from(table).select('id, order_id, event_name, status, attempts, http_status, detail, created_at, sent_at').order('created_at', { ascending: false }).limit(100); if (error) throw error; return data; },
     refetchInterval: 30_000,
   });
   const n = (s: string) => rows.filter(r => r.status === s).length;
   const sendNow = async () => {
     setBusy(true);
-    const { data, error } = await supabase.functions.invoke('tiktok-events-send', { body: {} });
+    const { data, error } = await supabase.functions.invoke(fn, { body: {} });
     setBusy(false);
     if (error || data?.error || data?.ok === false) return toast.error(data?.error ?? error?.message ?? 'Could not send. Check the access token secret.');
     toast.success(`Sent ${data.sent}, failed ${data.failed}, skipped ${data.skipped}`);
-    qc.invalidateQueries({ queryKey: ['tiktok-event-log'] });
+    qc.invalidateQueries({ queryKey: [table] });
   };
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4"><Stat label="Sent" value={String(n('sent'))} /><Stat label="Waiting" value={String(n('pending'))} /><Stat label="Failed" value={String(n('failed'))} /><Stat label="Skipped" value={String(n('skipped'))} /></div>
-      <Panel title="Server-side events sent to TikTok (latest 100)" action={<Button size="sm" onClick={sendNow} disabled={busy}>{busy ? 'Sending...' : 'Send waiting events now'}</Button>} flush>
+      <Panel title={`Server-side events sent to ${name} (latest 100)`} action={<Button size="sm" onClick={sendNow} disabled={busy}>{busy ? 'Sending...' : 'Send waiting events now'}</Button>} flush>
         <div className="overflow-x-auto"><table className="w-full text-sm">
           <thead className="bg-muted/40 text-left text-xs text-muted-foreground"><tr><th className="px-3 py-2">Time</th><th className="px-3 py-2">Event</th><th className="px-3 py-2">Order</th><th className="px-3 py-2">Status</th><th className="px-3 py-2">Tries</th><th className="px-3 py-2">Detail</th></tr></thead>
           <tbody>{rows.map(r => (
