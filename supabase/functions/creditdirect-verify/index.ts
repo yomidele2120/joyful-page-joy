@@ -4,6 +4,7 @@
 // webhook (creditdirect-webhook) can complete it too.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { evaluateCreditDirect, fetchStatus, loadCreditDirectConfig, terminalFailure } from "../_shared/creditdirect.ts";
+import { kickTikTokEvents } from "../_shared/tiktokKick.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -56,6 +57,7 @@ Deno.serve(async (req) => {
     const { data: result, error } = await db.rpc('confirm_bnpl_payment', {
       _order_id: order_id, _provider_reference: outcome.providerRef, _is_live: outcome.isLive ?? null, _raw: json,
     });
+    kickTikTokEvents();   // queued by the database only if the order is now paid; safe to call every time
     if (error) return reply({ error: error.message }, 500);
     if (result === 'confirmed' || result === 'already_confirmed') return reply({ success: true });
     return reply({ error: `Could not confirm this payment (${result})` }, 409);

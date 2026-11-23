@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { validatePaystackCharge } from "../_shared/paystackCharge.ts";
 import { kickAdWorker } from "../_shared/adKick.ts";
+import { kickTikTokEvents } from "../_shared/tiktokKick.ts";
 
 
 const corsHeaders = {
@@ -139,6 +140,7 @@ serve(async (req) => {
           // Handles late payments safely: a paid order that already expired is revived if the
           // stock is still there, or flagged "needs_refund" if it has been sold meanwhile.
           const { data: paidResult } = await supabase.rpc('mark_order_paid', { _order_id: order.id, _method: 'card' });
+          kickTikTokEvents();   // queued by the database only if the order is now paid; safe to call every time
           if (paidResult !== 'needs_refund' && paidResult !== 'already_needs_refund') {
             // Money has reached you: supplier earnings on this order can start their hold period.
             await supabase.from('orders')

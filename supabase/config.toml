@@ -119,3 +119,6 @@ verify_jwt = false
 
 [functions.resolve-bank-account]
 verify_jwt = false
+
+[functions.tiktok-events-send]
+verify_jwt = false

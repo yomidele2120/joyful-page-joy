@@ -14,7 +14,8 @@ import { formatNaira } from '@/lib/format';
 import { toast } from 'sonner';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { trackInitiateCheckout, trackPurchase } from '@/lib/tracking';
+import { trackInitiateCheckout, trackPurchase, trackAddPaymentInfo } from '@/lib/tracking';
+import { recordOrderAttribution } from '@/lib/attribution';
 import { activeProvider, providerBrowserReady, providerName } from '@/lib/bnplProvider';
 
 // Set VITE_PAYSTACK_PUBLIC_KEY in Vercel (Settings > Environment Variables) and redeploy.
@@ -197,6 +198,8 @@ export default function Checkout() {
       });
       if (orderError) throw orderError;
       const order = created as { order_id: string; total: number };
+      void recordOrderAttribution(order.order_id);
+      trackAddPaymentInfo(order.order_id, items.map(i => ({ id: i.id, name: i.name, quantity: i.quantity, unitPrice: unitPrice(i) })), Number(order.total));
 
       // Credit Direct: the server opens a hosted checkout and we send the buyer there. They come back to
       // /pay-later/return, which asks Credit Direct whether the order was really paid.
@@ -304,6 +307,8 @@ export default function Checkout() {
       if (orderError) throw orderError;
 
       const order = created as { order_id: string; total: number };
+      void recordOrderAttribution(order.order_id);
+      trackAddPaymentInfo(order.order_id, items.map(i => ({ id: i.id, name: i.name, quantity: i.quantity, unitPrice: unitPrice(i) })), Number(order.total));
 
       // Initialize payment via edge function (the amount is read from the order server-side)
       const { data: paymentData, error: paymentError } = await supabase.functions.invoke('initialize-payment', {
@@ -342,7 +347,7 @@ export default function Checkout() {
               throw new Error(msg);
             }
 
-            trackPurchase(order.order_id, items.map(i => ({ id: i.id, quantity: i.quantity, unitPrice: unitPrice(i) })), Number(order.total));
+            trackPurchase(order.order_id, items.map(i => ({ id: i.id, quantity: i.quantity, unitPrice: unitPrice(i) })), Number(order.total), hasPreorder);
             clearCart();
             toast.success('Payment successful! Your order has been placed.');
             navigate('/');

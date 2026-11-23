@@ -4,6 +4,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { candidateReferences, evaluateVerification, fetchVerify } from "../_shared/klump.ts";
+import { kickTikTokEvents } from "../_shared/tiktokKick.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -46,6 +47,7 @@ serve(async (req) => {
       const { data: result, error } = await db.rpc('confirm_bnpl_payment', {
         _order_id: order_id, _provider_reference: outcome.providerRef, _is_live: outcome.isLive ?? null, _raw: json,
       });
+      kickTikTokEvents();   // queued by the database only if the order is now paid; safe to call every time
       if (error) return reply({ error: error.message }, 500);
       if (result === 'confirmed' || result === 'already_confirmed') return reply({ success: true });
       return reply({ error: `Could not confirm this payment (${result})` }, 409);

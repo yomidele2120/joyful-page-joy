@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { validatePaystackCharge } from "../_shared/paystackCharge.ts";
+import { kickTikTokEvents } from "../_shared/tiktokKick.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -115,6 +116,7 @@ serve(async (req) => {
       .eq('paystack_reference', reference).eq('status', 'success').is('paid_at', null);
 
     const { data: paidResult } = await adminClient.rpc('mark_order_paid', { _order_id: orderId, _method: 'card' });
+    kickTikTokEvents();   // queued by the database only if the order is now paid; safe to call every time
     if (paidResult !== 'needs_refund') {
       // Money has reached you: supplier earnings on this order can start their hold period.
       await adminClient.from('orders')

@@ -4,6 +4,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { candidateReferences, collectStrings, evaluateVerification, fetchVerify, hmacHex, safeEqual } from "../_shared/klump.ts";
+import { kickTikTokEvents } from "../_shared/tiktokKick.ts";
 
 const ok = (body: unknown = { received: true }, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
@@ -58,6 +59,7 @@ serve(async (req) => {
         const { data: result } = await db.rpc('confirm_bnpl_payment', {
           _order_id: tx.order_id, _provider_reference: outcome.providerRef, _is_live: outcome.isLive ?? null, _raw: json,
         });
+        kickTikTokEvents();   // queued by the database only if the order is now paid; safe to call every time
         console.log('klump-webhook confirm result:', result);
         break;
       }

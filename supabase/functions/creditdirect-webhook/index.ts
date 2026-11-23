@@ -3,6 +3,7 @@
 // If CREDITDIRECT_WEBHOOK_SECRET is set, the HMAC signature is required.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
+import { kickTikTokEvents } from "../_shared/tiktokKick.ts";
   evaluateCreditDirect, fetchStatus, findOurReference, loadCreditDirectConfig, signatureValid, terminalFailure,
 } from "../_shared/creditdirect.ts";
 
@@ -47,6 +48,7 @@ Deno.serve(async (req) => {
             const { data: result } = await db.rpc('confirm_bnpl_payment', {
               _order_id: tx.order_id, _provider_reference: outcome.providerRef, _is_live: outcome.isLive ?? null, _raw: json,
             });
+            kickTikTokEvents();   // queued by the database only if the order is now paid; safe to call every time
             console.log('creditdirect-webhook confirm result:', result);
           } else {
             console.log('creditdirect-webhook not confirmed:', outcome.reason);
