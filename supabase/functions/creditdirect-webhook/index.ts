@@ -3,9 +3,9 @@
 // If CREDITDIRECT_WEBHOOK_SECRET is set, the HMAC signature is required.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
-import { kickTikTokEvents } from "../_shared/tiktokKick.ts";
   evaluateCreditDirect, fetchStatus, findOurReference, loadCreditDirectConfig, signatureValid, terminalFailure,
 } from "../_shared/creditdirect.ts";
+import { kickTikTokEvents } from "../_shared/tiktokKick.ts";
 
 const ok = (body: unknown = { received: true }, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
