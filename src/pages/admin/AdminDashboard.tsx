@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from 'sonner';
 import { lazyPage } from '@/lib/lazyPage';
 const ServiceCostsPanel = lazyPage(() => import('@/components/admin/ServiceCostsPanel'));
+const SponsoredAdminPanel = lazyPage(() => import('@/components/sponsored/SponsoredAdminPanel'));
 const SubscriptionsTab = lazyPage(() => import('@/components/admin/SubscriptionsTab'));
 const SupplierPlansTab = lazyPage(() => import('@/components/admin/SupplierPlansTab'));
 const SubscriptionPricingAdmin = lazyPage(() => import('@/components/admin/SubscriptionPricingAdmin'));
@@ -303,6 +304,7 @@ export default function AdminDashboard() {
     { key: 'ai-intelligence', label: 'AI listing tools', icon: Sparkles, group: 'Marketplace' },
     { key: 'campaigns', label: 'Campaign manager', icon: BadgeDollarSign, group: 'Marketplace' },
     { key: 'vendor-ads', label: 'Vendor advertising', icon: Megaphone, group: 'Marketplace' },
+    { key: 'sponsored', label: 'Sponsored products (TikTok)', icon: BadgeDollarSign, group: 'Marketplace' },
     { key: 'risk-review', label: 'Risk review', icon: ShieldAlert, group: 'Marketplace' },
     { key: 'social-seo', label: 'Social & SEO', icon: Globe, group: 'Marketplace' },
     { key: 'google-merchant', label: 'Google Merchant', icon: ShoppingBag, group: 'Marketplace' },
@@ -686,6 +688,7 @@ export default function AdminDashboard() {
         {activeTab === 'email-notifications' && <EmailNotificationsTab />}
         {activeTab === 'subscriptions' && <SubscriptionsTab />}
         {activeTab === 'service-costs' && <ServiceCostsPanel />}
+        {activeTab === 'sponsored' && <SponsoredAdminPanel />}
         {activeTab === 'supplier-plans' && <div className="space-y-6"><SupplierPlansTab /><SubscriptionPricingAdmin /></div>}
         {activeTab === 'referrals' && <ReferralAdminTab />}
         {activeTab === 'ai-intelligence' && <AiProductIntelligenceTab />}

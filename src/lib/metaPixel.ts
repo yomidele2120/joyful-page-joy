@@ -1,7 +1,7 @@
 // Meta (Facebook) Pixel for the storefront.
 //
-// The pixel is OFF unless VITE_META_PIXEL_ID is set to a valid Pixel ID, so
-// local development and previews never send anything to Meta.
+// The pixel only sends data after the visitor allows marketing cookies. Local development
+// can switch it off by setting VITE_META_PIXEL_ID to an empty value.
 //
 // Rules this file follows:
 //  - Only product ids, names, quantities and totals are sent. No names, emails,
@@ -10,7 +10,10 @@
 //  - A Purchase is reported once per order, and only after the payment has been
 //    confirmed by our server.
 
-const PIXEL_ID = (import.meta.env.VITE_META_PIXEL_ID as string | undefined)?.trim() ?? '';
+// The ITHUBAFRICA pixel is the default (a Pixel ID is public, not a secret). VITE_META_PIXEL_ID overrides it;
+// set it to an empty value to switch the pixel off (the unit tests do this).
+const DEFAULT_PIXEL_ID = '2364055121096809';
+const PIXEL_ID = ((import.meta.env.VITE_META_PIXEL_ID as string | undefined) ?? DEFAULT_PIXEL_ID).trim();
 const CURRENCY = 'NGN';
 
 type Fbq = ((...args: unknown[]) => void) & {

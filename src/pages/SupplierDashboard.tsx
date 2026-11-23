@@ -48,6 +48,7 @@ import { applyStoredReferral } from '@/lib/referral';
 import ReferralPanel from '@/components/dashboard/ReferralPanel';
 import SupplierMembershipTab from '@/components/dashboard/SupplierMembershipTab';
 import VendorAdvertisingTab from '@/components/dashboard/VendorAdvertisingTab';
+import VendorSponsoredTab from '@/components/sponsored/VendorSponsoredTab';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 export default function SupplierDashboard() {
@@ -56,7 +57,7 @@ export default function SupplierDashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useTabParam('overview', ['overview', 'products', 'videos', 'orders', 'disputes', 'add-product', 'membership', 'referrals', 'advertising', 'earnings', 'followers', 'notifications', 'shop-settings']);
+  const [activeTab, setActiveTab] = useTabParam('overview', ['overview', 'products', 'videos', 'orders', 'disputes', 'add-product', 'membership', 'referrals', 'advertising', 'tiktok-promo', 'earnings', 'followers', 'notifications', 'shop-settings']);
   const [preorderProduct, setPreorderProduct] = useState<any>(null);
   const [priceProduct, setPriceProduct] = useState<any>(null);
   const [editProductId, setEditProductId] = useState<string | null>(null);
@@ -211,6 +212,7 @@ export default function SupplierDashboard() {
         { key: 'membership', label: 'Membership', icon: CreditCard, group: 'Grow' },
         { key: 'referrals', label: 'Refer & earn', icon: Gift, group: 'Grow' },
         { key: 'advertising', label: 'Advertising', icon: Megaphone, group: 'Grow' },
+        { key: 'tiktok-promo', label: 'TikTok promotion', icon: Megaphone, group: 'Grow' },
         { key: 'followers', label: 'Followers', icon: Users, group: 'Grow' },
         { key: 'notifications', label: 'Notifications', icon: Bell, badge: unreadNotes, group: 'Account' },
         { key: 'shop-settings', label: 'Shop settings', icon: Settings, group: 'Account' },
@@ -517,6 +519,7 @@ export default function SupplierDashboard() {
             {activeTab === 'membership' && <SupplierMembershipTab vendorId={vendor.id} />}
             {activeTab === 'referrals' && <ReferralPanel />}
             {activeTab === 'advertising' && <VendorAdvertisingTab vendorId={vendor.id} />}
+            {activeTab === 'tiktok-promo' && <VendorSponsoredTab vendorId={vendor.id} />}
             {activeTab === 'earnings' && <VendorEarningsPanel vendorId={vendor.id} />}
             {activeTab === 'followers' && <VendorFollowersPanel vendorId={vendor.id} />}
             {activeTab === 'notifications' && <NotificationsPanel />}
