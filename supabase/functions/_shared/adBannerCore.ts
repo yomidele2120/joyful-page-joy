@@ -304,6 +304,17 @@ export const MODERATION_PROMPT = [
   'contains_face=true if a human face is clearly visible.',
 ].join(' ');
 
+/** Reviewer rules for vendor-described pictures. Safety is as strict as above; only the text and logo rule is practical:
+ *  tiny incidental markings (key labels, small screen details, faint stitching) are fine, prominent words and brand marks are not. */
+export const MODERATION_PROMPT_PICTURE = [
+  'You are an ad-image reviewer for a family-friendly marketplace.',
+  'Look at the image and answer ONLY with JSON: {"safe": boolean, "contains_text": boolean, "contains_logo": boolean, "contains_face": boolean, "reasons": string[]}.',
+  'safe=false for violence, nudity, sexual or suggestive content, hate symbols, drugs, weapons or anything misleading.',
+  'contains_text=true ONLY if clearly readable words, slogans, captions, signs, price tags or watermarks are a visible part of the picture. Ignore tiny, blurred or incidental markings such as keyboard keys, small screen details, buttons and tiny labels.',
+  'contains_logo=true ONLY if a clearly recognisable brand logo or brand name is prominent. Ignore small or unreadable marks.',
+  'contains_face=true if a human face is clearly visible. Put a short plain reason in reasons whenever any flag is true.',
+].join(' ');
+
 export interface ModerationResult { safe: boolean; contains_text: boolean; contains_logo: boolean; contains_face: boolean; reasons: string[] }
 
 export function parseModerationResponse(raw: string | null | undefined): ModerationResult | null {

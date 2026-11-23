@@ -12,7 +12,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 // Model names change. Check OpenAI's current model list and set these if a default stops working.
 
 import {
-  buildCopyPrompt, classifyProviderStatus, MODERATION_PROMPT, parseCopyResponse, parseModerationResponse, templateCopy,
+  buildCopyPrompt, classifyProviderStatus, MODERATION_PROMPT, MODERATION_PROMPT_PICTURE, parseCopyResponse, parseModerationResponse, templateCopy,
   type ArtCategory, type Copy, type ModerationResult, type VendorForAd,
 } from './adBannerCore.ts';
 
@@ -210,10 +210,10 @@ export async function generateCopy(
  * Safety review of a generated image. If the review itself cannot run or cannot be understood this THROWS (retryable),
  * so an image that was never checked is never published.
  */
-export async function moderateImage(base64: string, mime: string): Promise<ModerationResult> {
+export async function moderateImage(base64: string, mime: string, opts: { picture?: boolean } = {}): Promise<ModerationResult> {
   const data = await post('/responses', {
     model: moderationModel(),
-    instructions: MODERATION_PROMPT,
+    instructions: opts.picture ? MODERATION_PROMPT_PICTURE : MODERATION_PROMPT,
     input: [{ role: 'user', content: [
       { type: 'input_text', text: 'Review this advertising image.' },
       { type: 'input_image', image_url: `data:${mime};base64,${base64}` },

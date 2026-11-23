@@ -54,9 +54,13 @@ async function handle(req: Request): Promise<Response> {
     const art = await generateSquareArt(wrap(prompt.trim()));
     const info = inspectImage(art.bytes, SQUARE_IMAGE);
     if (!info.ok) return await fail('bad_image', 'The image was not usable. The charge was refunded.');
-    const review = await moderateImage(art.base64, art.mime);
+    const review = await moderateImage(art.base64, art.mime, { picture: true });
     if (!review.safe || review.contains_text || review.contains_logo) {
-      return await fail('image_blocked', 'The image did not pass the safety review, so it was not kept. The charge was refunded. Try describing it differently.', 422);
+      const why = !review.safe ? 'it was not judged suitable for an advert'
+        : review.contains_text && review.contains_logo ? 'it showed readable words and a brand mark'
+        : review.contains_text ? 'it showed readable words' : 'it showed a brand mark';
+      console.log('ad-generate-image blocked:', JSON.stringify({ safe: review.safe, text: review.contains_text, logo: review.contains_logo, reasons: review.reasons }));
+      return await fail('image_blocked', `The picture was not kept because ${why}. The charge was refunded. Try describing a simpler scene, for example the product on a plain background.`, 422);
     }
     // 2c. save privately in the vendor's own folder
     const { data: v } = await admin.from('ad_ai_images').select('vendor_id').eq('id', id).maybeSingle();
