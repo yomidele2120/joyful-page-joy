@@ -144,18 +144,32 @@ function SocialView() {
   );
 }
 
+/** Marks a request as running, but only with the platform's own campaign ID or link, so the status stays genuine. */
+function RunningControl({ onStart }: { onStart: (externalId: string) => void }) {
+  const [id, setId] = useState('');
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-2 rounded-md bg-muted/40 p-2">
+      <input className="h-8 min-w-[16rem] flex-1 rounded-md border border-input bg-background px-2 text-xs" placeholder="Campaign ID or link from the platform's ads manager" value={id} onChange={(e) => setId(e.target.value)} aria-label="Platform campaign ID or link" />
+      <Button size="sm" disabled={id.trim().length < 3} onClick={() => onStart(id.trim())}>Mark as running</Button>
+      <span className="text-xs text-muted-foreground">Use this only after the ad is really live. The vendor sees "Running".</span>
+    </div>
+  );
+}
+
 function ExternalView() {
   const q = useAdmin<any[]>('external', 'admin_list_external_campaigns');
   return (
     <div className="space-y-4">
     <GoogleAdsConnectionPanel />
     <Panel title="External ad requests">
-      <p className="mb-3 rounded-md bg-amber-50 p-2 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">Campaigns are not created in Google or the other platforms from here yet, so a request can never be marked running here. The connection test above only checks your Google Ads keys. Review it, then run the campaign yourself in the platform's own ads manager if you choose to, and keep the status truthful.</p>
+      <p className="mb-3 rounded-md bg-amber-50 p-2 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">Campaigns are not created in Google or the other platforms from here. Create the ad in the platform's own ads manager, then come back and press Mark as running with its campaign ID, so the vendor sees the true status. The connection test above only checks your Google Ads keys.</p>
       <Loading q={q} />
       <div className="space-y-2">{q.data?.map((r) => { const s = externalStatus(r.status); return (
         <div key={r.id} className="rounded border border-border p-2 text-sm">
           <div className="flex flex-wrap items-center justify-between gap-2"><span>{r.store_name} · {PLATFORM_LABEL[r.platform] ?? r.platform} · {r.scope} · {r.objective} · {r.duration_days} days · budget {r.budget_amount ?? '-'} {r.spend_authorized ? '(authorised)' : '(not authorised)'}</span><Status info={s} /></div>
           <ExternalExportPanel request={r} />
+          {['pending_review', 'paused'].includes(r.status) && (
+            <RunningControl onStart={(id) => run(() => call('admin_set_external_status', { _id: r.id, _status: 'active', _note: null, _external_id: id }), 'Marked as running. The vendor has been told.', q.refresh)} />)}
           <div className="mt-1 flex flex-wrap gap-1.5">{['pending_review', 'rejected', 'paused', 'ended', 'cancelled', 'failed'].filter((x) => x !== r.status).map((x) =>
             <Button key={x} size="sm" variant="outline" onClick={() => run(() => call('admin_set_external_status', { _id: r.id, _status: x, _note: null }), 'Updated.', q.refresh)}>{externalStatus(x).label}</Button>)}</div>
         </div>); })}</div>
