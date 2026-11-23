@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import AiImageMaker from '@/components/dashboard/AiImageMaker';
+import PosterMaker from '@/components/dashboard/PosterMaker';
 
 // Photos / one short video a vendor attaches to an external ad request. Files go to the private "ad-creatives" bucket,
 // under the vendor's own folder. The request function re-checks every path on the server.
@@ -79,6 +80,7 @@ export default function AdCreativeUploader({ vendorId, files, onChange }: { vend
       <Button type="button" variant="outline" size="sm" className="mt-2" disabled={busy || files.length >= MAX_FILES} onClick={() => input.current?.click()}>
         {busy ? 'Uploading…' : files.length ? 'Add more' : 'Choose photos or a video'}
       </Button>
+      <PosterMaker vendorId={vendorId} files={files} maxFiles={MAX_FILES} onAdd={(f) => onChange([...files, f])} />
       <AiImageMaker files={files} maxFiles={MAX_FILES} onAdd={(f) => onChange([...files, f])} />
     </div>
   );

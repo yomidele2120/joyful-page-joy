@@ -112,9 +112,19 @@ export function useSponsoredRows(rowKeys: readonly string[]) {
     };
   }, [ads, settings, keyStr]);
 }
+// Banners the visitor closed during this visit (kept while they move between pages, forgotten on refresh).
+const dismissedAds = new Set<string>();
+/** On a phone the sponsored row is a compact card the visitor can close; on larger screens it is the wide strip. */
 export function SponsoredRowBanner({ ad }: { ad: HomepageAd | null }) {
+  const [, force] = useState(0);
   if (!ad) return null;
-  return <section aria-label="Sponsored" className="mt-8 sm:mt-10"><AdBanner ad={ad} placement="sponsored_row" variant="slim" /></section>;
+  const closed = dismissedAds.has(ad.id);
+  return (
+    <section aria-label="Sponsored" className="mt-8 sm:mt-10">
+      {!closed && <AdBanner ad={ad} placement="sponsored_row" variant="card" className="sm:hidden" onDismiss={() => { dismissedAds.add(ad.id); force((n) => n + 1); }} />}
+      <AdBanner ad={ad} placement="sponsored_row" variant="slim" className="hidden sm:flex" />
+    </section>
+  );
 }
 
 /**

@@ -419,3 +419,41 @@ export function classifyProviderStatus(status: number): FailureKind {
   if (status === 400) return { code: 'provider_rejected_request', retryable: true };
   return { code: `provider_http_${status}`, retryable: true };
 }
+
+// ------------------------------------------------------------------ art directions for vendor-requested pictures
+// Each direction is a complete, designed look. The vendor's own description of the subject is always kept; only the
+// treatment changes. A new direction is picked each time (never the one just used), so pictures stop looking alike.
+// Every direction is text-free by construction: wording is added later by the website, never drawn by the model.
+export interface ArtDirection { id: string; label: string; look: string }
+export const ART_DIRECTIONS: ArtDirection[] = [
+  { id: 'clean', label: 'Clean photo', look: 'polished commercial product photograph on a softly lit studio set, natural shadows, true colours, crisp detail' },
+  { id: 'pedestal', label: 'Pedestal showcase', look: 'the subject displayed on a rounded stone or glossy pedestal in a minimal colour-blocked set, soft spotlight from above, gentle floor reflection, magazine-cover elegance' },
+  { id: 'neon', label: 'Neon night', look: 'dark moody scene with vivid magenta and cyan neon rim lighting, glossy reflections, subtle haze, cinematic night-city energy' },
+  { id: 'burst', label: 'Colour burst', look: 'bold saturated background in one strong colour with a lighter radial burst behind the subject, floating geometric confetti shapes, energetic poster feel' },
+  { id: 'papercut', label: 'Paper-cut layers', look: 'layered paper-cut diorama with soft drop shadows between layers, warm tactile textures and a handmade craft feel' },
+  { id: 'glass', label: 'Frosted glass', look: 'soft frosted-glass panels and glowing translucent orbs behind the subject, pastel gradient background, airy modern interface-style depth' },
+  { id: 'afro', label: 'African pattern', look: 'rich warm background inspired by African wax-print geometry in deep earth tones with gold accents, subject sharply lit in front, proud and celebratory' },
+  { id: 'duotone', label: 'Duotone', look: 'striking two-colour duotone treatment with high contrast, bold graphic shapes and strong negative space, contemporary editorial feel' },
+  { id: 'flatlay', label: 'Flat-lay lifestyle', look: 'top-down flat-lay on a textured surface with a few tasteful props arranged around the subject, natural window light, styled lifestyle magazine look' },
+  { id: 'render3d', label: '3D render', look: 'playful glossy three-dimensional render with rounded forms, soft global illumination and a clean pastel backdrop' },
+  { id: 'sunset', label: 'Golden hour', look: 'warm golden-hour glow with long soft shadows and a gradient sunset sky, lens flare kept subtle, aspirational and inviting' },
+  { id: 'abstract', label: 'Abstract motion', look: 'dynamic abstract swooshes and light trails curving around the subject on a deep gradient background, sense of speed and energy' },
+];
+export const isArtDirectionId = (id: unknown): id is string => typeof id === 'string' && ART_DIRECTIONS.some((d) => d.id === id);
+
+/** Picks a direction at random from a seed, never the same as `avoid` (the one used last), so back-to-back pictures differ. */
+export function pickArtDirection(seed: string, avoid?: string | null): ArtDirection {
+  const r = rng(`art:${seed}`);
+  const pool = ART_DIRECTIONS.filter((d) => d.id !== avoid);
+  return pool[Math.floor(r() * pool.length)];
+}
+
+/** The prompt for a vendor-described picture. The vendor's words are only the subject; everything else is fixed here. */
+export function buildDesignedPicturePrompt(subject: string, dir: ArtDirection): string {
+  return [
+    `Premium advertising artwork, square composition. Subject described by the shop owner: "${subject}".`,
+    `Art direction: ${dir.look}.`,
+    'Design it like a professionally art-directed promotional visual: one clear focal point, generous breathing room, confident colour choices, depth and light that make the subject feel desirable.',
+    'Rules: no text, no letters, no numbers, no logos, no watermarks, no brand names, no real or famous people, no recognisable celebrities, no sale stickers or price tags. Show the subject honestly and attractively.',
+  ].join(' ');
+}

@@ -5,19 +5,13 @@
 // OPENAI_API_KEY stays in this server code; the browser never sees it.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { generateSquareArt, moderateImage, promptIsAllowed, ProviderError, withAiContext, setAiContext } from '../_shared/adAI.ts';
-import { inspectImage, SQUARE_IMAGE } from '../_shared/adBannerCore.ts';
+import { inspectImage, SQUARE_IMAGE, ART_DIRECTIONS, isArtDirectionId, pickArtDirection, buildDesignedPicturePrompt } from '../_shared/adBannerCore.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
-
-// The vendor's words are wrapped in fixed rules so the picture is a clean, text-free, brand-free product or lifestyle image.
-const wrap = (p: string) =>
-  `Photorealistic advertising photograph, square composition, clean and well lit. Subject described by the shop owner: "${p}". ` +
-  'Rules: no text, no letters, no numbers, no logos, no watermarks, no brand names, no real or famous people, no recognisable celebrities, ' +
-  'no sale stickers or price tags. Show the subject honestly and attractively.';
 
 Deno.serve((req: Request) => withAiContext({ feature: 'ad_ai_image' }, () => handle(req)));
 
@@ -35,6 +29,9 @@ async function handle(req: Request): Promise<Response> {
 
   const body = await req.json().catch(() => ({}));
   const prompt = typeof body?.prompt === 'string' ? body.prompt : '';
+  // The vendor can choose a look or leave it to us; 'surprise' (or nothing) picks a different one each time, never the same as the last one used.
+  const lastLook = isArtDirectionId(body?.last_look) ? body.last_look : null;
+  const direction = isArtDirectionId(body?.look) ? ART_DIRECTIONS.find((d) => d.id === body.look)! : pickArtDirection(crypto.randomUUID(), lastLook);
 
   // 1. charge (this also enforces plan, limits and balance)
   const { data: started, error: startError } = await userClient.rpc('vendor_start_ai_image', { _prompt: prompt });
@@ -51,7 +48,7 @@ async function handle(req: Request): Promise<Response> {
     // 2a. the description itself
     if (!(await promptIsAllowed(prompt))) return await fail('prompt_blocked', 'That description cannot be used. The charge was refunded.', 422);
     // 2b. make the image, check it is a real image, and have it reviewed (an AI-made face is allowed; text, logos and unsafe content are not)
-    const art = await generateSquareArt(wrap(prompt.trim()));
+    const art = await generateSquareArt(buildDesignedPicturePrompt(prompt.trim(), direction));
     const info = inspectImage(art.bytes, SQUARE_IMAGE);
     if (!info.ok) return await fail('bad_image', 'The image was not usable. The charge was refunded.');
     const review = await moderateImage(art.base64, art.mime, { picture: true });
@@ -73,7 +70,7 @@ async function handle(req: Request): Promise<Response> {
       await admin.storage.from('ad-creatives').remove([path]);
       return await fail('finish_failed', 'Something went wrong. The charge was refunded.');
     }
-    return reply({ ok: true, id, path, size: art.bytes.length, balance_kobo: started.balance_kobo });
+    return reply({ ok: true, id, path, look: direction.id, look_label: direction.label, size: art.bytes.length, balance_kobo: started.balance_kobo });
   } catch (e) {
     const code = e instanceof ProviderError ? e.code : 'unexpected';
     return await fail(code, 'The image service had a problem. The charge was refunded. Please try again.');

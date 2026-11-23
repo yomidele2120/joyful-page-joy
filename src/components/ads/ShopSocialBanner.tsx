@@ -23,7 +23,7 @@ const EDGE_REM = 1;
  * It stays on screen for the whole visit and comes back on every page load. Closing it hides only that account until the page is refreshed;
  * the shop's other account (if any) takes its place. Links only.
  */
-export default function ShopSocialBanner({ vendorId, isOwnShop }: { vendorId: string; isOwnShop?: boolean }) {
+export default function ShopSocialBanner({ vendorId, isOwnShop, suspended }: { vendorId: string; isOwnShop?: boolean; suspended?: boolean }) {
   const { data } = useQuery({ queryKey: ['shop-social-banner', vendorId], queryFn: () => fetchShopSocialBanner(vendorId), staleTime: 5 * 60_000, retry: 1, enabled: !!vendorId && !isOwnShop });
   const [account, setAccount] = useState<SocialAccount | null>(null);
   const [entered, setEntered] = useState(false);
@@ -38,9 +38,9 @@ export default function ShopSocialBanner({ vendorId, isOwnShop }: { vendorId: st
   useEffect(() => {
     const next = open[0] ?? null;
     setAccount(next);
-    if (next) trackSocial('impression', next.id);
+    if (next && !suspended) trackSocial('impression', next.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nextId]);
+  }, [nextId, suspended]);
 
   // Slide in whenever an account appears (also when it is replaced after a close).
   const accountId = account?.id;
@@ -68,7 +68,7 @@ export default function ShopSocialBanner({ vendorId, isOwnShop }: { vendorId: st
     return () => { window.removeEventListener('scroll', onScroll); window.clearTimeout(timer); };
   }, [accountId]);
 
-  if (!data || !account) return null;
+  if (!data || !account || suspended) return null;
 
   const close = () => setClosed((c) => [...c, account.id]);
 

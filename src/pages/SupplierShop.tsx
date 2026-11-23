@@ -20,6 +20,7 @@ import CallButtons from '@/components/calls/CallButtons';
 import { formatResponseTime, useVendorReputation } from '@/hooks/useVendorReputation';
 import SupplierReviews from '@/components/SupplierReviews';
 import ShopSocialBanner from '@/components/ads/ShopSocialBanner';
+import ShopPromoPopup from '@/components/ads/ShopPromoPopup';
 import { useShopAdAttribution } from '@/components/ads/useAdAttribution';
 
 function useDebounced<T>(value: T, ms: number) {
@@ -56,6 +57,7 @@ export default function SupplierShop() {
     if (n > 1) params.set('page', String(n)); else params.delete('page');
     setSearchParams(params, { replace: n === 1 });
   };
+  const [promoOpen, setPromoOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const debounced = useDebounced(search, 300);
@@ -284,7 +286,8 @@ export default function SupplierShop() {
         )}
       </div>
       <JsonLd id="shop" data={shopOrganization(vendor as any)} />
-      <ShopSocialBanner vendorId={vendor.id} isOwnShop={isOwnShop} />
+      <ShopPromoPopup vendorId={vendor.id} isOwnShop={isOwnShop} onOpenChange={setPromoOpen} />
+      <ShopSocialBanner vendorId={vendor.id} isOwnShop={isOwnShop} suspended={promoOpen} />
     </Layout>
   );
 }

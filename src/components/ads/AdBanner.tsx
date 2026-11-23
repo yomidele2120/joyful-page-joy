@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { ArrowRight, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { HomepageAd, AdPlacement } from '@/lib/ads/adsApi';
 import { trackAd } from '@/lib/ads/adsApi';
@@ -13,7 +14,7 @@ const counted = new Set<string>();
  * One advertising banner. The artwork is text-free; the shop name, logo, headline, description and button are drawn
  * here, so they are always the vendor's real data and always sharp. The whole banner is one link to the vendor's own shop.
  */
-export default function AdBanner({ ad, placement, priority = false, className, variant = 'full' }: { ad: HomepageAd; placement: AdPlacement; priority?: boolean; className?: string; variant?: 'full' | 'slim' }) {
+export default function AdBanner({ ad, placement, priority = false, className, variant = 'full', onDismiss }: { ad: HomepageAd; placement: AdPlacement; priority?: boolean; className?: string; variant?: 'full' | 'slim' | 'card'; onDismiss?: () => void }) {
   const ref = useRef<HTMLAnchorElement>(null);
   const src = bannerSources(ad.banner_image_url);
 
@@ -33,6 +34,40 @@ export default function AdBanner({ ad, placement, priority = false, className, v
   }, [ad.id, placement]);
 
   const products = (ad.products ?? []).slice(0, 3);
+
+  // Card: the phone-sized look. A tilted picture tile on the left, the wording on the right, an arrow, and a close button. Same data and tracking.
+  if (variant === 'card') {
+    return (
+      <div className={cn('relative', className)}>
+        <Link
+          ref={ref}
+          to={adShopLink(ad.vendor_id, ad.id)}
+          onClick={() => trackAd({ event: 'banner_click', campaign: ad.id, placement })}
+          aria-label={`${ad.store_name}: ${ad.headline} (sponsored)`}
+          className="group relative flex min-h-[124px] items-center gap-3 overflow-hidden rounded-2xl bg-neutral-900 p-3 pr-4 text-white"
+        >
+          <img src={src.mobile} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-50 blur-[2px]" aria-hidden="true" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/60 to-black/80" aria-hidden="true" />
+          <div className="relative -rotate-6 shrink-0 overflow-hidden rounded-xl border-2 border-white/80 bg-white shadow-xl transition-transform duration-300 group-active:rotate-0">
+            <img src={products[0]?.image || src.mobile} alt="" loading="lazy" decoding="async" className="h-24 w-24 object-cover" />
+          </div>
+          <div className="relative min-w-0 flex-1 pr-6">
+            <p className="truncate text-[11px] font-medium text-white/75">{ad.store_name}</p>
+            <h3 className="line-clamp-2 font-heading text-base font-extrabold leading-tight">{ad.headline}</h3>
+            {ad.description && <p className="mt-0.5 line-clamp-2 text-xs text-white/80">{ad.description}</p>}
+            <ArrowRight className="mt-1.5 h-5 w-5 text-white" aria-hidden="true" />
+          </div>
+          <span className="absolute bottom-2 right-3 rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-white/90 backdrop-blur">Sponsored</span>
+        </Link>
+        {onDismiss && (
+          <button type="button" aria-label="Hide this sponsored banner" onClick={onDismiss}
+                  className="absolute right-2 top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white hover:bg-black/75">
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+    );
+  }
 
   // Slim strip: a short banner for placements between product rows. Same data and tracking, less height.
   if (variant === 'slim') {

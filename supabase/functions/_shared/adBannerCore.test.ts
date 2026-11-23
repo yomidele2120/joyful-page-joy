@@ -242,3 +242,15 @@ test('square pictures (product photos, vendor ad images) pass the square limits 
   assert.equal(inspectImage(png(2100, 900), SQUARE_IMAGE).ok, false);         // wide is not square
   assert.equal(inspectImage(new TextEncoder().encode('<html>'.repeat(3000)), SQUARE_IMAGE).ok, false);
 });
+
+test('art directions: never repeat the last one, always text-free, vendor subject kept', async () => {
+  const { ART_DIRECTIONS, pickArtDirection, buildDesignedPicturePrompt, isArtDirectionId } = await import('./adBannerCore.ts');
+  assert.ok(ART_DIRECTIONS.length >= 10);
+  const seen = new Set<string>();
+  for (let i = 0; i < 200; i++) { const d = pickArtDirection(`s${i}`, 'neon'); assert.notEqual(d.id, 'neon'); seen.add(d.id); }
+  assert.ok(seen.size >= 8, 'looks vary');
+  const p = buildDesignedPicturePrompt('a red leather handbag', ART_DIRECTIONS[1]);
+  assert.ok(p.includes('red leather handbag') && /no text/.test(p) && /no logos/.test(p));
+  assert.ok(isArtDirectionId('clean') && !isArtDirectionId('x') && !isArtDirectionId(5));
+  assert.equal(pickArtDirection('a').id, pickArtDirection('a').id);
+});
