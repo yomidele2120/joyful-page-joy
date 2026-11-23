@@ -85,5 +85,6 @@ export const listAccessibleCustomers = (c: AdsConfig, token: string, f: Fetcher 
   adsRequest(c, token, 'GET', 'customers:listAccessibleCustomers', undefined, f)
     .then((j) => ((j.resourceNames ?? []) as string[]).map((r) => digits(r.split('/')[1])));
 
+// Newer API versions reject pageSize (fixed at 10000 rows), so it is not sent. Callers limit rows with LIMIT in the query.
 export const search = (c: AdsConfig, token: string, customerId: string, query: string, f: Fetcher = fetch) =>
-  adsRequest(c, token, 'POST', `customers/${digits(customerId)}/googleAds:search`, { query, pageSize: 50 }, f).then((j) => (j.results ?? []) as any[]);
+  adsRequest(c, token, 'POST', `customers/${digits(customerId)}/googleAds:search`, { query }, f).then((j) => (j.results ?? []) as any[]);

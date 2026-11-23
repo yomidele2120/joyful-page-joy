@@ -67,7 +67,7 @@ $$;
 REVOKE ALL ON FUNCTION public.ai_assist_begin(uuid, text), public.ai_assist_finish(uuid, text, text, text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.ai_assist_begin(uuid, text), public.ai_assist_finish(uuid, text, text, text) TO service_role;
 
-CREATE OR REPLACE FUNCTION public.admin_ai_usage_summary(_days integer DEFAULT 30) RETURNS jsonb
+CREATE OR REPLACE FUNCTION public.admin_ai_feature_usage(_days integer DEFAULT 30) RETURNS jsonb
 LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
 BEGIN
   IF NOT public.has_role(auth.uid(), 'admin') THEN RAISE EXCEPTION 'Admin only'; END IF;
@@ -75,5 +75,5 @@ BEGIN
     SELECT feature, status, count(*) AS n FROM public.ai_usage_logs
      WHERE created_at > now() - make_interval(days => greatest(1, least(_days, 365))) GROUP BY 1, 2 ORDER BY 1, 2) x), '[]'::jsonb));
 END $$;
-REVOKE ALL ON FUNCTION public.admin_ai_usage_summary(integer) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.admin_ai_usage_summary(integer) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.admin_ai_feature_usage(integer) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.admin_ai_feature_usage(integer) TO authenticated, service_role;
