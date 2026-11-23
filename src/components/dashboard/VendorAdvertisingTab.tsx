@@ -21,6 +21,25 @@ import AdCreativeUploader, { type CreativeFile } from '@/components/dashboard/Ad
 
 type Overview = any;
 
+/** Shows the platform's minimum for the chosen days and how the budget is split, before the vendor submits. */
+function MinBudgetNote({ platform, days, budget, views, objective }: { platform: string; days: number; budget: number; views: number; objective: string }) {
+  const { data } = useQuery<any>({
+    queryKey: ['external-min-budget', platform, days, views, objective],
+    queryFn: async () => { const { data, error } = await (supabase as any).rpc('external_ad_min_budget', { _platform: platform, _days: days, _views_per_day: views, _objective: objective }); if (error) throw error; return data; },
+    staleTime: 60_000,
+  });
+  if (!data) return null;
+  const naira = (v: number) => `₦${Math.round(v).toLocaleString()}`;
+  const share = Number(data.fee_daily_ngn) / Number(data.daily_min_ngn);
+  const low = budget > 0 && budget < Number(data.total_min_ngn);
+  return (
+    <p className={`sm:col-span-3 text-xs ${low ? 'text-destructive' : 'text-muted-foreground'}`}>
+      To reach about {views.toLocaleString()} people a day for {days} day{days === 1 ? '' : 's'}, the minimum is <b>{naira(data.total_min_ngn)}</b> ({naira(data.daily_min_ngn)} a day).{data.floor_applied && <> This platform has its own minimum daily spend, so a smaller reach does not cost less.</>} Reach is an estimate; platforms do not guarantee it.
+      {budget >= Number(data.total_min_ngn) && <> Of your {naira(budget)}, about {naira(budget * (1 - share))} goes to the ad platform (tax included) and {naira(budget * share)} is ITHUBAFRICA's management fee.</>}
+    </p>
+  );
+}
+
 export default function VendorAdvertisingTab({ vendorId }: { vendorId: string }) {
   const qc = useQueryClient();
   const refresh = () => { qc.invalidateQueries({ queryKey: ['ad-overview'] }); qc.invalidateQueries({ queryKey: ['ad-analytics'] }); };
@@ -225,7 +244,7 @@ function External({ o, vendorId, onChange }: { o: Overview; vendorId: string; on
   const f = o.entitlement.features ?? {};
   const allowed = o.entitlement.active && f.external_ads_enabled;
   const rows: any[] = o.external_campaigns ?? [];
-  const [form, setForm] = useState({ platform: 'google_ads', scope: 'shop', objective: 'traffic', budget: '', days: '14', authorize: false });
+  const [form, setForm] = useState({ platform: 'google_ads', scope: 'shop', objective: 'traffic', budget: '', days: '14', views: '1000', authorize: false });
   const [products, setProducts] = useState<string[]>([]);
   const [picking, setPicking] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -246,13 +265,15 @@ function External({ o, vendorId, onChange }: { o: Overview; vendorId: string; on
           <select className="h-10 rounded-md border border-input bg-background px-2 text-sm" value={form.platform} onChange={(e) => setForm({ ...form, platform: e.target.value })} aria-label="Platform">{Object.entries(PLATFORM_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
           <select className="h-10 rounded-md border border-input bg-background px-2 text-sm" value={form.scope} onChange={(e) => setForm({ ...form, scope: e.target.value })} aria-label="Promote"><option value="shop">Whole shop</option><option value="products">Selected products</option></select>
           <select className="h-10 rounded-md border border-input bg-background px-2 text-sm" value={form.objective} onChange={(e) => setForm({ ...form, objective: e.target.value })} aria-label="Goal"><option value="traffic">Visits</option><option value="awareness">Awareness</option><option value="sales">Sales</option></select>
+          <select className="h-10 rounded-md border border-input bg-background px-2 text-sm" value={form.views} onChange={(e) => setForm({ ...form, views: e.target.value })} aria-label="People to reach each day">{[500, 1000, 2500, 5000, 10000, 25000, 50000].map((n) => <option key={n} value={n}>Reach {n.toLocaleString()} people a day</option>)}</select>
           <Input type="number" min={0} placeholder="Budget you want to spend (NGN)" value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} />
+          <MinBudgetNote platform={form.platform} days={Number(form.days) || 1} budget={Number(form.budget) || 0} views={Number(form.views) || 1000} objective={form.objective} />
           <Input type="number" min={1} max={90} placeholder="Days" value={form.days} onChange={(e) => setForm({ ...form, days: e.target.value })} />
           {form.scope === 'products' && <Button variant="outline" onClick={() => setPicking(true)}>{products.length} product(s) selected</Button>}
           <AdCreativeUploader vendorId={vendorId} files={media} onChange={setMedia} />
           <Textarea className="sm:col-span-3" rows={2} maxLength={500} placeholder="Optional note for our team: what to highlight, offer details, the main message (500 characters)" value={note} onChange={(e) => setNote(e.target.value)} />
-          <label className="flex items-center gap-2 text-xs sm:col-span-3"><Checkbox checked={form.authorize} onCheckedChange={(v) => setForm({ ...form, authorize: v === true })} /> I authorise this budget. It is paid to the ad platform, not to ITHUBAFRICA, and nothing is spent until the campaign is actually published.</label>
-          <Button className="sm:col-span-3" disabled={busy} onClick={async () => { setBusy(true); try { await call('vendor_request_external_campaign', { _platform: form.platform, _scope: form.scope, _product_ids: form.scope === 'products' ? products : [], _objective: form.objective, _budget: form.budget ? Number(form.budget) : null, _duration_days: Number(form.days), _authorize_spend: form.authorize, _creative_files: media, _creative_note: note.trim() || null }); toast.success(form.authorize ? 'Request submitted.' : 'Draft saved.'); setMedia([]); setNote(''); onChange(); } catch (e) { toast.error(errText(e)); } finally { setBusy(false); } }}>{form.authorize ? 'Submit request' : 'Save draft'}</Button>
+          <label className="flex items-center gap-2 text-xs sm:col-span-3"><Checkbox checked={form.authorize} onCheckedChange={(v) => setForm({ ...form, authorize: v === true })} /> I authorise this budget. It covers the ad platform's charge and ITHUBAFRICA's management fee (shown above). It is taken from your ad balance once, only when the campaign goes live.</label>
+          <Button className="sm:col-span-3" disabled={busy} onClick={async () => { setBusy(true); try { await call('vendor_request_external_campaign', { _platform: form.platform, _scope: form.scope, _product_ids: form.scope === 'products' ? products : [], _objective: form.objective, _budget: form.budget ? Number(form.budget) : null, _duration_days: Number(form.days), _authorize_spend: form.authorize, _creative_files: media, _creative_note: note.trim() || null, _views_per_day: Number(form.views) }); toast.success(form.authorize ? 'Request submitted.' : 'Draft saved.'); setMedia([]); setNote(''); onChange(); } catch (e) { toast.error(errText(e)); } finally { setBusy(false); } }}>{form.authorize ? 'Submit request' : 'Save draft'}</Button>
         </div>)}
       {picking && <ProductPicker vendorId={vendorId} max={f.max_advertised_products ?? 0} initial={products} onClose={() => setPicking(false)} onSave={async (ids) => { setProducts(ids); setPicking(false); }} />}
     </Panel>

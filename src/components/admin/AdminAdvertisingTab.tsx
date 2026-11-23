@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import ExternalPricingPanel from './ExternalPricingPanel';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -161,6 +162,7 @@ function ExternalView() {
   return (
     <div className="space-y-4">
     <GoogleAdsConnectionPanel />
+    <ExternalPricingPanel />
     <Panel title="External ad requests">
       <p className="mb-3 rounded-md bg-amber-50 p-2 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">Campaigns are not created in Google or the other platforms from here. Create the ad in the platform's own ads manager, then come back and press Mark as running with its campaign ID, so the vendor sees the true status. The connection test above only checks your Google Ads keys.</p>
       <Loading q={q} />
