@@ -10,7 +10,7 @@ import CallAlertsPrompt from '@/components/calls/CallAlertsPrompt';
 import { primeRingtone, startRingtone, stopRingtone } from '@/lib/ringtone';
 import { inviteWithRetry, isNotLoggedInError, sendWhenLoggedIn } from '@/lib/callRetry';
 import { sendCallAlert } from '@/lib/callPush';
-import { callMessage, isGenuineIncomingCall, outcomeForEnd, toZegoUserId, type CallOutcome, type CallType } from '@/lib/zego';
+import { callMessage, fromZegoUserId, isGenuineIncomingCall, outcomeForEnd, toZegoUserId, type CallOutcome, type CallType } from '@/lib/zego';
 
 // Voice/video calls with ZEGOCLOUD Call Kit. The libraries are loaded only when a signed-in member opens the site
 // AND the admin has switched calling on, so everyone else downloads nothing extra.
@@ -44,12 +44,27 @@ const zegoErrorText = (e: any) => {
   const msg = e?.message ?? e?.msg ?? (typeof e === 'string' ? e : '');
   return [code, msg].filter(Boolean).join(' ').slice(0, 120);
 };
+const reportFailure = (callId: string | undefined, peer: string | undefined, side: 'caller' | 'callee', stage: string, err: unknown) => {
+  const text = typeof err === 'string' ? err : (zegoErrorText(err) || String((err as any)?.message ?? ''));
+  void db.rpc('log_call_failure', { _call: callId ?? null, _peer: peer ?? null, _side: side, _stage: stage, _error: text, _device: navigator.userAgent.slice(0, 200) }).then(() => {}, () => {});
+};
+// Zego support asks for the SDK logs of a failed call. The Web SDK cannot save a log file, so it is uploaded to Zego at the moment of failure.
+const uploadZegoLogs = async (k: { zp: any; ZIM: any } | null): Promise<string> => {
+  const at = new Date().toISOString();
+  const done: string[] = [];
+  try { const z = k?.ZIM?.getInstance?.(); if (z?.uploadLog) { await z.uploadLog(); done.push('ZIM'); } } catch (e) { console.warn('ZIM uploadLog failed', e); }
+  try {
+    const x = k?.zp?.express ?? k?.zp?.zegoExpressEngine ?? k?.zp?.zg ?? null;
+    if (x?.uploadLog) { await x.uploadLog(); done.push('Express'); }
+  } catch (e) { console.warn('Express uploadLog failed', e); }
+  return `logs uploaded at ${at} (${Intl.DateTimeFormat().resolvedOptions().timeZone}): ${done.join(' + ') || 'none'}`;
+};
 const errText = (e: any) => String(e?.message ?? e ?? 'Something went wrong').replace(/^.*?:\s*/, '');
 
 export function CallProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const { data: enabled } = useCallsEnabled();
-  const kit = useRef<{ zp: any; Kit: any } | null>(null);
+  const kit = useRef<{ zp: any; Kit: any; ZIM: any } | null>(null);
   const active = useRef<Active | null>(null);
   const ringGen = useRef(0);                          // bumps whenever a ringing call ends, so a slow check never shows a call that is already over
   const ringTimer = useRef<number | undefined>(undefined);
@@ -124,12 +139,20 @@ export function CallProvider({ children }: { children: ReactNode }) {
               try { callId = JSON.parse(extra || '{}')?.callId; } catch { /* no data */ }
               let info: any = null;
               if (callId && /^[0-9a-f-]{36}$/i.test(callId)) {
-                const res = await db.rpc('incoming_call_info', { _call: callId });
-                info = res.data ?? null;
+                // A passing network or sign-in hiccup must not silently kill a real call: look the record up up to 3 times.
+                for (let i = 0; i < 3 && !info; i++) {
+                  const res = await db.rpc('incoming_call_info', { _call: callId });
+                  info = res.data ?? null;
+                  if (!info && i < 2) await new Promise((r) => window.setTimeout(r, 700));
+                }
               }
               if (gen !== ringGen.current) return;                              // the caller already hung up while we were checking
               // No matching, fresh call record means it did not go through start_call (rules and limits): do not ring.
-              if (!isGenuineIncomingCall(info, { me: meId, callerZegoId: caller.userID })) { refuse(); return; }
+              if (!isGenuineIncomingCall(info, { me: meId, callerZegoId: caller.userID })) {
+                reportFailure(callId, fromZegoUserId(caller.userID) ?? undefined, 'callee', info ? 'incoming_check_failed' : 'incoming_lookup_empty', `callId=${callId ?? 'none'} info=${info ? JSON.stringify(info) : 'null'}`);
+                console.warn('Incoming call not shown', { callId, hasInfo: !!info, info, callerZegoId: caller.userID, me: meId });
+                refuse(); return;
+              }
               const a: Active = { role: 'callee', callId, peerName: caller.userName || 'Someone', type, startedAt: Date.now() };
               active.current = a;
               clearRingTimer();
@@ -166,6 +189,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
             };
           },
           onCallInvitationEnded: (reason: string) => {
+            console.info('Call invitation ended', reason);
             ringGen.current++; clearRingTimer();
             setIncoming(null); setOutgoing(null); setRoomType(null);                                // cancelled, declined or timed out while ringing
             const a = active.current;
@@ -175,7 +199,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
           },
         });
         current = zp;
-        kit.current = { zp, Kit };
+        kit.current = { zp, Kit, ZIM };
         setReady(true);
         const scheduleRenew = (ms: number) => {
           renew = window.setTimeout(() => {
@@ -188,6 +212,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
         scheduleRenew(RENEW_MS);
       } catch (e) {
         console.warn('Calling is not available', e);
+        reportFailure(undefined, undefined, 'caller', 'calling_not_available', e);
         if (!cancelled) setReady(false);
       }
     };
@@ -208,7 +233,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
     if (isBusy()) { toast.error('You are already on a call'); return; }
     primeRingtone();                       // inside the tap, so the phone allows the ring-back tone a moment later
     const { data: callId, error } = await db.rpc('start_call', { _peer: peerUserId, _type: type });
-    if (error || !callId) { toast.error(errText(error) || 'Could not start the call'); return; }
+    if (error || !callId) { reportFailure(undefined, peerUserId, 'caller', 'start_call', errText(error)); toast.error(errText(error) || 'Could not start the call'); return; }
     const { data: row } = await db.from('call_logs').select('conversation_id').eq('id', callId).maybeSingle();
     const a: Active = { role: 'caller', callId, peerUserId, peerName, type, conversationId: row?.conversation_id, startedAt: Date.now() };
     active.current = a;
@@ -241,6 +266,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
       }
     } catch (e) {
       console.error('ZEGO sendCallInvitation failed', e);
+      void uploadZegoLogs(k).then((up) => reportFailure(callId, peerUserId, 'caller', isNotLoggedInError(e) ? 'zego_not_logged_in' : 'send_invitation', `${zegoErrorText(e)} | ${up}`));
       if (isNotLoggedInError(e)) {
         // Still not signed in after waiting: the connection was lost (a phone waking up, bad network). Build it again.
         toast.error('Calling lost its connection and is reconnecting. Try again in a few seconds.');

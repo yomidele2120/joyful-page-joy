@@ -12,6 +12,30 @@ const call = async (fn: string, args?: Record<string, unknown>) => { const { dat
 const msg = (e: unknown) => (e instanceof Error ? e.message : 'Something went wrong.');
 const Stat = ({ label, value }: { label: string; value: string }) => <div className="rounded-lg border border-border bg-card px-3 py-2.5"><p className="text-xs text-muted-foreground">{label}</p><p className="text-lg font-semibold tabular-nums">{value}</p></div>;
 
+/** Admin: every failed call with its date, time, caller and callee. */
+function CallFailuresPanel() {
+  const q = useQuery<any[]>({ queryKey: ['admin-call-failures'], queryFn: () => call('admin_call_failures', { _limit: 100 }), refetchInterval: 30_000 });
+  const when = (t: string) => new Date(t).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'medium' });
+  return (
+    <Panel title="Failed calls" action={<Button size="sm" variant="ghost" onClick={() => q.refetch()}>Refresh</Button>}>
+      {q.error ? <p className="text-sm text-destructive">{msg(q.error)}</p> : !q.data ? <p className="text-sm text-muted-foreground">Loading...</p>
+        : !q.data.length ? <p className="text-sm text-muted-foreground">No failed calls recorded.</p> : (
+        <div className="overflow-x-auto"><table className="w-full text-left text-xs">
+          <thead className="text-muted-foreground"><tr><th className="py-1 pr-3">Date and time</th><th className="pr-3">Caller</th><th className="pr-3">Callee</th><th className="pr-3">Reported by</th><th className="pr-3">Where</th><th>Error</th></tr></thead>
+          <tbody>{q.data.map((f) => (
+            <tr key={f.id} className="border-t border-border align-top">
+              <td className="whitespace-nowrap py-1.5 pr-3">{when(f.failed_at)}</td>
+              <td className="pr-3">{f.caller_name || 'Unknown'}<br /><span className="break-all font-mono text-[10px] text-muted-foreground">{f.caller_id ?? '-'}</span></td>
+              <td className="pr-3">{f.callee_name || 'Unknown'}<br /><span className="break-all font-mono text-[10px] text-muted-foreground">{f.callee_id ?? '-'}</span></td>
+              <td className="pr-3 capitalize">{f.side}</td>
+              <td className="pr-3">{f.stage}</td>
+              <td className="break-words text-muted-foreground" title={f.device ?? ''}>{f.error || '-'}</td>
+            </tr>))}</tbody>
+        </table></div>)}
+    </Panel>
+  );
+}
+
 /** Admin: call waiting-list monitoring and settings. */
 export function CallQueueTab() {
   const qc = useQueryClient();
@@ -26,6 +50,7 @@ export function CallQueueTab() {
   const d = o.data;
   return (
     <div className="space-y-4">
+      <CallFailuresPanel />
       <Panel title="Waiting list right now">
         {o.error ? <p className="text-sm text-destructive">{msg(o.error)}</p> : !d ? <p className="text-sm text-muted-foreground">Loading...</p> : (<>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4"><Stat label="Waiting" value={String(d.waiting_now)} /><Stat label="Offered a turn" value={String(d.offered_now)} />
