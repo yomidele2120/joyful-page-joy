@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { inviteWithRetry } from './callRetry';
+import { inviteWithRetry, isNotLoggedInError, sendWhenLoggedIn } from './callRetry';
 import { urlBase64ToUint8Array } from './webPushKey';
 
 const clock = () => { let t = 0; return { now: () => t, sleep: async (ms: number) => { t += ms; } }; };
@@ -33,4 +33,30 @@ test('a failed send is not swallowed', async () => {
 test('VAPID key conversion handles URL-safe base64 and missing padding', () => {
   const bytes = urlBase64ToUint8Array('AQID_-A');   // 01 02 03 ff e0
   assert.deepEqual(Array.from(bytes), [1, 2, 3, 255, 224]);
+});
+
+const notLogged = { code: 6000121, message: 'API.callInvite: Not logged with call.' };
+test('recognises ZEGO error 6000121 in its different shapes', () => {
+  assert.equal(isNotLoggedInError(notLogged), true);
+  assert.equal(isNotLoggedInError(new Error('{"code":6000121,"message":"API.callInvite: Not logged with call."}')), true);
+  assert.equal(isNotLoggedInError({ code: 1 }), false);
+  assert.equal(isNotLoggedInError(null), false);
+});
+test('waits for sign-in and then succeeds', async () => {
+  let n = 0; const sleeps: number[] = [];
+  const r = await sendWhenLoggedIn({ send: async () => { if (++n < 3) throw notLogged; return 'ok'; }, isAborted: () => false, tries: 8, intervalMs: 1000, sleep: async (ms) => { sleeps.push(ms); } });
+  assert.equal(r, 'ok'); assert.equal(n, 3); assert.deepEqual(sleeps, [1000, 1000]);
+});
+test('gives up after the allowed tries and throws the original error', async () => {
+  let n = 0;
+  await assert.rejects(sendWhenLoggedIn({ send: async () => { n++; throw notLogged; }, isAborted: () => false, tries: 3, intervalMs: 1, sleep: async () => {} }), (e) => e === notLogged);
+  assert.equal(n, 4);
+});
+test('does not retry other errors, or after the caller cancelled', async () => {
+  let n = 0;
+  await assert.rejects(sendWhenLoggedIn({ send: async () => { n++; throw new Error('boom'); }, isAborted: () => false, tries: 5, intervalMs: 1, sleep: async () => {} }), /boom/);
+  assert.equal(n, 1);
+  n = 0;
+  await assert.rejects(sendWhenLoggedIn({ send: async () => { n++; throw notLogged; }, isAborted: () => true, tries: 5, intervalMs: 1, sleep: async () => {} }), (e) => e === notLogged);
+  assert.equal(n, 1);
 });

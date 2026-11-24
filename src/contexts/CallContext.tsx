@@ -8,7 +8,7 @@ import CallScreen from '@/components/calls/CallScreen';
 import SpeakerControl from '@/components/calls/SpeakerControl';
 import CallAlertsPrompt from '@/components/calls/CallAlertsPrompt';
 import { primeRingtone, startRingtone, stopRingtone } from '@/lib/ringtone';
-import { inviteWithRetry } from '@/lib/callRetry';
+import { inviteWithRetry, isNotLoggedInError, sendWhenLoggedIn } from '@/lib/callRetry';
 import { sendCallAlert } from '@/lib/callPush';
 import { callMessage, isGenuineIncomingCall, outcomeForEnd, toZegoUserId, type CallOutcome, type CallType } from '@/lib/zego';
 
@@ -31,6 +31,8 @@ interface Active {
 interface Incoming { callerName: string; type: CallType; accept: () => void; refuse: () => void }
 interface Outgoing { name: string; type: CallType; cancel: () => void; note?: string }
 
+const LOGIN_WAIT_TRIES = 10;                       // ZEGO signs in a moment after it starts; wait up to about 10 seconds
+const LOGIN_WAIT_MS = 1000;
 const RENEW_MS = 20 * 60 * 60 * 1000;   // tokens last 24h; sign in again well before that
 const RING_LIMIT_MS = 65_000;           // ZEGO stops ringing after 60s; never leave a ringing screen up longer than this
 const UNCONNECTED_LIMIT_MS = 90_000;
@@ -52,6 +54,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
   const ringGen = useRef(0);                          // bumps whenever a ringing call ends, so a slow check never shows a call that is already over
   const ringTimer = useRef<number | undefined>(undefined);
   const [ready, setReady] = useState(false);
+  const [bootKey, setBootKey] = useState(0);              // bumping this rebuilds the ZEGO connection from scratch
   const [incoming, setIncoming] = useState<Incoming | null>(null);
   const [outgoing, setOutgoing] = useState<Outgoing | null>(null);
   const [roomType, setRoomType] = useState<CallType | null>(null);   // set while this person is inside a call room (shows the speaker control)
@@ -196,7 +199,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
       clearRingTimer();
       kit.current = null; active.current = null; setReady(false); setIncoming(null); setOutgoing(null); setRoomType(null);
     };
-  }, [meId, enabled, closeCall, markAnswered, isBusy, clearRingTimer]);
+  }, [meId, enabled, bootKey, closeCall, markAnswered, isBusy, clearRingTimer]);
 
   const startCall = useCallback(async (peerUserId: string, peerName: string, type: CallType) => {
     const k = kit.current;
@@ -221,7 +224,8 @@ export function CallProvider({ children }: { children: ReactNode }) {
       // If the other person's site is closed, ZEGO cannot reach them. Send a call alert to their phone or computer, keep ringing
       // here, and keep trying: the moment they open the site, the call rings on their screen.
       const outcome = await inviteWithRetry({
-        send: invite,
+        // ZEGO signs in a moment after it starts: if it says so, wait a few seconds and send again.
+        send: () => sendWhenLoggedIn({ send: invite, isAborted: () => a.abort === true || active.current !== a, tries: LOGIN_WAIT_TRIES, intervalMs: LOGIN_WAIT_MS }),
         isAborted: () => a.abort === true || active.current !== a,
         onOffline: () => {
           setOutgoing((o) => (o ? { ...o, note: `${peerName} is not on the site right now. Still ringing…` } : o));
@@ -237,8 +241,14 @@ export function CallProvider({ children }: { children: ReactNode }) {
       }
     } catch (e) {
       console.error('ZEGO sendCallInvitation failed', e);
-      const detail = zegoErrorText(e);
-      toast.error(`Could not place the call${detail ? ` (${detail})` : ''}. Please try again.`);
+      if (isNotLoggedInError(e)) {
+        // Still not signed in after waiting: the connection was lost (a phone waking up, bad network). Build it again.
+        toast.error('Calling lost its connection and is reconnecting. Try again in a few seconds.');
+        setBootKey((n) => n + 1);
+      } else {
+        const detail = zegoErrorText(e);
+        toast.error(`Could not place the call${detail ? ` (${detail})` : ''}. Please try again.`);
+      }
       await closeCall('failed');
     }
   }, [meId, closeCall, isBusy]);
