@@ -200,13 +200,28 @@ export function CallProvider({ children }: { children: ReactNode }) {
         });
         // Record every change of the messaging connection. ZIM allows one sign-in per user: a second tab or phone signed in as the
         // same person kicks the first one out (event 4 = kicked out), which makes calls to that person silently fail.
-        try {
-          const zi = ZIM?.getInstance?.();
-          zi?.on?.('connectionStateChanged', (_z: unknown, r: { state?: number; event?: number }) => {
-            console.info('ZIM connection', r);
-            if (r?.state === 0) reportFailure(undefined, undefined, 'caller', 'zim_disconnected', `state=${r.state} event=${r.event} (event 4 = signed in on another tab or device)`);
-          });
-        } catch { /* diagnostics only */ }
+        // ZIM is created a moment after addPlugins, so wait for it before listening (up to 15 seconds).
+        {
+          let tries = 0;
+          const attach = () => {
+            if (cancelled) return;
+            let zi: any = null;
+            try { zi = ZIM?.getInstance?.(); } catch { /* not created yet */ }
+            if (!zi) { if (++tries < 30) window.setTimeout(attach, 500); else console.warn('ZIM instance was never created: the call plugin did not start'); return; }
+            console.info('ZIM instance ready');
+            try {
+              zi.on?.('connectionStateChanged', (_z: unknown, r: { state?: number; event?: number }) => {
+                console.info('ZIM connection', r);      // state 0 disconnected, 1 connecting, 2 connected, 3 reconnecting
+                if (r?.state === 0) reportFailure(undefined, undefined, 'caller', 'zim_disconnected', `state=${r.state} event=${r.event} (event 4 = signed in on another tab or device)`);
+              });
+              zi.on?.('error', (_z: unknown, e: { code?: number; message?: string }) => {
+                console.warn('ZIM error', e);
+                reportFailure(undefined, undefined, 'caller', 'zim_error', `${e?.code ?? ''} ${e?.message ?? ''}`);
+              });
+            } catch { /* diagnostics only */ }
+          };
+          attach();
+        }
         current = zp;
         kit.current = { zp, Kit, ZIM };
         setReady(true);

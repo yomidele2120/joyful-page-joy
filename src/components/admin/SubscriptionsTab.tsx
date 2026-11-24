@@ -95,6 +95,7 @@ function TermCard({ row }: { row: SubscriptionRow }) {
 function MinutesCard({ row }: { row: SubscriptionRow }) {
   const save = useSave();
   const [topUp, setTopUp] = useState('');
+  const [note, setNote] = useState(row.note ?? '');
   const v = stageView(row.stage, 'minutes');
   const total = row.total_minutes ?? 0;
   return (
@@ -109,7 +110,14 @@ function MinutesCard({ row }: { row: SubscriptionRow }) {
       </div>
       <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Phone className="h-3.5 w-3.5" /> Counting every connected call since {longDate(row.counts_from)}. Each call is rounded up to a whole minute.</p>
 
+      {row.note && <p className="text-xs text-muted-foreground">{row.note}</p>}
       <div className="space-y-3 border-t border-border pt-3">
+        <label className="block text-xs text-muted-foreground">Description (optional, shown on this card)
+          <span className="mt-1 flex gap-2">
+            <Input className="h-9" maxLength={500} value={note} onChange={e => setNote(e.target.value)} placeholder="e.g. Calls plan, topped up 24 Nov" />
+            <Button size="sm" variant="outline" disabled={save.isPending || note === (row.note ?? '')} onClick={() => save.mutate({ id: row.id, changes: { note: note.trim() || null } })}>Save</Button>
+          </span>
+        </label>
         <div className="flex flex-wrap items-end gap-2">
           <label className="text-xs text-muted-foreground">Add minutes (after you buy more)
             <Input type="number" min={1} inputMode="numeric" className="mt-1 h-9 w-40" value={topUp} onChange={e => setTopUp(e.target.value)} placeholder="e.g. 5000" />
