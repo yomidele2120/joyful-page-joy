@@ -50,3 +50,5 @@ BEGIN
 END $$;
 REVOKE ALL ON FUNCTION public.admin_call_failures(integer) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.admin_call_failures(integer) TO authenticated;
+
+NOTIFY pgrst, 'reload schema';

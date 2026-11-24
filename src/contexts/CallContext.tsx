@@ -46,7 +46,7 @@ const zegoErrorText = (e: any) => {
 };
 const reportFailure = (callId: string | undefined, peer: string | undefined, side: 'caller' | 'callee', stage: string, err: unknown) => {
   const text = typeof err === 'string' ? err : (zegoErrorText(err) || String((err as any)?.message ?? ''));
-  void db.rpc('log_call_failure', { _call: callId ?? null, _peer: peer ?? null, _side: side, _stage: stage, _error: text, _device: navigator.userAgent.slice(0, 200) }).then(() => {}, () => {});
+  void db.rpc('log_call_failure', { _call: callId ?? null, _peer: peer ?? null, _side: side, _stage: stage, _error: text, _device: navigator.userAgent.slice(0, 200) }).then((r: any) => { if (r?.error) console.warn('Could not save the call failure log (is the failed-call SQL run?)', r.error.message); }, () => {});
 };
 // Zego support asks for the SDK logs of a failed call. The Web SDK cannot save a log file, so it is uploaded to Zego at the moment of failure.
 const uploadZegoLogs = async (k: { zp: any; ZIM: any } | null): Promise<string> => {
@@ -198,6 +198,15 @@ export function CallProvider({ children }: { children: ReactNode }) {
             else active.current = null;
           },
         });
+        // Record every change of the messaging connection. ZIM allows one sign-in per user: a second tab or phone signed in as the
+        // same person kicks the first one out (event 4 = kicked out), which makes calls to that person silently fail.
+        try {
+          const zi = ZIM?.getInstance?.();
+          zi?.on?.('connectionStateChanged', (_z: unknown, r: { state?: number; event?: number }) => {
+            console.info('ZIM connection', r);
+            if (r?.state === 0) reportFailure(undefined, undefined, 'caller', 'zim_disconnected', `state=${r.state} event=${r.event} (event 4 = signed in on another tab or device)`);
+          });
+        } catch { /* diagnostics only */ }
         current = zp;
         kit.current = { zp, Kit, ZIM };
         setReady(true);
@@ -253,6 +262,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
         send: () => sendWhenLoggedIn({ send: invite, isAborted: () => a.abort === true || active.current !== a, tries: LOGIN_WAIT_TRIES, intervalMs: LOGIN_WAIT_MS }),
         isAborted: () => a.abort === true || active.current !== a,
         onOffline: () => {
+          reportFailure(callId, peerUserId, 'caller', 'callee_not_connected_to_zego', 'ZEGO could not reach the callee: they are not signed in to ZEGO messaging (site closed, signed in elsewhere, or their connection failed)');
           setOutgoing((o) => (o ? { ...o, note: `${peerName} is not on the site right now. Still ringing…` } : o));
           void sendCallAlert(callId).then((sent) => {
             if (sent > 0) setOutgoing((o) => (o ? { ...o, note: `${peerName} is not on the site. We sent them a call alert. Still ringing…` } : o));
@@ -261,6 +271,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
         intervalMs: OFFLINE_RETRY_MS, totalMs: OFFLINE_RING_MS,
       });
       if (outcome === 'timeout') {
+        reportFailure(callId, peerUserId, 'caller', 'ring_timeout', 'callee never received or answered the invitation');
         toast.error(`${peerName} did not pick up. They will see your missed call in the chat.`);
         await closeCall('missed');
       }
