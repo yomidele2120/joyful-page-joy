@@ -63,10 +63,10 @@ function TikTokSurface({ post, isActive, onFirstPlay }: PostMediaProps) {
           <iframe
             title={post.caption ? `TikTok: ${post.caption.slice(0, 60)}` : 'TikTok video'}
             src={`https://www.tiktok.com/embed/v2/${id}`}
-            allow="fullscreen; encrypted-media"
+            allow="autoplay; fullscreen; encrypted-media"
             allowFullScreen
             referrerPolicy="strict-origin-when-cross-origin"
-            sandbox="allow-scripts allow-same-origin allow-popups allow-presentation"
+            sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation"
             className="h-full w-full border-0"
           />
           <div aria-hidden className="absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-black from-70% to-transparent" />

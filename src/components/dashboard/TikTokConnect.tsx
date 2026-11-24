@@ -108,7 +108,7 @@ export default function TikTokConnect({ vendorId, switchedOn = true }: { vendorI
       {canManageIntegration && conn?.needs_reconnect && (
         <div className="mt-3 flex items-start gap-2 rounded-md bg-destructive/10 p-2.5 text-sm text-destructive">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>Your TikTok connection needs to be renewed. Your videos stay visible, but they will not update until you connect again.</span>
+          <span>Your TikTok connection needs to be renewed. Your TikTok videos are hidden from the feed and your shop until you connect again.</span>
         </div>
       )}
 
