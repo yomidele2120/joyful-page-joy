@@ -86,6 +86,9 @@ verify_jwt = false
 [functions.google-merchant]
 verify_jwt = false
 
+[functions.product-feed]
+verify_jwt = false
+
 [functions.initialize-ad-boost]
 verify_jwt = false
 

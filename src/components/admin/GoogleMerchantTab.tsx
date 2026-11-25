@@ -199,8 +199,19 @@ export default function GoogleMerchantTab() {
     );
   }
 
+  const feedUrl = `${String(import.meta.env.VITE_SUPABASE_URL ?? '').replace(/\/+$/, '')}/functions/v1/product-feed`;
   return (
     <div className="space-y-6">
+      <div className="space-y-2 rounded-lg border border-border bg-card p-4">
+        <h3 className="text-lg font-semibold">TikTok product feed</h3>
+        <p className="text-sm text-muted-foreground">In TikTok Ads Manager choose Products, Add products, Upload a feed, then paste this address as the online feed and set it to update every day.</p>
+        <div className="flex flex-wrap gap-2">
+          <Input readOnly value={feedUrl} className="min-w-0 flex-1 font-mono text-xs" onFocus={(e) => e.currentTarget.select()} aria-label="TikTok product feed address" />
+          <Button type="button" variant="outline" onClick={() => { navigator.clipboard?.writeText(feedUrl).then(() => toast.success('Feed address copied'), () => toast.error('Could not copy. Select the address and copy it.')); }}>Copy</Button>
+          <Button type="button" variant="ghost" asChild><a href={feedUrl} target="_blank" rel="noreferrer">Preview</a></Button>
+        </div>
+        <p className="text-xs text-muted-foreground">Lists public products of approved shops that have a price, a description and a picture. Prices are in NGN.</p>
+      </div>
       <div className="rounded-lg border border-border bg-card p-4">
         <div className="flex items-center justify-between gap-3">
           <div>

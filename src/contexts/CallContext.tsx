@@ -5,7 +5,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCallsEnabled } from '@/hooks/useCallsEnabled';
 import { sendMessage } from '@/hooks/useChat';
 import CallScreen from '@/components/calls/CallScreen';
-import SpeakerControl from '@/components/calls/SpeakerControl';
+import InCallScreen from '@/components/calls/InCallScreen';
+import { useSpeaker } from '@/hooks/useSpeaker';
+import { hasCamera, hasMicrophone, installMediaCapture, resetLocalMedia, setCameraOff, setMicMuted } from '@/lib/localMedia';
+import { joinCallTabElection } from '@/lib/tabLeader';
 import CallAlertsPrompt from '@/components/calls/CallAlertsPrompt';
 import { primeRingtone, startRingtone, stopRingtone } from '@/lib/ringtone';
 import { inviteWithRetry, isNotLoggedInError, sendWhenLoggedIn } from '@/lib/callRetry';
@@ -88,11 +91,19 @@ export function CallProvider({ children }: { children: ReactNode }) {
   const [incoming, setIncoming] = useState<Incoming | null>(null);
   const [outgoing, setOutgoing] = useState<Outgoing | null>(null);
   const [roomType, setRoomType] = useState<CallType | null>(null);   // set while this person is inside a call room (shows the speaker control)
+  const [minimized, setMinimized] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [cameraOff, setCameraOffState] = useState(false);
+  const [since, setSince] = useState<number | null>(null);       // when the other person joined: the call timer starts here
+  const [roomPeer, setRoomPeer] = useState('');
+  const [isCallTab, setIsCallTab] = useState(false);              // only one tab per person stays signed in to ZEGO (see lib/tabLeader.ts)
+  const [kicked, setKicked] = useState(false);                   // signed in to calls on another device, which pushed this one out
+  const host = useRef<HTMLDivElement | null>(null);              // where ZEGO draws the call room, so we can place it ourselves
   const meId = user?.id;
 
   // Report the end of a call once. The caller also leaves a line in the chat ("Voice call · 1:35", "Missed video call").
   const closeCall = useCallback(async (outcome: CallOutcome) => {
-    setRoomType(null);
+    setRoomType(null); setMinimized(false); setMuted(false); setCameraOffState(false); setSince(null); setRoomPeer(''); resetLocalMedia();
     const a = active.current;
     if (!a || a.closed) return;
     a.closed = true; active.current = null; setOutgoing(null);
@@ -108,6 +119,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
     const a = active.current;
     if (!a) return;
     a.joined = true;
+    setSince((t) => t ?? Date.now());
     if (a.callId && !a.closed) void db.rpc('finish_call', { _call: a.callId, _outcome: 'answered' });
   }, []);
 
@@ -125,7 +137,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!meId || enabled !== true) return;
+    if (!meId || enabled !== true || !isCallTab || kicked) return;
     let cancelled = false;
     let renew: number | undefined;
     let current: any = null;
@@ -201,9 +213,14 @@ export function CallProvider({ children }: { children: ReactNode }) {
             setOutgoing(null);                                                    // the other person accepted: leave the ringing screen
             const video = callType === Kit.InvitationTypeVideoCall;
             setRoomType(video ? 'video' : 'voice');
+            setRoomPeer(active.current?.peerName || '');
             return {
-              turnOnCameraWhenJoining: video, showMyCameraToggleButton: video,
+              // ZEGO draws the room inside our own element, and its built-in buttons are hidden: our InCallScreen has the buttons.
+              container: host.current ?? undefined,
+              turnOnCameraWhenJoining: video, turnOnMicrophoneWhenJoining: true,
+              showMyCameraToggleButton: false, showMyMicrophoneToggleButton: false, showAudioVideoSettingsButton: false,
               showScreenSharingButton: false, showTextChat: false, showUserList: false, maxUsers: 2,
+              showLeaveRoomConfirmDialog: false, showRoomTimer: false,
               showLayoutButton: false, showPinButton: false, lowerLeftNotification: { showUserJoinAndLeave: false, showTextChat: false },
               onJoinRoom: () => { if (active.current?.role === 'callee') markAnswered(); },   // the callee joins only after accepting
               onUserJoin: () => { if (active.current?.role === 'caller') markAnswered(); },   // the caller counts as answered when the other person arrives
@@ -246,6 +263,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
               zi.on?.('connectionStateChanged', (_z: unknown, r: { state?: number; event?: number }) => {
                 console.info('ZIM connection', r);      // state 0 disconnected, 1 connecting, 2 connected, 3 reconnecting
                 zimConnected = r?.state === 2;
+                if (r?.state === 0 && r?.event === 4) { setKicked(true); toast.info('Calls moved to another device or window where you are signed in.'); }
                 if (r?.state === 0 && r?.event !== 4) window.setTimeout(() => void signIn('after_disconnect'), 2000);
                 if (r?.state === 0) reportFailure(undefined, undefined, 'caller', 'zim_disconnected', `state=${r.state} event=${r.event} (event 4 = signed in on another tab or device)`);
               });
@@ -283,11 +301,13 @@ export function CallProvider({ children }: { children: ReactNode }) {
       clearRingTimer();
       kit.current = null; active.current = null; setReady(false); setIncoming(null); setOutgoing(null); setRoomType(null);
     };
-  }, [meId, enabled, bootKey, closeCall, markAnswered, isBusy, clearRingTimer]);
+  }, [meId, enabled, bootKey, isCallTab, kicked, closeCall, markAnswered, isBusy, clearRingTimer]);
 
   const startCall = useCallback(async (peerUserId: string, peerName: string, type: CallType) => {
     const k = kit.current;
     if (!meId) { toast.error('Sign in to make a call'); return; }
+    if (kicked) { setKicked(false); toast.info('Reconnecting calls on this device. Try again in a few seconds.'); return; }
+    if (!isCallTab) { toast.error('Calls are open in another tab of this site. Switch to that tab, or close it, and try again.'); return; }
     if (!k) { toast.error('Calling is still connecting. Try again in a few seconds.'); return; }
     if (isBusy()) { toast.error('You are already on a call'); return; }
     primeRingtone();                       // inside the tap, so the phone allows the ring-back tone a moment later
@@ -347,7 +367,67 @@ export function CallProvider({ children }: { children: ReactNode }) {
       }
       await closeCall('failed');
     }
-  }, [meId, closeCall, isBusy]);
+  }, [meId, kicked, isCallTab, closeCall, isBusy]);
+
+  // The element ZEGO draws the call room into, and the one-call-tab rule. Microphone and camera control starts watching right away.
+  useEffect(() => {
+    installMediaCapture();
+    const el = document.createElement('div');
+    el.setAttribute('data-call-room', '');
+    document.body.appendChild(el);
+    host.current = el;
+    return () => { el.remove(); host.current = null; };
+  }, []);
+  useEffect(() => {
+    const el = host.current;
+    if (!el) return;
+    const show = roomType === 'video' && !minimized;     // video fills the screen behind our buttons; voice and minimized stay off screen but keep playing sound
+    el.style.position = 'fixed';
+    el.style.zIndex = show ? '2147483000' : '-1';
+    if (show) { el.style.inset = '0'; el.style.left = ''; el.style.top = ''; el.style.width = '100%'; el.style.height = '100%'; }
+    else { el.style.inset = ''; el.style.left = '-10000px'; el.style.top = '0'; el.style.width = '360px'; el.style.height = '640px'; }
+  }, [roomType, minimized]);
+  useEffect(() => {
+    if (!meId || enabled !== true) { setIsCallTab(false); return; }
+    const election = joinCallTabElection(meId, setIsCallTab, () => !active.current);
+    return () => election.stop();
+  }, [meId, enabled]);
+
+  const speaker = useSpeaker(roomType ?? 'voice', !!roomType);
+  const toggleMute = useCallback(() => {
+    const next = !muted;
+    const changed = setMicMuted(next);
+    if (next && changed === 0) { setMicMuted(false); toast.error('Could not reach the microphone to mute it.'); return; }
+    setMuted(next);
+  }, [muted]);
+  const toggleCamera = useCallback(() => {
+    const next = !cameraOff;
+    const changed = setCameraOff(next);
+    if (next && changed === 0) { setCameraOff(false); toast.error('Could not reach the camera to switch it off.'); return; }
+    setCameraOffState(next);
+  }, [cameraOff]);
+  const hangUp = useCallback(async () => {
+    const k = kit.current;
+    let hung = false;
+    try { if (typeof k?.zp?.hangUp === 'function') { k.zp.hangUp(); hung = true; } } catch (e) { console.warn('hangUp failed', e); }
+    await closeCall('ended');
+    if (!hung) {                       // no hang-up available in this ZEGO version: leave the room by rebuilding the connection
+      try { k?.zp?.destroy?.(); } catch { /* already gone */ }
+      kit.current = null; setReady(false); setBootKey((n) => n + 1);
+    }
+  }, [closeCall]);
+  const sendReport = useCallback(async () => {
+    const a = active.current;
+    toast.info('Sending the call report…');
+    const up = await uploadZegoLogs(kit.current);
+    reportFailure(a?.callId, a?.peerUserId, a?.role === 'callee' ? 'callee' : 'caller', 'user_report', `Reported from the call screen. ${up}`);
+    toast.success('Report sent. Thank you.');
+  }, []);
+  const copyId = useCallback(() => {
+    const id = active.current?.callId;
+    if (!id) { toast.error('This call has no ID yet.'); return; }
+    navigator.clipboard?.writeText(id).then(() => toast.success('Call ID copied'), () => toast.error('Could not copy. Your browser blocked it.'));
+  }, []);
 
   // Ring while a call is ringing in either direction, and stop the moment it is answered, declined or ended.
   const ringing = incoming ? 'incoming' : outgoing ? 'outgoing' : null;
@@ -364,7 +444,11 @@ export function CallProvider({ children }: { children: ReactNode }) {
       {incoming && <CallScreen mode="incoming" name={incoming.callerName} type={incoming.type} onAccept={incoming.accept} onEnd={incoming.refuse} />}
       {!incoming && outgoing && <CallScreen mode="outgoing" name={outgoing.name} type={outgoing.type} note={outgoing.note} onEnd={outgoing.cancel} />}
       {ready && <CallAlertsPrompt />}
-      {roomType && <SpeakerControl type={roomType} />}
+      {roomType && (
+        <InCallScreen name={roomPeer || 'Call'} type={roomType} since={since} minimized={minimized} muted={muted} cameraOff={cameraOff}
+          speaker={speaker} onMute={toggleMute} onCamera={toggleCamera} onEnd={() => void hangUp()}
+          onMinimize={() => setMinimized(true)} onExpand={() => setMinimized(false)} onReport={() => void sendReport()} onCopyId={copyId} />
+      )}
     </Ctx.Provider>
   );
 }
