@@ -148,7 +148,12 @@ async function processJob(admin: Admin, job: Record<string, any>): Promise<Recor
 
     // 4. wording (AI, validated; vetted template fallback)
     textCalls++;
-    const copy = await generateCopy(vendorForAd, category, vendorMessage, String(campaign.vendor_id));
+    // A vendor's other banners must not carry the same wording: tell the writer what is already in use.
+    const { data: siblings } = await admin.from('vendor_advertising_campaigns').select('headline, description')
+      .eq('vendor_id', campaign.vendor_id).neq('id', campaign.id).not('headline', 'is', null)
+      .in('status', ['pending_review', 'active', 'paused']).limit(3);
+    const avoid = (Array.isArray(siblings) ? siblings : []).map((r: any) => [r.headline, r.description].filter(Boolean).join(' - ')).filter(Boolean);
+    const copy = await generateCopy(vendorForAd, category, vendorMessage, `${campaign.vendor_id}:${campaign.id}`, { avoid, focus: subjects });
 
     // 5. store the artwork
     const uploaded = await uploadAdArtwork(art.bytes, info.mime, campaign.vendor_id, campaign.id, jobId.slice(0, 8));

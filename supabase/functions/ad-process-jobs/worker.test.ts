@@ -34,7 +34,7 @@ const GOOD_COPY = '{"headline":"Discover Premium Phones","description":"Browse p
 
 function builder(table: string) {
   const b: any = {
-    select: () => b, eq: () => b, in: () => b, order: () => b, limit: () => b,
+    select: () => b, eq: () => b, neq: () => b, not: () => b, in: () => b, order: () => b, limit: () => b,
     update: (v: any) => { calls.updates.push({ table, v }); return b; },
     maybeSingle: async () => ({ data: Array.isArray(fixtures[table]) ? fixtures[table][0] : fixtures[table] }),
     then: (res: any, rej: any) => Promise.resolve({ data: fixtures[table] }).then(res, rej),

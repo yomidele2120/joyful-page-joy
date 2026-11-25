@@ -193,10 +193,11 @@ export async function generateBannerArt(prompt: string): Promise<GeneratedArt> {
 /** AI-written headline + description. Anything invalid or unsafe falls back to vetted template copy; this never fails the job. */
 export async function generateCopy(
   vendor: VendorForAd, category: ArtCategory, vendorMessage: string | null, seed: string,
+  extra?: { avoid?: string[]; focus?: string[] },
 ): Promise<{ copy: Copy; source: 'ai' | 'template'; model: string | null; note?: string }> {
   const model = textModel();
   try {
-    const { system, user } = buildCopyPrompt(vendor, category, vendorMessage);
+    const { system, user } = buildCopyPrompt(vendor, category, vendorMessage, extra);
     const data = await post('/responses', { model, instructions: system, input: user, max_output_tokens: 400 }, 30_000);
     const checked = parseCopyResponse(outputText(data));
     if (checked.ok && checked.copy) return { copy: checked.copy, source: 'ai', model };

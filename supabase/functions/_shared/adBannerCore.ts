@@ -275,7 +275,7 @@ export function buildImagePrompt(input: PromptInput): string {
   return lines.join('\n');
 }
 
-export function buildCopyPrompt(vendor: VendorForAd, category: ArtCategory, vendorMessage?: string | null): { system: string; user: string } {
+export function buildCopyPrompt(vendor: VendorForAd, category: ArtCategory, vendorMessage?: string | null, extra?: { avoid?: string[]; focus?: string[] }): { system: string; user: string } {
   const desc = sanitizeForPrompt(vendor.storeDescription, 160);
   const msg = sanitizeForPrompt(vendorMessage, 100);
   return {
@@ -291,6 +291,8 @@ export function buildCopyPrompt(vendor: VendorForAd, category: ArtCategory, vend
       `Shop category: ${category}.`,
       desc ? `Shop description (context only): ${desc}.` : '',
       msg ? `Vendor message (tone hint only): ${msg}.` : '',
+      extra?.focus?.length ? `This banner highlights: ${extra.focus.map((f) => sanitizeForPrompt(f, 40)).join(', ')}.` : '',
+      extra?.avoid?.length ? `This shop already runs banners worded like these. Write something clearly different in angle, opening word and wording: ${extra.avoid.map((a) => `"${sanitizeForPrompt(a, 140)}"`).join('; ')}.` : '',
       'Examples of the style wanted: "Discover Premium Electronics", "Shop the Latest Fashion", "Explore Quality Home Essentials".',
     ].filter(Boolean).join('\n'),
   };
