@@ -1,3 +1,4 @@
+import { kickBannerWorker } from '@/lib/ads/kickWorker';
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
@@ -147,7 +148,7 @@ function CampaignCard({ c, o, vendorId, onChange }: { c: any; o: Overview; vendo
       <div className="mt-2 flex flex-wrap gap-2">
         {!ended && <Button size="sm" disabled={busy || !!problem} onClick={() => wrap(async () => { const r = await call<string>('vendor_update_campaign_message', { _campaign: c.id, _headline: h, _description: d }); if (r === 'pending_review') toast.info('Sent for approval.'); }, 'Wording saved.')}>Save wording</Button>}
         {['active', 'paused', 'pending_review', 'failed'].includes(c.status) && (
-          <Button size="sm" variant="outline" disabled={busy} onClick={() => { if (window.confirm('Create a new banner? This uses one of your banner creations.')) wrap(() => call('vendor_request_banner_regeneration', { _campaign: c.id }), 'A new banner is being created.'); }}>New banner</Button>)}
+          <Button size="sm" variant="outline" disabled={busy} onClick={() => { if (window.confirm('Create a new banner? This uses one of your banner creations.')) wrap(async () => { const r = await call('vendor_request_banner_regeneration', { _campaign: c.id }); kickBannerWorker(); return r; }, 'A new banner is being created.'); }}>New banner</Button>)}
         {!ended && url && (
           <Button size="sm" variant="outline" disabled={busy} className="text-destructive" onClick={() => { if (window.confirm('Delete this banner? It stops showing right away and your campaign is paused. You can create a new banner afterwards.')) wrap(() => call('vendor_delete_banner', { _campaign: c.id }), 'Banner deleted. Your campaign is paused until you create a new banner.'); }}>Delete banner</Button>)}
         {['active', 'paused'].includes(c.status) && <Button size="sm" variant="outline" disabled={busy} onClick={() => wrap(() => call('vendor_set_campaign_paused', { _campaign: c.id, _paused: c.status === 'active' }), c.status === 'active' ? 'Paused.' : 'Resumed.')}>{c.status === 'active' ? 'Pause' : 'Resume'}</Button>}

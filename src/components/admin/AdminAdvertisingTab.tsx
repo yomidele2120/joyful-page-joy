@@ -1,3 +1,4 @@
+import { kickBannerWorker } from '@/lib/ads/kickWorker';
 import { useState } from 'react';
 import ExternalPricingPanel from './ExternalPricingPanel';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -88,7 +89,7 @@ function CampaignRow({ c, refresh }: { c: any; refresh: () => void }) {
         {['paused', 'pending_review'].includes(c.status) && !b && <Button size="sm" variant="outline" onClick={() => run(() => call('admin_set_campaign_status', { _campaign: c.id, _status: 'active', _note: note || null }), 'Activated.', refresh)}>Activate</Button>}
         {!['rejected', 'cancelled', 'expired'].includes(c.status) && <Button size="sm" variant="ghost" onClick={() => { if (window.confirm('Reject this campaign?')) run(() => call('admin_set_campaign_status', { _campaign: c.id, _status: 'rejected', _note: note || null }), 'Rejected.', refresh); }}>Reject</Button>}
         {!['rejected', 'cancelled', 'expired'].includes(c.status) && img && <Button size="sm" variant="ghost" className="text-destructive" onClick={() => { if (window.confirm('Delete this banner? It stops showing right away and the campaign is paused. The vendor is told.')) run(() => call('admin_delete_banner', { _campaign: c.id, _note: note || null }), 'Banner deleted.', refresh); }}>Delete banner</Button>}
-        {!['rejected', 'cancelled', 'expired'].includes(c.status) && <Button size="sm" variant="ghost" onClick={() => run(() => call('admin_request_banner_revision', { _campaign: c.id, _note: note || null }), 'New banner requested (does not use the vendor quota).', refresh)}>Request new banner</Button>}
+        {!['rejected', 'cancelled', 'expired'].includes(c.status) && <Button size="sm" variant="ghost" onClick={() => run(async () => { const r = await call('admin_request_banner_revision', { _campaign: c.id, _note: note || null }); kickBannerWorker(); return r; }, 'New banner requested (does not use the vendor quota).', refresh)}>Request new banner</Button>}
         <Input className="h-8 w-48" placeholder="Note to vendor (optional)" maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} />
         <span className="flex items-center gap-1 text-xs">Priority <Input className="h-8 w-16" type="number" min={0} max={100} value={prio} onChange={(e) => setPrio(e.target.value)} />
           <Button size="sm" variant="ghost" onClick={() => run(() => call('admin_set_campaign_priority', { _campaign: c.id, _priority: Number(prio) }), 'Priority saved.', refresh)}>Save</Button></span>

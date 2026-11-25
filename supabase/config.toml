@@ -20,6 +20,9 @@ verify_jwt = false
 [functions.ad-process-jobs]
 verify_jwt = false
 
+[functions.ad-kick]
+verify_jwt = false
+
 [functions.email-notifications]
 verify_jwt = false
 
