@@ -142,7 +142,7 @@ async function processJob(admin: Admin, job: Record<string, any>): Promise<Recor
 
     // 3. safety review (throws if the review cannot run, so nothing unreviewed is ever published)
     visionCalls++;
-    const review = await moderateImage(art.base64, info.mime);
+    const review = await moderateImage(art.base64, info.mime, { picture: true });
     const decision = moderationDecision(review);
     if (!decision.pass) throw new ProviderError(`Image failed review: ${decision.flags.join(', ')}.`, 'moderation_rejected', true);
 
