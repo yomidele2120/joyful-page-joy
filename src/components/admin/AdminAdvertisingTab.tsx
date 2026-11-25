@@ -205,7 +205,7 @@ function AnalyticsView() {
 const SETTING_FIELDS: [string, string, 'bool' | 'num'][] = [
   ['ads_enabled', 'Advertising on', 'bool'], ['require_approval', 'Admin approval before a banner goes live', 'bool'],
   ['featured_banner_limit', 'Featured slideshow: vendors in rotation (1-10)', 'num'], ['sponsored_banner_limit', 'Sponsored banners between rows (0-12)', 'num'], ['sponsored_row_interval', 'Sponsored banner after every N rows (1-20)', 'num'],
-  ['rotating_limit', 'Rotating banner pool (1-24)', 'num'], ['rotation_minutes', 'Rotate every N minutes', 'num'],
+  ['rotating_limit', 'Rotating banner pool (1-24)', 'num'], ['max_banners_per_vendor', 'Banners one vendor can run at once (1-2)', 'num'], ['rotation_minutes', 'Rotate every N minutes', 'num'],
   ['social_banner_enabled', 'Social banner on shops', 'bool'], ['social_display_minutes', 'Social banner stays for N minutes', 'num'], ['social_rotation_minutes', 'Minutes between showings', 'num'],
   ['social_max_per_day', 'Max showings per visitor per day', 'num'], ['social_dismiss_hours', 'Hours hidden after a visitor closes it', 'num'],
   ['ai_generation_enabled', 'AI banner generation on', 'bool'], ['ai_daily_limit', 'AI attempts per day', 'num'], ['ai_monthly_budget_usd', 'AI monthly budget (USD)', 'num'],
