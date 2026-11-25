@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import AdBanner from './AdBanner';
 import { fetchAdSettings, fetchHomepageAds, type AdPlacement, type HomepageAd, type PublicAdSettings } from '@/lib/ads/adsApi';
@@ -15,20 +15,21 @@ function useAds(placement: AdPlacement, enabled: boolean) {
 }
 
 /** How long each vendor's featured banner stays before the next vendor's banner takes over. */
-export const FEATURED_SLIDE_MS = 15_000;
+export const FEATURED_SLIDE_MS = 5_000;
 
 /**
  * Featured banners at the top of the homepage, as a slideshow. Each slide is a different vendor's own banner; with more
- * than one running, the next vendor's banner appears every 15 seconds. The slideshow stops moving while the pointer or
+ * than one running, the next banner appears every 5 seconds. The slideshow stops moving while the pointer or
  * keyboard focus is on it, while the browser tab is in the background, and for people who ask for reduced motion
  * (they can still use the dots). One banner or none: nothing moves, and nothing renders when nothing is eligible.
  */
 export function FeaturedAds({ className }: { className?: string }) {
   const { data: settings } = useAdSettings();
   const { data: ads } = useAds('featured', !!settings?.ads_enabled);
-  const slides = useMemo(() => pickAds(ads ?? [], { limit: settings?.featured_banner_limit ?? 1, seed: `${PAGE_SEED}:f` }), [ads, settings?.featured_banner_limit]);
+  const slides = useMemo(() => pickAds(ads ?? [], { limit: settings?.featured_banner_limit ?? 1, seed: `${PAGE_SEED}:f`, onePerVendor: false }), [ads, settings?.featured_banner_limit]);
   const [index, setIndex] = useState(0);
   const [hold, setHold] = useState(false);
+  const [mobileClosed, setMobileClosed] = useState(false);
   const [hidden, setHidden] = useState(() => typeof document !== 'undefined' && document.hidden);
   const [reduce, setReduce] = useState(() => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
   const count = slides.length;
@@ -47,7 +48,7 @@ export function FeaturedAds({ className }: { className?: string }) {
   }, []);
   useEffect(() => { if (index >= count) setIndex(0); }, [count, index]);
 
-  // A fresh 15 seconds starts every time the slide changes, including when a visitor taps a dot.
+  // A fresh 5 seconds starts every time the slide changes, including when a visitor taps a dot.
   const playing = count > 1 && !hold && !hidden && !reduce;
   useEffect(() => {
     if (!playing) return;
@@ -56,6 +57,25 @@ export function FeaturedAds({ className }: { className?: string }) {
   }, [playing, index, count]);
 
   const go = useCallback((i: number) => setIndex(((i % count) + count) % count), [count]);
+
+  // Phone carousel: slides sit side by side and snap under the thumb; the next one peeks in from the right.
+  const track = useRef<HTMLDivElement>(null);
+  const fromScroll = useRef(false);
+  const indexRef = useRef(0);
+  indexRef.current = index;
+  const onTrackScroll = useCallback(() => {
+    const el = track.current; if (!el || !el.children.length) return;
+    const first = el.children[0] as HTMLElement; const second = el.children[1] as HTMLElement | undefined;
+    const step = second ? second.offsetLeft - first.offsetLeft : first.offsetWidth;
+    const i = Math.max(0, Math.min(count - 1, Math.round(el.scrollLeft / (step || 1))));
+    if (i !== indexRef.current) { fromScroll.current = true; setIndex(i); }
+  }, [count]);
+  useEffect(() => {
+    const el = track.current; if (!el || count < 2) return;
+    if (fromScroll.current) { fromScroll.current = false; return; }
+    const kid = el.children[index] as HTMLElement | undefined;
+    if (kid) el.scrollTo({ left: kid.offsetLeft - (el.children[0] as HTMLElement).offsetLeft, behavior: reduce ? 'auto' : 'smooth' });
+  }, [index, count, reduce]);
 
   if (!settings?.ads_enabled || !count) return null;
   const ad = slides[Math.min(index, count - 1)];
@@ -69,11 +89,29 @@ export function FeaturedAds({ className }: { className?: string }) {
       onFocusCapture={() => setHold(true)}
       onBlurCapture={() => setHold(false)}
     >
-      <div key={ad.id} className={reduce ? '' : 'animate-in fade-in duration-500'} aria-live={playing ? 'off' : 'polite'}>
+      {/* Phones: swipeable full-width cards, auto-advance every 5 seconds, dots inside the card, closable for this visit */}
+      {!mobileClosed && (
+        <div className="sm:hidden">
+          <div ref={track} onScroll={onTrackScroll} onTouchStart={() => setHold(true)} onTouchEnd={() => setHold(false)} onTouchCancel={() => setHold(false)}
+               className="flex snap-x snap-mandatory overflow-x-auto pb-1 pt-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {slides.map((s) => (
+              <div key={s.id} className="w-full shrink-0 snap-center px-1">
+                <AdBanner ad={s} placement="featured" variant="card" onDismiss={() => setMobileClosed(true)}
+                  dots={count > 1 ? slides.map((d, i) => (
+                    <button key={d.id} type="button" onClick={() => go(i)} aria-label={`Show sponsored banner ${i + 1} of ${count}`} aria-current={i === index ? 'true' : undefined}
+                            className="flex h-5 w-4 items-center justify-center"><span className={`block h-2 w-2 rounded-full ${i === index ? 'bg-white' : 'bg-white/40'}`} /></button>
+                  )) : undefined} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {/* Tablets and computers: one banner at a time, fading */}
+      <div key={ad.id} className={`hidden sm:block ${reduce ? '' : 'animate-in fade-in duration-500'}`} aria-live={playing ? 'off' : 'polite'}>
         <AdBanner ad={ad} placement="featured" priority={index === 0} />
       </div>
       {count > 1 && (
-        <div className="mt-2 flex items-center justify-center gap-1.5" role="group" aria-label="Choose a sponsored banner">
+        <div className="mt-2 hidden items-center justify-center gap-1.5 sm:flex" role="group" aria-label="Choose a sponsored banner">
           {slides.map((s, i) => (
             <button
               key={s.id}
@@ -144,7 +182,7 @@ export function useSponsoredFeed(slotCount: number, pageKey: string): HomepageAd
 export function RotatingAds({ className }: { className?: string }) {
   const { data: settings } = useAdSettings();
   const { data: ads } = useAds('rotating', !!settings?.ads_enabled);
-  const pool = useMemo(() => pickAds(ads ?? [], { limit: settings?.rotating_limit ?? 5, seed: `${PAGE_SEED}:r` }), [ads, settings?.rotating_limit]);
+  const pool = useMemo(() => pickAds(ads ?? [], { limit: settings?.rotating_limit ?? 5, seed: `${PAGE_SEED}:r`, onePerVendor: false }), [ads, settings?.rotating_limit]);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const t = window.setInterval(() => setNow(Date.now()), 30_000); return () => window.clearInterval(t); }, []);
   if (!settings?.ads_enabled || !pool.length) return null;

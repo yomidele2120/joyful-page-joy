@@ -14,7 +14,7 @@ const counted = new Set<string>();
  * One advertising banner. The artwork is text-free; the shop name, logo, headline, description and button are drawn
  * here, so they are always the vendor's real data and always sharp. The whole banner is one link to the vendor's own shop.
  */
-export default function AdBanner({ ad, placement, priority = false, className, variant = 'full', onDismiss }: { ad: HomepageAd; placement: AdPlacement; priority?: boolean; className?: string; variant?: 'full' | 'slim' | 'card'; onDismiss?: () => void }) {
+export default function AdBanner({ ad, placement, priority = false, className, variant = 'full', onDismiss, dots }: { ad: HomepageAd; placement: AdPlacement; priority?: boolean; className?: string; variant?: 'full' | 'slim' | 'card'; onDismiss?: () => void; dots?: React.ReactNode }) {
   const ref = useRef<HTMLAnchorElement>(null);
   const src = bannerSources(ad.banner_image_url);
 
@@ -35,7 +35,8 @@ export default function AdBanner({ ad, placement, priority = false, className, v
 
   const products = (ad.products ?? []).slice(0, 3);
 
-  // Card: the phone-sized look. A tilted picture tile on the left, the wording on the right, an arrow, and a close button. Same data and tracking.
+  // Card: the phone-sized look (music-app style). A dark card, a tilted picture tile that pokes out above its top-left corner,
+  // the wording on the right, an arrow, a close button and (in a carousel) the dots inside the card. Same data and tracking.
   if (variant === 'card') {
     return (
       <div className={cn('relative', className)}>
@@ -44,27 +45,29 @@ export default function AdBanner({ ad, placement, priority = false, className, v
           to={adShopLink(ad.vendor_id, ad.id)}
           onClick={() => trackAd({ event: 'banner_click', campaign: ad.id, placement })}
           aria-label={`${ad.store_name}: ${ad.headline} (sponsored)`}
-          className="group relative flex min-h-[124px] items-center gap-3 overflow-hidden rounded-2xl bg-neutral-900 p-3 pr-4 text-white"
+          className="group relative block min-h-[132px] rounded-2xl text-white"
         >
-          <img src={src.mobile} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-50 blur-[2px]" aria-hidden="true" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/60 to-black/80" aria-hidden="true" />
-          <div className="relative -rotate-6 shrink-0 overflow-hidden rounded-xl border-2 border-white/80 bg-white shadow-xl transition-transform duration-300 group-active:rotate-0">
-            <img src={products[0]?.image || src.mobile} alt="" loading="lazy" decoding="async" className="h-24 w-24 object-cover" />
-          </div>
-          <div className="relative min-w-0 flex-1 pr-6">
-            <p className="truncate text-[11px] font-medium text-white/75">{ad.store_name}</p>
-            <h3 className="line-clamp-2 font-heading text-base font-extrabold leading-tight">{ad.headline}</h3>
-            {ad.description && <p className="mt-0.5 line-clamp-2 text-xs text-white/80">{ad.description}</p>}
-            <ArrowRight className="mt-1.5 h-5 w-5 text-white" aria-hidden="true" />
-          </div>
-          <span className="absolute bottom-2 right-3 rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-white/90 backdrop-blur">Sponsored</span>
+          <span className="absolute inset-0 overflow-hidden rounded-2xl bg-neutral-950" aria-hidden="true">
+            <img src={src.mobile} alt="" loading="lazy" decoding="async" className="h-full w-full scale-110 object-cover opacity-40 blur-[3px]" />
+            <span className="absolute inset-0 bg-gradient-to-r from-black/55 via-black/75 to-black/90" />
+          </span>
+          <span className="absolute -top-4 left-3 block -rotate-6 overflow-hidden rounded-xl border-2 border-white/85 bg-white shadow-xl transition-transform duration-300 group-active:rotate-0" aria-hidden="true">
+            <img src={products[0]?.image || src.mobile} alt="" loading="lazy" decoding="async" className="h-28 w-28 object-cover" />
+          </span>
+          <span className="relative block min-h-[132px] py-3 pl-[8.25rem] pr-12">
+            <span className="block truncate text-[11px] font-medium text-white/70">{ad.store_name} · Sponsored</span>
+            <h3 className="line-clamp-2 font-heading text-lg font-extrabold leading-tight">{ad.headline}</h3>
+            {ad.description && <span className="mt-0.5 line-clamp-2 block text-xs text-white/80">{ad.description}</span>}
+            <ArrowRight className="mt-2 h-6 w-6 text-white" aria-hidden="true" />
+          </span>
         </Link>
         {onDismiss && (
           <button type="button" aria-label="Hide this sponsored banner" onClick={onDismiss}
-                  className="absolute right-2 top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white hover:bg-black/75">
+                  className="absolute right-2.5 top-2.5 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-white/70 text-white hover:bg-white/15">
             <X className="h-4 w-4" />
           </button>
         )}
+        {dots && <div className="absolute bottom-2.5 right-4 z-10 flex items-center gap-1">{dots}</div>}
       </div>
     );
   }
