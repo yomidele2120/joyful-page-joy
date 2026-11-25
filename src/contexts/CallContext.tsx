@@ -31,7 +31,7 @@ interface Active {
 interface Incoming { callerName: string; type: CallType; accept: () => void; refuse: () => void }
 interface Outgoing { name: string; type: CallType; cancel: () => void; note?: string }
 
-const LOGIN_WAIT_TRIES = 10;                       // ZEGO signs in a moment after it starts; wait up to about 10 seconds
+const LOGIN_WAIT_TRIES = 20;                       // ZEGO signs in a moment after it starts; wait up to about 10 seconds
 const LOGIN_WAIT_MS = 1000;
 const RENEW_MS = 20 * 60 * 60 * 1000;   // tokens last 24h; sign in again well before that
 const RING_LIMIT_MS = 65_000;           // ZEGO stops ringing after 60s; never leave a ringing screen up longer than this
@@ -68,6 +68,7 @@ const forceZimLogin = async (k: { ZIM: any; login: { userId: string; userName: s
     await zi.login(k.login.userId, { userName: k.login.userName, token: k.login.token });
     return null;
   } catch (err: any) {
+    if (err?.code === 6000111 || /6000111|already logged in/i.test(String(err?.message ?? err))) return null;   // already signed in: that is fine
     const text = `${err?.code ?? ''} ${err?.message ?? err}`.trim();
     console.warn('ZIM login failed', err);
     return text;
@@ -217,15 +218,27 @@ export function CallProvider({ children }: { children: ReactNode }) {
         // ZIM is created a moment after addPlugins, so wait for it before listening (up to 15 seconds).
         {
           let tries = 0;
+          let zimConnected = false;
           const attach = () => {
             if (cancelled) return;
             let zi: any = null;
             try { zi = ZIM?.getInstance?.(); } catch { /* not created yet */ }
             if (!zi) { if (++tries < 30) window.setTimeout(attach, 500); else console.warn('ZIM instance was never created: the call plugin did not start'); return; }
             console.info('ZIM instance ready');
+            // Everyone must be signed in to ZEGO messaging while the site is open, or calls to them never ring. If the kit has not
+            // managed it a few seconds after loading (or the connection drops), sign in directly and record why if that fails too.
+            const signIn = async (why: string) => {
+              if (cancelled || zimConnected) return;
+              const err = await forceZimLogin({ ZIM, login: { userId: data.userId, userName: data.userName, token: data.token } });
+              if (err) reportFailure(undefined, undefined, 'callee', 'zim_login_failed_' + why, err);
+              else console.info('ZIM signed in directly (' + why + ')');
+            };
+            window.setTimeout(() => void signIn('on_load'), 4000);
             try {
               zi.on?.('connectionStateChanged', (_z: unknown, r: { state?: number; event?: number }) => {
                 console.info('ZIM connection', r);      // state 0 disconnected, 1 connecting, 2 connected, 3 reconnecting
+                zimConnected = r?.state === 2;
+                if (r?.state === 0 && r?.event !== 4) window.setTimeout(() => void signIn('after_disconnect'), 2000);
                 if (r?.state === 0) reportFailure(undefined, undefined, 'caller', 'zim_disconnected', `state=${r.state} event=${r.event} (event 4 = signed in on another tab or device)`);
               });
               zi.on?.('error', (_z: unknown, e: { code?: number; message?: string }) => {
@@ -295,7 +308,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
             if (!isNotLoggedInError(e)) throw e;
             const loginError = await forceZimLogin(k);
             if (loginError) { reportFailure(callId, peerUserId, 'caller', 'zim_login_failed', loginError); throw e; }
-            return await wait(3);
+            return await wait(10);
           }
         },
         isAborted: () => a.abort === true || active.current !== a,
