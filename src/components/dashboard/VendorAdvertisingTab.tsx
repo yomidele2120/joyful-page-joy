@@ -93,7 +93,7 @@ function Campaigns({ o, vendorId, onChange }: { o: Overview; vendorId: string; o
   return (
     <Panel title="Promotions" action={ent.active && (ent.features?.max_advertised_products ?? 0) > 0 && <div className="flex gap-2">{canAddSecond && <Button size="sm" variant="outline" disabled={adding} onClick={addSecond}>Add second banner</Button>}<Button size="sm" variant="outline" onClick={() => setPicking(true)}>Promote products</Button></div>}>
       {picking && <ProductPicker vendorId={vendorId} max={ent.features?.max_advertised_products ?? 0} onClose={() => setPicking(false)}
-        onSave={async (ids) => { try { await call('vendor_create_product_campaign', { _product_ids: ids }); toast.success('Promotion created. Your banner is being made.'); setPicking(false); onChange(); } catch (e) { toast.error(errText(e)); } }} />}
+        onSave={async (ids) => { try { await call('vendor_create_product_campaign', { _product_ids: ids }); toast.success('Promotion created. Your banner is being made.'); setPicking(false); onChange(); void kickBannerWorker(); } catch (e) { toast.error(errText(e)); } }} />}
       {!campaigns.length && <p className="text-sm text-muted-foreground">{ent.active ? 'Your shop promotion is created automatically after payment. It will appear here.' : 'No promotions yet.'}</p>}
       <div className="space-y-4">{campaigns.map((c) => <CampaignCard key={c.id} c={c} o={o} vendorId={vendorId} onChange={onChange} />)}</div>
     </Panel>
@@ -115,7 +115,7 @@ function CampaignCard({ c, o, vendorId, onChange }: { c: any; o: Overview; vendo
   return (
     <div className="rounded-lg border border-border p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="font-medium">{c.campaign_type === 'shop_promotion' ? (c.slot === 2 ? 'Shop promotion (second banner)' : 'Shop promotion') : 'Product promotion'}</p>
+        <p className="font-medium">{(c.campaign_type === 'shop_promotion' ? 'Shop promotion' : 'Product promotion') + (c.slot === 2 ? ' (second banner)' : '')}</p>
         <Status info={info} />
       </div>
       <p className="mt-0.5 text-xs text-muted-foreground">{info.hint} {c.status === 'active' && daysLeft(c.end_date)} · {fmtDate(c.start_date)} to {fmtDate(c.end_date)}</p>
