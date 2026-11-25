@@ -148,7 +148,14 @@ export function CallProvider({ children }: { children: ReactNode }) {
           onConfirmDialogWhenReceiving: (callType: number, caller: { userID: string; userName?: string }, refuse: () => void, accept: () => void, extra: string) => {
             void (async () => {
               const type: CallType = callType === Kit.InvitationTypeVideoCall ? 'video' : 'voice';
-              if (isBusy()) { refuse(); return; }                               // already on a call
+              console.info('Incoming call invitation received', { from: caller?.userID, extra });
+              let rcvId: string | undefined;
+              try { rcvId = JSON.parse(extra || '{}')?.callId; } catch { /* no data */ }
+              reportFailure(rcvId, fromZegoUserId(caller.userID) ?? undefined, 'callee', 'info_invitation_received', 'This device received the invitation (diagnostic row, not a failure)');
+              if (isBusy()) {
+                reportFailure(rcvId, fromZegoUserId(caller.userID) ?? undefined, 'callee', 'refused_busy', `device thought a call was already in progress (role=${active.current?.role} joined=${active.current?.joined})`);
+                refuse(); return;                                               // already on a call
+              }
               const gen = ringGen.current;
               let callId: string | undefined;
               try { callId = JSON.parse(extra || '{}')?.callId; } catch { /* no data */ }
@@ -209,6 +216,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
             setIncoming(null); setOutgoing(null); setRoomType(null);                                // cancelled, declined or timed out while ringing
             const a = active.current;
             if (!a) return;
+            if (a.role === 'caller' && !a.joined && !a.closed) reportFailure(a.callId, a.peerUserId, 'caller', 'unanswered_after_send', `invitation was sent but ended with reason "${reason}" without the callee joining`);
             if (a.role === 'caller' || reason === 'LeaveRoom') void closeCall(outcomeForEnd(reason));
             else active.current = null;
           },
