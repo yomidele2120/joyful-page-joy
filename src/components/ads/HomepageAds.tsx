@@ -29,7 +29,6 @@ export function FeaturedAds({ className }: { className?: string }) {
   const slides = useMemo(() => pickAds(ads ?? [], { limit: settings?.featured_banner_limit ?? 1, seed: `${PAGE_SEED}:f`, onePerVendor: false }), [ads, settings?.featured_banner_limit]);
   const [index, setIndex] = useState(0);
   const [hold, setHold] = useState(false);
-  const [mobileClosed, setMobileClosed] = useState(false);
   const [hidden, setHidden] = useState(() => typeof document !== 'undefined' && document.hidden);
   const [reduce, setReduce] = useState(() => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
   const count = slides.length;
@@ -89,14 +88,14 @@ export function FeaturedAds({ className }: { className?: string }) {
       onFocusCapture={() => setHold(true)}
       onBlurCapture={() => setHold(false)}
     >
-      {/* Phones: swipeable full-width cards, auto-advance every 5 seconds, dots inside the card, closable for this visit */}
-      {!mobileClosed && (
+      {/* Phones: swipeable full-width cards, auto-advance every 5 seconds, dots inside the card */}
+      {(
         <div className="sm:hidden">
           <div ref={track} onScroll={onTrackScroll} onTouchStart={() => setHold(true)} onTouchEnd={() => setHold(false)} onTouchCancel={() => setHold(false)}
                className="flex snap-x snap-mandatory overflow-x-auto pb-1 pt-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {slides.map((s) => (
               <div key={s.id} className="w-full shrink-0 snap-center px-1">
-                <AdBanner ad={s} placement="featured" variant="card" onDismiss={() => setMobileClosed(true)}
+                <AdBanner ad={s} placement="featured" variant="card"
                   dots={count > 1 ? slides.map((d, i) => (
                     <button key={d.id} type="button" onClick={() => go(i)} aria-label={`Show sponsored banner ${i + 1} of ${count}`} aria-current={i === index ? 'true' : undefined}
                             className="flex h-5 w-4 items-center justify-center"><span className={`block h-2 w-2 rounded-full ${i === index ? 'bg-white' : 'bg-white/40'}`} /></button>
@@ -150,16 +149,12 @@ export function useSponsoredRows(rowKeys: readonly string[]) {
     };
   }, [ads, settings, keyStr]);
 }
-// Banners the visitor closed during this visit (kept while they move between pages, forgotten on refresh).
-const dismissedAds = new Set<string>();
-/** On a phone the sponsored row is a compact card the visitor can close; on larger screens it is the wide strip. */
+/** On a phone the sponsored row is a compact card; on larger screens it is the wide strip. Sponsored banners cannot be closed. */
 export function SponsoredRowBanner({ ad }: { ad: HomepageAd | null }) {
-  const [, force] = useState(0);
   if (!ad) return null;
-  const closed = dismissedAds.has(ad.id);
   return (
     <section aria-label="Sponsored" className="mt-8 sm:mt-10">
-      {!closed && <AdBanner ad={ad} placement="sponsored_row" variant="card" className="sm:hidden" onDismiss={() => { dismissedAds.add(ad.id); force((n) => n + 1); }} />}
+      <div className="pt-4 sm:hidden"><AdBanner ad={ad} placement="sponsored_row" variant="card" /></div>
       <AdBanner ad={ad} placement="sponsored_row" variant="slim" className="hidden sm:flex" />
     </section>
   );

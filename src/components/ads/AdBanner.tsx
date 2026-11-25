@@ -48,8 +48,8 @@ export default function AdBanner({ ad, placement, priority = false, className, v
           className="group relative block min-h-[132px] rounded-2xl text-white"
         >
           <span className="absolute inset-0 overflow-hidden rounded-2xl bg-neutral-950" aria-hidden="true">
-            <img src={src.mobile} alt="" loading="lazy" decoding="async" className="h-full w-full scale-110 object-cover opacity-40 blur-[3px]" />
-            <span className="absolute inset-0 bg-gradient-to-r from-black/55 via-black/75 to-black/90" />
+            <img src={src.mobile} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+            <span className="absolute inset-0 bg-gradient-to-r from-black/20 via-black/45 to-black/80" />
           </span>
           <span className="absolute -top-4 left-3 block -rotate-6 overflow-hidden rounded-xl border-2 border-white/85 bg-white shadow-xl transition-transform duration-300 group-active:rotate-0" aria-hidden="true">
             <img src={products[0]?.image || src.mobile} alt="" loading="lazy" decoding="async" className="h-28 w-28 object-cover" />
