@@ -59,12 +59,26 @@ const uploadZegoLogs = async (k: { zp: any; ZIM: any } | null): Promise<string> 
   } catch (e) { console.warn('Express uploadLog failed', e); }
   return `logs uploaded at ${at} (${Intl.DateTimeFormat().resolvedOptions().timeZone}): ${done.join(' + ') || 'none'}`;
 };
+// If ZEGO still says "not logged in" after waiting, sign in to its messaging service (ZIM) ourselves. This either fixes it or
+// returns ZEGO's real reason (for example the In-app Chat service is not enabled for the AppID, or the token is rejected).
+const forceZimLogin = async (k: { ZIM: any; login: { userId: string; userName: string; token: string } }): Promise<string | null> => {
+  try {
+    const zi = k.ZIM?.getInstance?.();
+    if (!zi) return 'ZIM instance was never created';
+    await zi.login(k.login.userId, { userName: k.login.userName, token: k.login.token });
+    return null;
+  } catch (err: any) {
+    const text = `${err?.code ?? ''} ${err?.message ?? err}`.trim();
+    console.warn('ZIM login failed', err);
+    return text;
+  }
+};
 const errText = (e: any) => String(e?.message ?? e ?? 'Something went wrong').replace(/^.*?:\s*/, '');
 
 export function CallProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const { data: enabled } = useCallsEnabled();
-  const kit = useRef<{ zp: any; Kit: any; ZIM: any } | null>(null);
+  const kit = useRef<{ zp: any; Kit: any; ZIM: any; login: { userId: string; userName: string; token: string } } | null>(null);
   const active = useRef<Active | null>(null);
   const ringGen = useRef(0);                          // bumps whenever a ringing call ends, so a slow check never shows a call that is already over
   const ringTimer = useRef<number | undefined>(undefined);
@@ -223,7 +237,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
           attach();
         }
         current = zp;
-        kit.current = { zp, Kit, ZIM };
+        kit.current = { zp, Kit, ZIM, login: { userId: data.userId, userName: data.userName, token: data.token } };
         setReady(true);
         const scheduleRenew = (ms: number) => {
           renew = window.setTimeout(() => {
@@ -274,7 +288,16 @@ export function CallProvider({ children }: { children: ReactNode }) {
       // here, and keep trying: the moment they open the site, the call rings on their screen.
       const outcome = await inviteWithRetry({
         // ZEGO signs in a moment after it starts: if it says so, wait a few seconds and send again.
-        send: () => sendWhenLoggedIn({ send: invite, isAborted: () => a.abort === true || active.current !== a, tries: LOGIN_WAIT_TRIES, intervalMs: LOGIN_WAIT_MS }),
+        send: async () => {
+          const wait = (tries: number) => sendWhenLoggedIn({ send: invite, isAborted: () => a.abort === true || active.current !== a, tries, intervalMs: LOGIN_WAIT_MS });
+          try { return await wait(LOGIN_WAIT_TRIES); }
+          catch (e) {
+            if (!isNotLoggedInError(e)) throw e;
+            const loginError = await forceZimLogin(k);
+            if (loginError) { reportFailure(callId, peerUserId, 'caller', 'zim_login_failed', loginError); throw e; }
+            return await wait(3);
+          }
+        },
         isAborted: () => a.abort === true || active.current !== a,
         onOffline: () => {
           reportFailure(callId, peerUserId, 'caller', 'callee_not_connected_to_zego', 'ZEGO could not reach the callee: they are not signed in to ZEGO messaging (site closed, signed in elsewhere, or their connection failed)');
