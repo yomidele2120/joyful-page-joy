@@ -19,7 +19,7 @@ const PERKS: Array<{ title: string; text: string }> = [
   { title: 'Paid through Paystack', text: 'Buyers pay on the site. The money goes to your bank account, so you are not chasing transfers.' },
   { title: 'Buyers who ask for quotes', text: 'Shoppers post what they need in bulk. You see the request and reply with your price.' },
   { title: 'Chat and calls in the app', text: 'Buyers message or call you from your shop. When you are on a call, the next caller waits in a queue instead of getting a dead line.' },
-  { title: 'Upload hundreds, not one by one', text: 'Import your product list in bulk. An AI helper can tidy a title or description, and you decide what to keep.' },
+  { title: 'Large catalogue? Ask for bulk upload', text: 'Have hundreds of products? Apply by email and our team will add them for you from your product file.' },
   { title: 'Promotion on the homepage', text: 'Paid plans include a banner built from your real shop details, shown on the homepage and your shop page.' },
 ];
 

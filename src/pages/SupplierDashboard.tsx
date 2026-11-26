@@ -337,6 +337,15 @@ export default function SupplierDashboard() {
 
             {activeTab === 'products' && (
               <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/40 p-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">Bulk product upload</p>
+                  <p className="text-xs text-muted-foreground">This feature is currently turned off. To have many products added at once, apply by email and we will ask you to send your product file and details.</p>
+                </div>
+                <Button asChild size="sm" variant="outline">
+                  <a href={`mailto:akaniluchi@gmail.com?subject=${encodeURIComponent('Bulk product upload request')}&body=${encodeURIComponent(`Shop name: ${vendor.store_name}\nShop ID: ${vendor.id}\n\nI would like to apply for bulk product upload. Approximate number of products: `)}`}>Apply by email</a>
+                </Button>
+              </div>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h2 className="font-heading font-bold">My products{productData ? ` (${formatProductCount(productData.total)})` : ''}</h2>
                 <div className="flex flex-wrap items-center gap-3">
