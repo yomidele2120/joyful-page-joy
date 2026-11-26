@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import AdBundleAdminPanel from '@/components/admin/AdBundleAdminPanel';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -55,6 +56,7 @@ export default function SubscriptionPricingAdmin() {
 
   return (
     <div className="space-y-4">
+      <AdBundleAdminPanel />
       <Panel title="Plan prices">
         <p className="mb-3 text-sm text-muted-foreground">A price for "All categories" applies to every supplier. A category price overrides it for suppliers who chose that category. Turn a category price off to hide the plan there. Checkout also needs "Purchase enabled" switched on above.</p>
         <div className="grid gap-2 sm:grid-cols-5">

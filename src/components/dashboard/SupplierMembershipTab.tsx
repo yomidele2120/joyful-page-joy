@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { formatNaira } from '@/lib/format';
+import AdBundleBuilder from '@/components/dashboard/AdBundleBuilder';
 
 type MembershipPlan = {
   slug: 'free' | 'silver' | 'premium' | 'gold' | 'diamond';
@@ -33,7 +34,7 @@ type Membership = {
   expires_at: string | null;
 };
 
-export default function SupplierMembershipTab({ vendorId }: { vendorId: string }) {
+function LegacyMembershipTab({ vendorId }: { vendorId: string }) {
   const [busyPlan, setBusyPlan] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
   const [searchParams] = useSearchParams();
@@ -274,4 +275,20 @@ export default function SupplierMembershipTab({ vendorId }: { vendorId: string }
       {membership?.status === 'suspended' && <p className="text-sm text-destructive">Membership benefits are paused. Contact marketplace support.</p>}
     </div>
   );
+}
+
+
+/** Shows the all-inclusive purchase screen while the admin has it switched on; otherwise the original membership screen. */
+export default function SupplierMembershipTab({ vendorId }: { vendorId: string }) {
+  const { data: options, isLoading } = useQuery({
+    queryKey: ['ad-bundle-options'],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).rpc('get_ad_bundle_options');
+      if (error) return null;
+      return data as { enabled?: boolean } | null;
+    },
+  });
+  if (isLoading) return <p className="text-sm text-muted-foreground">Loading membership plans...</p>;
+  if (options?.enabled) return <AdBundleBuilder vendorId={vendorId} />;
+  return <LegacyMembershipTab vendorId={vendorId} />;
 }

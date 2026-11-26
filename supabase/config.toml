@@ -6,6 +6,9 @@ verify_jwt = false
 [functions.initialize-supplier-subscription]
 verify_jwt = false
 
+[functions.initialize-ad-bundle-subscription]
+verify_jwt = false
+
 [functions.verify-supplier-subscription]
 verify_jwt = false
 
