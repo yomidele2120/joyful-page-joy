@@ -39,8 +39,8 @@ const LOGIN_WAIT_MS = 1000;
 const RENEW_MS = 20 * 60 * 60 * 1000;   // tokens last 24h; sign in again well before that
 const RING_LIMIT_MS = 65_000;           // ZEGO stops ringing after 60s; never leave a ringing screen up longer than this
 const UNCONNECTED_LIMIT_MS = 90_000;
-const OFFLINE_RING_MS = 40_000;         // keep ringing someone who is not on the site this long, alerting them and retrying
-const OFFLINE_RETRY_MS = 5_000;    // a call that has not connected after this long is treated as dead
+const OFFLINE_RING_MS = 58_000;         // keep ringing someone who is not on the site this long, alerting them and retrying
+const OFFLINE_RETRY_MS = 3_000;    // a call that has not connected after this long is treated as dead
 const db = supabase as any;
 const zegoErrorText = (e: any) => {
   const code = e?.code ?? e?.errorCode ?? e?.ret;
@@ -141,6 +141,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     let renew: number | undefined;
     let current: any = null;
+    let offWake: (() => void) | null = null;
 
     const boot = async () => {
       try {
@@ -259,6 +260,22 @@ export function CallProvider({ children }: { children: ReactNode }) {
               else console.info('ZIM signed in directly (' + why + ')');
             };
             window.setTimeout(() => void signIn('on_load'), 4000);
+            // A phone that was locked or in the background drops its ZEGO connection without always saying so. The moment the
+            // site comes back to the front (for example after tapping the call alert) sign in again, so a call that is still
+            // ringing on the caller's side (it re-sends every few seconds) reaches this screen at once.
+            const wake = () => {
+              if (cancelled || document.visibilityState === 'hidden') return;
+              zimConnected = false;
+              window.setTimeout(() => void signIn('on_wake'), 300);
+            };
+            document.addEventListener('visibilitychange', wake);
+            window.addEventListener('focus', wake);
+            window.addEventListener('online', wake);
+            window.addEventListener('pageshow', wake);
+            offWake = () => {
+              document.removeEventListener('visibilitychange', wake); window.removeEventListener('focus', wake);
+              window.removeEventListener('online', wake); window.removeEventListener('pageshow', wake);
+            };
             try {
               zi.on?.('connectionStateChanged', (_z: unknown, r: { state?: number; event?: number }) => {
                 console.info('ZIM connection', r);      // state 0 disconnected, 1 connecting, 2 connected, 3 reconnecting
@@ -297,6 +314,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
       if (renew) window.clearTimeout(renew);
+      offWake?.();
       try { current?.destroy?.(); } catch { /* ignore */ }
       clearRingTimer();
       kit.current = null; active.current = null; setReady(false); setIncoming(null); setOutgoing(null); setRoomType(null);

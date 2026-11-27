@@ -4,6 +4,7 @@ import { Search } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import ProductCard, { ProductCardSkeleton } from '@/components/ProductCard';
 import { FeaturedAds } from '@/components/ads/HomepageAds';
+import PlansSection from '@/components/plans/PlansSection';
 import { useCategories, useMarketplaceStats, useProducts } from '@/hooks/useProducts';
 
 // The front door for visitors who are not signed in. Signed-in users go straight to the marketplace home (see RootRoute).
@@ -96,6 +97,8 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+      <PlansSection id="plans" />
 
       <section className="container max-w-[1200px] py-14 sm:py-20">
         <div className="grid gap-10 md:grid-cols-2">

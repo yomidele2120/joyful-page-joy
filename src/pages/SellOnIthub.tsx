@@ -2,12 +2,11 @@ import { useEffect } from 'react';
 import JsonLd from '@/components/seo/JsonLd';
 import { faqPage } from '@/lib/seo/structuredData';
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import Layout from '@/components/layout/Layout';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useProducts } from '@/hooks/useProducts';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
+import PlansSection from '@/components/plans/PlansSection';
 
 // Supplier landing page. Everything here is true of the platform as built: no sales figures, no testimonials, no promised
 // timings. Plan prices are read live from the database, so the page can never show a price an admin did not set.
@@ -38,33 +37,9 @@ const FAQ: Array<{ q: string; a: string }> = [
   { q: 'Can I list many products at once?', a: 'Yes. Use bulk import in your dashboard. You can still edit every product afterwards.' },
 ];
 
-type Plan = { slug: string; name: string; price_kobo: number | null; period_days: number | null; visibility_boost: number; purchase_enabled: boolean };
-
-function usePlans() {
-  return useQuery({
-    queryKey: ['public-supplier-plans'], staleTime: 5 * 60_000,
-    queryFn: async () => {
-      const { data, error } = await supabase.from('supplier_membership_plans')
-        .select('slug, name, price_kobo, period_days, visibility_boost, purchase_enabled').eq('is_active', true);
-      if (error) throw error;
-      const order = ['free', 'silver', 'premium', 'gold', 'diamond'];
-      return ((data ?? []) as Plan[]).sort((a, b) => order.indexOf(a.slug) - order.indexOf(b.slug));
-    },
-  });
-}
-
-function priceLine(p: Plan): { big: string; small: string } {
-  if (p.slug === 'free') return { big: 'Free', small: 'to open a shop' };
-  if (p.price_kobo && p.purchase_enabled) {
-    return { big: `₦${(p.price_kobo / 100).toLocaleString('en-NG')}`, small: p.period_days ? `every ${p.period_days} days` : '' };
-  }
-  return { big: 'Soon', small: 'price not announced yet' };
-}
-
 export default function SellOnIthub() {
   const { isVendor } = useAuth();
   const { data: products } = useProducts({ limit: 24 });
-  const { data: plans } = usePlans();
   const crates = (products ?? []).filter(p => p.image_url).slice(0, 6);
   const cta = isVendor ? { to: '/supplier-dashboard', label: 'Go to my shop' } : { to: '/supplier-signup', label: 'Open your shop' };
 
@@ -151,28 +126,7 @@ export default function SellOnIthub() {
       </section>
 
       {/* Plans, read live */}
-      <section className="container max-w-[1200px] py-16 sm:py-24">
-        <h2 style={SIGN} className="text-4xl font-extrabold uppercase leading-[0.95] sm:text-6xl">Plans</h2>
-        <p className="mt-4 max-w-xl text-muted-foreground">Start free. Paid plans rank your products higher in search and listings and include homepage advertising. Prices are set by IT Hub Africa and shown here as they are today.</p>
-        {plans && plans.length > 0 && (
-          <div className="mt-10 grid divide-y divide-border border-y border-border md:grid-cols-3 md:divide-x md:divide-y-0">
-            {plans.map(p => {
-              const price = priceLine(p);
-              return (
-                <div key={p.slug} className="py-8 md:px-8 md:first:pl-0 md:last:pr-0">
-                  <h3 className="font-heading text-lg font-semibold">{p.name}</h3>
-                  <p style={SIGN} className="mt-2 text-5xl font-extrabold leading-none">{price.big}</p>
-                  <p className="mt-1 text-sm text-muted-foreground">{price.small}</p>
-                  <p className="mt-4 text-sm leading-relaxed">
-                    {p.slug === 'free' ? 'Shop page, product listings, orders, chat and calls.'
-                      : p.visibility_boost > 0 ? 'Everything in Free, a ranking boost in search and listings, and homepage advertising.' : 'Everything in Free, plus homepage advertising.'}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
+      <PlansSection id="plans" heading="Plans" />
 
       {/* FAQ */}
       <section className="container max-w-[1200px] pb-16 sm:pb-24">

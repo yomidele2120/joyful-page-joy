@@ -1,3 +1,4 @@
+import PlansSection from '@/components/plans/PlansSection';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
@@ -231,6 +232,8 @@ export default function Index() {
       <BrandMarquee />
 
       <StoreVisitSection />
+
+      <PlansSection id="plans" />
 
       <section className="bg-[#0a2236] py-12 text-white md:py-16">
         <div className="container flex max-w-[1200px] flex-col items-start justify-between gap-6 md:flex-row md:items-center">
