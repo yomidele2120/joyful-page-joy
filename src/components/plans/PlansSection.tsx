@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { planFeatureGroups, type CatalogPlan } from '@/lib/planFeatures';
 
 // Seller plans for the public pages (landing, marketplace home, /sell). Everything is read live from the database, so the page can
 // never show a price or a plan the admin did not set: plans from supplier_membership_plans, prices from plan_prices.
@@ -21,15 +22,18 @@ function usePublicPlans() {
   return useQuery({
     queryKey: ['public-plans-and-prices'], staleTime: 5 * 60_000,
     queryFn: async () => {
-      const [p, pr] = await Promise.all([
+      const [p, pr, cat] = await Promise.all([
         db.from('supplier_membership_plans').select('slug, name, price_kobo, period_days, visibility_boost, purchase_enabled, ad_credit_kobo, sort_order').eq('is_active', true),
         db.from('plan_prices').select('plan_slug, billing_period, category_id, price_kobo').eq('is_active', true),
+        db.rpc('plan_catalog'),   // the same full list of limits the seller dashboard shows
       ]);
       if (p.error) throw p.error;
       const order = ['free', 'silver', 'premium', 'gold', 'diamond'];
       const plans = ((p.data ?? []) as PlanRow[]).sort((a, b) =>
         a.slug === 'free' ? -1 : b.slug === 'free' ? 1 : (a.sort_order ?? 0) - (b.sort_order ?? 0) || order.indexOf(a.slug) - order.indexOf(b.slug));
-      return { plans, prices: (pr.error ? [] : (pr.data ?? [])) as PriceRow[] };
+      const catalog: Record<string, CatalogPlan> = {};
+      for (const c of ((cat.error ? [] : (cat.data ?? [])) as CatalogPlan[])) catalog[c.slug] = c;
+      return { plans, prices: (pr.error ? [] : (pr.data ?? [])) as PriceRow[], catalog };
     },
   });
 }
@@ -95,10 +99,24 @@ export default function PlansSection({ id, heading = 'Plans for sellers', intro,
               <h3 className="font-heading text-lg font-semibold">{p.name}</h3>
               <p style={SIGN} className="mt-2 text-4xl font-extrabold leading-none sm:text-5xl">{price ? price.big : 'Soon'}</p>
               <p className="mt-1 min-h-[1.25rem] text-sm text-muted-foreground">{price ? price.small : 'price not announced yet'}</p>
-              <ul className="mt-4 space-y-1.5 text-sm leading-relaxed">
-                {perks.map(t => <li key={t} className="flex gap-2"><span aria-hidden className="mt-0.5 text-[#f26a1b]">✓</span><span>{t}</span></li>)}
-              </ul>
-              <Link to={cta.to} className="mt-6 inline-block rounded-md border border-foreground/30 px-4 py-2 text-center text-sm font-semibold transition-colors hover:bg-foreground hover:text-background">{cta.label}</Link>
+              {data.catalog[p.slug] ? (
+                <div className="mt-4 space-y-4 text-sm leading-relaxed">
+                  {planFeatureGroups(data.catalog[p.slug]).map(g => (
+                    <div key={g.title}>
+                      <p className="text-xs font-semibold text-muted-foreground">{g.title}</p>
+                      <ul className="mt-1 space-y-1">
+                        {g.items.map(t => <li key={t} className="flex gap-2"><span aria-hidden className="mt-0.5 text-[#f26a1b]">✓</span><span>{t}</span></li>)}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <ul className="mt-4 space-y-1.5 text-sm leading-relaxed">
+                  {perks.map(t => <li key={t} className="flex gap-2"><span aria-hidden className="mt-0.5 text-[#f26a1b]">✓</span><span>{t}</span></li>)}
+                </ul>
+              )}
+              <div className="flex-1" />
+              <Link to={cta.to} className="mt-6 block rounded-md border border-foreground/30 px-4 py-2 text-center text-sm font-semibold transition-colors hover:bg-foreground hover:text-background">{cta.label}</Link>
             </div>
           );
         })}
