@@ -30,6 +30,7 @@ import { trackViewContent } from '@/lib/tracking';
 import { formatResponseTime, useVendorReputation } from '@/hooks/useVendorReputation';
 import { buildProductSeo, serializeProductStructuredData } from '@/lib/productSeo';
 import { BUSINESS } from '@/config/business';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 const CANONICAL_ORIGIN = BUSINESS.website.startsWith('http') ? BUSINESS.website : `https://${BUSINESS.website}`;
 
 const KLUMP_PUBLIC_KEY = import.meta.env.VITE_KLUMP_PUBLIC_KEY as string | undefined;
@@ -275,7 +276,7 @@ export default function ProductDetail() {
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)] lg:gap-10">
           {/* Gallery */}
-          <section className="min-w-0">
+          <section className="min-w-0 lg:col-start-1 lg:row-start-1">
             <div className="relative aspect-square overflow-hidden rounded-3xl border border-border bg-white shadow-sm sm:aspect-[1.08/1]">
               {showVideo && product.video_url ? (
                 <video src={product.video_url} controls autoPlay className="h-full w-full bg-black object-contain" />
@@ -314,12 +315,22 @@ export default function ProductDetail() {
           </section>
 
           {/* Buy box */}
-          <section className="min-w-0">
+          <section className="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1">
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               {product.brand && <span className="font-medium text-foreground">{product.brand}</span>}
               {product.categories?.name && <span>{product.categories.name}</span>}
             </div>
             <h1 className="mt-2 font-heading text-2xl font-bold leading-tight sm:text-3xl">{product.name}</h1>
+            {specs.length > 0 && (
+              <div className="mt-3">
+                <ul className="flex flex-wrap gap-1.5">
+                  {specs.slice(0, 4).map(([key, value]) => (
+                    <li key={key} className="max-w-full truncate rounded-full bg-secondary px-3 py-1 text-xs"><span className="text-muted-foreground">{key}: </span><span className="font-medium">{value}</span></li>
+                  ))}
+                </ul>
+                <a href="#details" onClick={() => document.querySelector<HTMLElement>('#details [data-tab="specs"]')?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }))} className="mt-2 inline-block text-xs font-medium text-primary hover:underline">See full specifications</a>
+              </div>
+            )}
             {(preorderOpen || (payLaterOffered && payLaterFits)) && (
               <div className="mt-2 flex flex-wrap gap-2">
                 {preorderOpen && <PreorderBadge date={product.preorder_release_date} />}
@@ -496,6 +507,34 @@ export default function ProductDetail() {
               </div>
             )}
           </section>
+
+          {/* Description and specifications: sits under the photos on desktop (beside the buy box) and right after it on phones */}
+          <section id="details" className="min-w-0 scroll-mt-24 lg:col-start-1 lg:row-start-2">
+            <Tabs defaultValue={product.description ? 'description' : specs.length ? 'specs' : 'delivery'} className="rounded-3xl border border-border bg-card p-4 shadow-sm sm:p-6">
+              <TabsList className="h-auto w-full flex-wrap justify-start gap-1 bg-transparent p-0">
+                <TabsTrigger value="description" className="rounded-full data-[state=active]:bg-foreground data-[state=active]:text-background">Description</TabsTrigger>
+                <TabsTrigger value="specs" data-tab="specs" className="rounded-full data-[state=active]:bg-foreground data-[state=active]:text-background">Specifications</TabsTrigger>
+                <TabsTrigger value="delivery" className="rounded-full data-[state=active]:bg-foreground data-[state=active]:text-background">Delivery and payment</TabsTrigger>
+              </TabsList>
+              <TabsContent value="description" className="mt-4">
+                <p className="whitespace-pre-line text-sm leading-7 text-muted-foreground">{product.description || 'Contact the seller for more information about this product.'}</p>
+              </TabsContent>
+              <TabsContent value="specs" className="mt-4">
+                <dl className="divide-y divide-border text-sm">
+                  {specs.map(([key, value]) => <DetailRow key={key} label={key} value={value} />)}
+              {product.brand && <DetailRow label="Brand" value={product.brand} />}
+              {product.categories?.name && <DetailRow label="Category" value={product.categories.name} />}
+              {product.sku && <DetailRow label="SKU" value={product.sku} />}
+              <DetailRow label="Minimum order" value={`${moq} ${moq === 1 ? unit : pluralUnit(unit)}`} />
+              <DetailRow label="Availability" value={isPreorder ? (outOfStock ? 'Preorder unavailable' : `Preorder - expected ${formatLongDate(product.preorder_release_date) || 'date to be confirmed'}`) : outOfStock ? 'Out of stock' : `${product.stock_quantity} in stock`} />
+                </dl>
+              </TabsContent>
+              <TabsContent value="delivery" className="mt-4 space-y-3 text-sm leading-6 text-muted-foreground">
+                <p>Delivery timing and shipping costs vary by supplier and destination. Send an inquiry or chat with the supplier to confirm a delivery estimate before ordering.</p>
+                <p>Card, bank and transfer payments at checkout are processed securely by Paystack. Price breaks above are applied automatically to your quantity.</p>
+              </TabsContent>
+            </Tabs>
+          </section>
         </div>
 
         <p className="mt-6 text-xs text-muted-foreground">
@@ -503,34 +542,6 @@ export default function ProductDetail() {
           {vendor && <> or <Link to={`/contact?type=seller_report&vendor=${vendor.id}`} className="text-primary hover:underline">report the seller</Link></>}.
           See our <Link to="/returns-policy" className="text-primary hover:underline">returns policy</Link> and <Link to="/shipping-policy" className="text-primary hover:underline">shipping policy</Link>.
         </p>
-
-        <section className="mt-8 border-y border-border py-5 sm:mt-10">
-          <h2 className="font-heading text-lg font-bold">Product description</h2>
-          <p className="mt-3 whitespace-pre-line text-sm leading-7 text-muted-foreground">{product.description || 'Contact the seller for more information about this product.'}</p>
-        </section>
-
-        <section className="mt-6 grid gap-6 sm:grid-cols-2">
-          <div className="border-b border-border pb-5 sm:border-0">
-            <h2 className="font-heading text-lg font-bold">Product attributes</h2>
-            <dl className="mt-3 divide-y divide-border text-sm">
-              {specs.map(([key, value]) => <DetailRow key={key} label={key} value={value} />)}
-              {product.brand && <DetailRow label="Brand" value={product.brand} />}
-              {product.categories?.name && <DetailRow label="Category" value={product.categories.name} />}
-              {product.sku && <DetailRow label="SKU" value={product.sku} />}
-              <DetailRow label="Minimum order" value={`${moq} ${moq === 1 ? unit : pluralUnit(unit)}`} />
-              <DetailRow label="Availability" value={isPreorder ? (outOfStock ? 'Preorder unavailable' : `Preorder - expected ${formatLongDate(product.preorder_release_date) || 'date to be confirmed'}`) : outOfStock ? 'Out of stock' : `${product.stock_quantity} in stock`} />
-            </dl>
-          </div>
-          <div>
-            <h2 className="font-heading text-lg font-bold">Order information</h2>
-            <p className="mt-3 text-sm leading-6 text-muted-foreground">
-              Delivery timing and shipping costs vary by supplier and destination. Send an inquiry or chat with the supplier to confirm a delivery estimate before ordering.
-            </p>
-            <p className="mt-3 text-sm leading-6 text-muted-foreground">
-              Card, bank and transfer payments at checkout are processed securely by Paystack. Price breaks above are applied automatically to your quantity.
-            </p>
-          </div>
-        </section>
 
         {!!similar.length && (
           <section className="mt-9 border-t border-border pt-6">
