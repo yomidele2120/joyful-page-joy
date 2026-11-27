@@ -115,7 +115,7 @@ export default function CommentsSheet({ postId, open, onOpenChange }: CommentsSh
             disabled={!user}
             className="flex-1"
           />
-          <Button type="submit" size="icon" disabled={!user || !text.trim() || addComment.isPending}>
+          <Button type="submit" size="icon" aria-label="Post comment" disabled={!user || !text.trim() || addComment.isPending}>
             <Send className="w-4 h-4" />
           </Button>
         </form>

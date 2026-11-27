@@ -35,10 +35,10 @@ export interface BrandFlyer {
 }
 
 export const BRAND_FLYERS = {
-  elevate: { id: 'elevate', src: elevate, alt: 'Elevate your life at I.T Hub Africa, up to 30% off', href: '/products' },  // artwork is exactly 2:1 (same as the slider), so it fills the slide with nothing cropped on any screen
+  elevate: { id: 'elevate', src: elevate, alt: 'Elevate your life at IT Hub Africa, up to 30% off', href: '/products' },  // artwork is exactly 2:1 (same as the slider), so it fills the slide with nothing cropped on any screen
   seamlessPurple: { id: 'seamless-purple', src: seamlessPurple, alt: 'Seamless payment: fast, safe and trusted', href: '/products' },
   seamlessOlive: { id: 'seamless-olive', src: seamlessOlive, alt: 'Seamless payment: fast, safe and trusted', href: '/products' },
-  techFlatlay: { id: 'tech-flatlay', src: techFlatlay, alt: 'Tech gadgets and electronics from verified suppliers at I.T Hub Africa', href: '/products' },
+  techFlatlay: { id: 'tech-flatlay', src: techFlatlay, alt: 'Tech gadgets and electronics from verified suppliers at IT Hub Africa', href: '/products' },
   blackFriday: { id: 'black-friday', src: blackFriday, alt: 'Black Friday super sale: up to 59% off smart watches', href: '/products' },
   // Wide 2:1 flyers with text near every edge, so they are shown whole instead of cropped.
   payLater: { id: 'pay-later', src: payLater, alt: 'Buy now, pay later: get the latest phones and laptops and spread your payments', href: '/pay-later', fit: 'contain', pinned: true },

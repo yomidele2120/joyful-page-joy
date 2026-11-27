@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { inviteWithRetry, isNotLoggedInError, sendWhenLoggedIn } from './callRetry';
+import { inviteWithRetry, isCalleeUnreachableError, isNotLoggedInError, sendWhenLoggedIn } from './callRetry';
 import { urlBase64ToUint8Array } from './webPushKey';
 
 const clock = () => { let t = 0; return { now: () => t, sleep: async (ms: number) => { t += ms; } }; };
@@ -59,4 +59,11 @@ test('does not retry other errors, or after the caller cancelled', async () => {
   n = 0;
   await assert.rejects(sendWhenLoggedIn({ send: async () => { n++; throw notLogged; }, isAborted: () => true, tries: 5, intervalMs: 1, sleep: async () => {} }), (e) => e === notLogged);
   assert.equal(n, 1);
+});
+
+test('ZEGO "called user not registered" (6000281 / 107026) counts as an unreachable callee, not a failure', () => {
+  assert.equal(isCalleeUnreachableError({ code: 6000281, message: 'code: 107026, message: all called user not registered or service exception' }), true);
+  assert.equal(isCalleeUnreachableError(new Error('{"code":6000281}')), true);
+  assert.equal(isCalleeUnreachableError({ code: 6000121 }), false);
+  assert.equal(isCalleeUnreachableError(null), false);
 });

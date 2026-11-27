@@ -1,3 +1,4 @@
+import { BUSINESS } from '@/config/business';
 import { useState, useEffect, useRef } from 'react';
 import AiListingAssist from '@/components/dashboard/AiListingAssist';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
@@ -343,7 +344,7 @@ export default function SupplierDashboard() {
                   <p className="text-xs text-muted-foreground">This feature is currently turned off. To have many products added at once, apply by email and we will ask you to send your product file and details.</p>
                 </div>
                 <Button asChild size="sm" variant="outline">
-                  <a href={`mailto:akaniluchi@gmail.com?subject=${encodeURIComponent('Bulk product upload request')}&body=${encodeURIComponent(`Shop name: ${vendor.store_name}\nShop ID: ${vendor.id}\n\nI would like to apply for bulk product upload. Approximate number of products: `)}`}>Apply by email</a>
+                  <a href={`mailto:${BUSINESS.email}?subject=${encodeURIComponent('Bulk product upload request')}&body=${encodeURIComponent(`Shop name: ${vendor.store_name}\nShop ID: ${vendor.id}\n\nI would like to apply for bulk product upload. Approximate number of products: `)}`}>Apply by email</a>
                 </Button>
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2">

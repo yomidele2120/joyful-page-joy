@@ -61,3 +61,15 @@ export async function sendWhenLoggedIn<T>(o: LoginWaitOptions<T>): Promise<T> {
     }
   }
 }
+
+// ZEGO answers 6000281 (inner code 107026, "all called user not registered or service exception") when the person being called has
+// no live ZEGO sign-in: they have never opened the site with calls on, their site is closed, or their connection dropped.
+// That is the same situation as "not on the site right now", so it is handled the same way (alert them, keep trying), not as a failure.
+export function isCalleeUnreachableError(e: unknown): boolean {
+  if (!e) return false;
+  const code = (e as { code?: unknown }).code;
+  if (code === 6000281 || code === '6000281') return true;
+  let text = '';
+  try { text = typeof e === 'string' ? e : JSON.stringify(e) + ' ' + String((e as { message?: unknown }).message ?? ''); } catch { text = String(e); }
+  return /6000281|107026|not registered/i.test(text);
+}

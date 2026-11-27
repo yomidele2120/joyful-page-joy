@@ -152,7 +152,7 @@ export default function SupplierChat() {
                 {searchResults.map(v => (
                   <button key={v.user_id} className="w-full text-left px-3 py-2 hover:bg-secondary flex items-center gap-2 text-sm"
                     onClick={() => startChat(v.user_id)}>
-                    {v.logo_url ? <img src={v.logo_url} className="w-6 h-6 rounded-full object-cover" /> : <Store className="w-4 h-4 text-muted-foreground" />}
+                    {v.logo_url ? <img src={v.logo_url} alt="" className="w-6 h-6 rounded-full object-cover" /> : <Store className="w-4 h-4 text-muted-foreground" />}
                     {v.store_name}
                   </button>
                 ))}
@@ -172,7 +172,7 @@ export default function SupplierChat() {
                   onClick={() => selectConversation(c)}>
                   <div className="flex items-center gap-3">
                     {c.other_is_vendor && c.other_vendor?.logo_url ? (
-                      <img src={c.other_vendor.logo_url} className="w-10 h-10 rounded-full object-cover" />
+                      <img src={c.other_vendor.logo_url} alt="" className="w-10 h-10 rounded-full object-cover" />
                     ) : (
                       <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                         {c.other_is_vendor ? <Store className="w-5 h-5 text-primary" /> : <User className="w-5 h-5 text-primary" />}
@@ -216,7 +216,7 @@ export default function SupplierChat() {
                   <ArrowLeft className="w-5 h-5" />
                 </Button>
                 {activeConvo?.other_is_vendor && activeConvo?.other_vendor?.logo_url ? (
-                  <img src={activeConvo.other_vendor.logo_url} className="w-8 h-8 rounded-full object-cover" />
+                  <img src={activeConvo.other_vendor.logo_url} alt="" className="w-8 h-8 rounded-full object-cover" />
                 ) : (
                   <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                     {activeConvo?.other_is_vendor ? <Store className="w-4 h-4 text-primary" /> : <User className="w-4 h-4 text-primary" />}

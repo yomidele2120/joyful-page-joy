@@ -53,7 +53,7 @@ export default function VoiceRecorder({ onRecorded, disabled }: VoiceRecorderPro
     return (
       <div className="flex items-center gap-2">
         <span className="text-xs text-destructive animate-pulse">● {formatDuration(duration)}</span>
-        <Button type="button" size="icon" variant="destructive" onClick={stop} className="h-8 w-8">
+        <Button type="button" size="icon" variant="destructive" onClick={stop} className="h-8 w-8" aria-label="Stop recording">
           <Square className="w-3 h-3 fill-current" />
         </Button>
       </div>
@@ -61,7 +61,7 @@ export default function VoiceRecorder({ onRecorded, disabled }: VoiceRecorderPro
   }
 
   return (
-    <Button type="button" size="icon" variant="ghost" onClick={start} disabled={disabled} className="h-9 w-9">
+    <Button type="button" size="icon" variant="ghost" onClick={start} disabled={disabled} className="h-9 w-9" aria-label="Record a voice message">
       <Mic className="w-4 h-4" />
     </Button>
   );

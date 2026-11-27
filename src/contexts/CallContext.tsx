@@ -11,7 +11,7 @@ import { hasCamera, hasMicrophone, installMediaCapture, resetLocalMedia, setCame
 import { joinCallTabElection } from '@/lib/tabLeader';
 import CallAlertsPrompt from '@/components/calls/CallAlertsPrompt';
 import { primeRingtone, startRingtone, stopRingtone } from '@/lib/ringtone';
-import { inviteWithRetry, isNotLoggedInError, sendWhenLoggedIn } from '@/lib/callRetry';
+import { inviteWithRetry, isCalleeUnreachableError, isNotLoggedInError, sendWhenLoggedIn } from '@/lib/callRetry';
 import { sendCallAlert } from '@/lib/callPush';
 import { callMessage, fromZegoUserId, isGenuineIncomingCall, outcomeForEnd, toZegoUserId, type CallOutcome, type CallType } from '@/lib/zego';
 
@@ -349,12 +349,15 @@ export function CallProvider({ children }: { children: ReactNode }) {
         // ZEGO signs in a moment after it starts: if it says so, wait a few seconds and send again.
         send: async () => {
           const wait = (tries: number) => sendWhenLoggedIn({ send: invite, isAborted: () => a.abort === true || active.current !== a, tries, intervalMs: LOGIN_WAIT_MS });
+          // The other person has no live ZEGO sign-in: treat it as "not on the site" so they get an alert and the call keeps retrying.
+          const unreachable = (e: unknown) => (isCalleeUnreachableError(e) ? ({ errorInvitees: [{ userID: toZegoUserId(peerUserId) }] }) : null);
           try { return await wait(LOGIN_WAIT_TRIES); }
           catch (e) {
+            const u = unreachable(e); if (u) return u;
             if (!isNotLoggedInError(e)) throw e;
             const loginError = await forceZimLogin(k);
             if (loginError) { reportFailure(callId, peerUserId, 'caller', 'zim_login_failed', loginError); throw e; }
-            return await wait(10);
+            try { return await wait(10); } catch (e2) { const u = unreachable(e2); if (u) return u; throw e2; }
           }
         },
         isAborted: () => a.abort === true || active.current !== a,
